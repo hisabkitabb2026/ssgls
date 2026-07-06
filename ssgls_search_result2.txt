@@ -1,0 +1,9 @@
+﻿D:\InvoiceShelf-2.4.1\ssgls\app\Http\Controllers\V1\Admin\CustomField\CustomFieldsController.php
+D:\InvoiceShelf-2.4.1\ssgls\app\Http\Controllers\V1\Admin\Invoice\LrReceiptAutoFillController.php
+D:\InvoiceShelf-2.4.1\ssgls\app\Http\Controllers\V1\Admin\Invoice\LrReceiptLookupController.php
+D:\InvoiceShelf-2.4.1\ssgls\app\Http\Controllers\V1\Admin\Report\ProfitLossReportController.php
+D:\InvoiceShelf-2.4.1\ssgls\app\Models\Estimate.php
+D:\InvoiceShelf-2.4.1\ssgls\public\build\assets\SalesTax-r8LMCxAo.js
+D:\InvoiceShelf-2.4.1\ssgls\resources\scripts\admin\components\estimate-invoice-common\CreateItemRow.vue
+D:\InvoiceShelf-2.4.1\ssgls\resources\scripts\admin\views\invoices\create\InvoiceCreate.vue
+D:\InvoiceShelf-2.4.1\ssgls\resources\views\app\pdf\invoice\lr_receipt.blade.php

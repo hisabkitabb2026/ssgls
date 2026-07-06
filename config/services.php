@@ -51,4 +51,13 @@ return [
         'region' => env('SES_REGION', 'us-east-1'),
     ],
 
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
+
+    'whatsapp' => [
+        'base_url' => env('WHATSAPP_SERVER_URL', 'http://localhost:2785'),
+        'api_key' => env('WHATSAPP_API_KEY', ''),
+    ],
+
 ];

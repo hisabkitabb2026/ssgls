@@ -3,6 +3,8 @@ import DollarIcon from '@/scripts/components/icons/dashboard/DollarIcon.vue'
 import CustomerIcon from '@/scripts/components/icons/dashboard/CustomerIcon.vue'
 import InvoiceIcon from '@/scripts/components/icons/dashboard/InvoiceIcon.vue'
 import EstimateIcon from '@/scripts/components/icons/dashboard/EstimateIcon.vue'
+import LrReceiptIcon from '@/scripts/components/icons/dashboard/LrReceiptIcon.vue'
+import LorryReceiptIcon from '@/scripts/components/icons/dashboard/LorryReceiptIcon.vue'
 import DashboardStatsItem from './DashboardStatsItem.vue'
 
 import { useDashboardStore } from '../store'
@@ -13,6 +15,8 @@ const ABILITIES = {
   VIEW_INVOICE: 'view-invoice',
   VIEW_CUSTOMER: 'view-customer',
   VIEW_ESTIMATE: 'view-estimate',
+  VIEW_LR_RECEIPT: 'view-invoice',
+  VIEW_LORRY_RECEIPT: 'view-invoice',
 } as const
 
 const dashboardStore = useDashboardStore()
@@ -80,6 +84,36 @@ const userStore = useUserStore()
       "
     >
       {{ dashboardStore.stats.totalEstimateCount }}
+    </DashboardStatsItem>
+
+    <!-- LR Receipts -->
+    <DashboardStatsItem
+      v-if="userStore.hasAbilities(ABILITIES.VIEW_LR_RECEIPT)"
+      :icon-component="LrReceiptIcon"
+      :loading="!dashboardStore.isDashboardDataLoaded"
+      route="/admin/invoices?template=lr_receipt"
+      :label="
+        dashboardStore.stats.totalLrReceiptCount <= 1
+          ? $t('dashboard.cards.lr_receipts', 1)
+          : $t('dashboard.cards.lr_receipts', 2)
+      "
+    >
+      {{ dashboardStore.stats.totalLrReceiptCount }}
+    </DashboardStatsItem>
+
+    <!-- Lorry Receipts -->
+    <DashboardStatsItem
+      v-if="userStore.hasAbilities(ABILITIES.VIEW_LORRY_RECEIPT)"
+      :icon-component="LorryReceiptIcon"
+      :loading="!dashboardStore.isDashboardDataLoaded"
+      route="/admin/invoices?template=lorry_receipt"
+      :label="
+        dashboardStore.stats.totalLorryReceiptCount <= 1
+          ? $t('dashboard.cards.lorry_receipts', 1)
+          : $t('dashboard.cards.lorry_receipts', 2)
+      "
+    >
+      {{ dashboardStore.stats.totalLorryReceiptCount }}
     </DashboardStatsItem>
   </div>
 </template>

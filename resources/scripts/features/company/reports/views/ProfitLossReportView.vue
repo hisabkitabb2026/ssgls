@@ -14,6 +14,7 @@ interface DateRangeOption {
 interface ReportFormData {
   from_date: string
   to_date: string
+  customer_id: string
 }
 
 const { t } = useI18n()
@@ -41,6 +42,7 @@ const initialRange = defaultMonthRange()
 const formData = reactive<ReportFormData>({
   from_date: initialRange.from,
   to_date: initialRange.to,
+  customer_id: '',
 })
 
 const getReportUrl = computed<string | null>(() => url.value)
@@ -48,7 +50,11 @@ const getReportUrl = computed<string | null>(() => url.value)
 const selectedCompany = computed(() => companyStore.selectedCompany)
 
 const dateRangeUrl = computed<string>(() => {
-  return `${siteURL.value}?from_date=${formatDate(formData.from_date)}&to_date=${formatDate(formData.to_date)}`
+  let url = `${siteURL.value}?from_date=${formatDate(formData.from_date)}&to_date=${formatDate(formData.to_date)}`
+  if (formData.customer_id) {
+    url += `&customer_id=${formData.customer_id}`
+  }
+  return url
 })
 
 globalStore.downloadReport = downloadReport
@@ -119,9 +125,21 @@ function downloadReport(): void {
         </BaseInputGroup>
       </div>
 
+      <BaseInputGroup
+        label="Customer Name"
+        class="col-span-12 md:col-span-8 my-6"
+      >
+        <BaseCustomerSelectInput
+          v-model="formData.customer_id"
+          placeholder="Search by customer name"
+          value-prop="id"
+          label="name"
+        />
+      </BaseInputGroup>
+
       <BaseButton
         variant="primary"
-        class="hidden w-full mt-6 md:flex justify-center"
+        class="hidden w-full mt-0 md:flex justify-center"
         type="submit"
         @click.prevent="getReports"
       >

@@ -159,6 +159,86 @@
             line-height: 21px;
             color: #5851D8;
         }
+
+        .customer-heading {
+            margin-top: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #040405;
+            border-bottom: 1px solid #EAF1FB;
+            padding-bottom: 4px;
+        }
+
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .detail-table thead th {
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 10px;
+            font-weight: bold;
+            color: #040405;
+        }
+
+        .detail-table thead th:nth-child(2),
+        .detail-table thead th:nth-child(3),
+        .detail-table thead th:nth-child(4) {
+            text-align: right;
+        }
+
+        .detail-table tbody td {
+            padding: 6px 8px;
+            font-size: 10px;
+            color: #595959;
+        }
+
+        .detail-table tbody td:nth-child(2),
+        .detail-table tbody td:nth-child(3),
+        .detail-table tbody td:nth-child(4) {
+            text-align: right;
+        }
+
+        .detail-table thead tr {
+            background-color: #F9FBFF;
+            border-bottom: 1px solid #EAF1FB;
+        }
+
+        .detail-table tbody tr {
+            border-bottom: 1px solid #EAF1FB;
+        }
+
+        .customer-total {
+            width: 100%;
+            margin-bottom: 25px;
+        }
+
+        .customer-total td {
+            text-align: right;
+            font-size: 11px;
+            font-weight: bold;
+            color: #040405;
+        }
+
+        .no-records {
+            padding: 15px;
+            text-align: center;
+            font-size: 11px;
+            color: #a5acc1;
+        }
+
+        .sub-info {
+            font-size: 8px;
+            color: #595959;
+        }
+
+        .date-info {
+            font-size: 8px;
+            color: #a5acc1;
+        }
     </style>
 
 </head>
@@ -191,42 +271,88 @@
                 </td>
             </tr>
         </table>
-        <p class="expenses-title">@lang('pdf_expenses_label')</p>
-        <div class="expenses-table-container">
-            <table class="expenses-table">
-                @foreach ($expenseCategories as $expenseCategory)
+
+        <!-- Detailed Lorry Receipt Breakdown grouped by Customer -->
+        @if(count($customersData) > 0)
+            @foreach ($customersData as $customerData)
+                <p class="customer-heading">
+                    {{ $customerData['name'] }}
+                </p>
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">{{ __('Lorry Receipt details') }}</th>
+                            <th style="width: 25%;">{{ __('Credit/Income Amount') }}</th>
+                            <th style="width: 25%;">{{ __('Debit/Expense Amount') }}</th>
+                            <th style="width: 25%;">{{ __('Net Profit / Loss') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($customerData['lrReceipts'] as $lrReceipt)
+                            @php
+                                $netVal = (float) $lrReceipt['net_profit'];
+                                $netColor = $netVal >= 0 ? '#2ec4b6' : '#e71d36';
+                            @endphp
+                            <tr>
+                                <td>
+                                    {{ __('Docket No') }}: <strong>{{ $lrReceipt['lr_no'] }}</strong><br>
+                                    @if(!empty($lrReceipt['challan_no']))
+                                        <span class="sub-info">Challan No: {{ $lrReceipt['challan_no'] }}</span><br>
+                                    @endif
+                                    @if(!empty($lrReceipt['office_invoice_no']))
+                                        <span class="sub-info">Invoice No: {{ $lrReceipt['office_invoice_no'] }}</span><br>
+                                    @endif
+                                    @if(!empty($lrReceipt['lr_date']))
+                                        <span class="date-info">Date: {{ $lrReceipt['lr_date'] }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    {!! format_money_pdf($lrReceipt['amount_credit'], $currency) !!}<br>
+                                    @if(!empty($lrReceipt['amount_credit_date']))
+                                        <span class="date-info">Credit Date: {{ $lrReceipt['amount_credit_date'] }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    {!! format_money_pdf($lrReceipt['amount_debit'], $currency) !!}<br>
+                                    @if(!empty($lrReceipt['amount_debit_date']))
+                                        <span class="date-info">Debit Date: {{ $lrReceipt['amount_debit_date'] }}</span>
+                                    @endif
+                                </td>
+                                <td style="font-weight: bold; color: {{ $netColor }};">
+                                    {!! format_money_pdf($netVal, $currency) !!}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                <table class="customer-total">
+                    <tr>
+                        <td>
+                            {{ __('Total Income') }}: {!! format_money_pdf($customerData['totalIncome'], $currency) !!}
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            {{ __('Net Profit') }}: {!! format_money_pdf($customerData['totalNetProfit'], $currency) !!}
+                        </td>
+                    </tr>
+                </table>
+            @endforeach
+        @else
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px;">
                 <tr>
-                    <td>
-                        <p class="expense-title">
-                            {{ $expenseCategory->category->name }}
-                        </p>
-                    </td>
-                    <td>
-                        <p class="expense-amount">
-                            {!! format_money_pdf($expenseCategory->total_amount, $currency) !!}
-                        </p>
+                    <td class="no-records">
+                        {{ __('No records found') }}
                     </td>
                 </tr>
-                @endforeach
-
             </table>
-        </div>
+        @endif
     </div>
 
-    <table class="expense-total-indicator-table">
-        <tr>
-            <td class="expense-total-cell">
-                <p class="expense-total">{!! format_money_pdf($totalExpense, $currency) !!}</p>
-            </td>
-        </tr>
-    </table>
     <table class="report-footer">
         <tr>
             <td>
                 <p class="report-footer-label">@lang("pdf_net_profit_label")</p>
             </td>
             <td>
-                <p class="report-footer-value">{!! format_money_pdf($income - $totalExpense, $currency) !!}</p>
+                <p class="report-footer-value">{!! format_money_pdf($netProfit, $currency) !!}</p>
             </td>
         </tr>
     </table>

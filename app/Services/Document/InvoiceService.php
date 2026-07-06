@@ -13,6 +13,7 @@ use App\Models\Estimate;
 use App\Models\ExchangeRateLog;
 use App\Models\Invoice;
 use App\Services\Mail\CompanyMailConfigService;
+use App\Services\Report\ProfitLossCalculationService;
 use App\Support\Pdf\PdfTemplateUtils;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -23,7 +24,46 @@ class InvoiceService
 {
     public function __construct(
         private readonly DocumentItemService $documentItemService,
+        private readonly ProfitLossCalculationService $profitLossService,
     ) {}
+
+    /**
+     * Auto-add prefixes for document numbers based on template type
+     * - LR Receipt: challan_no -> "CH {value}"
+     * - Lorry Receipt: docket_no -> "DOC {value}"
+     * - Invoice: invoice_number -> "INV {value}" (only for non-auto-generated numbers)
+     */
+    private function addDocumentPrefixes(array &$data, Request $request): void
+    {
+        $templateName = $data['template_name'] ?? $request->input('template_name', '');
+        
+        // For LR Receipt (template: lr_receipt) - add CH prefix to challan_no
+        if ($templateName === 'lr_receipt' && !empty($data['challan_no'])) {
+            $challanNo = trim($data['challan_no']);
+            // Only add prefix if it doesn't already start with "CH"
+            if (!preg_match('/^CH[-\s]?/i', $challanNo)) {
+                $data['challan_no'] = 'CH ' . $challanNo;
+            }
+        }
+        
+        // For Lorry Receipt (template: lorry_receipt) - add DOC prefix to docket_no
+        if ($templateName === 'lorry_receipt' && !empty($data['docket_no'])) {
+            $docketNo = trim($data['docket_no']);
+            // Only add prefix if it doesn't already start with "DOC"
+            if (!preg_match('/^DOC[-\s]?/i', $docketNo)) {
+                $data['docket_no'] = 'DOC ' . $docketNo;
+            }
+        }
+        
+        // For Office Invoice - add INV prefix to invoice_number (only if manually provided)
+        if ($templateName === 'office_invoice' && $request->has('invoice_number') && !empty($request->invoice_number)) {
+            $invoiceNo = trim($data['invoice_number']);
+            // Only add prefix if it doesn't already start with "INV"
+            if (!preg_match('/^INV[-\s]?/i', $invoiceNo)) {
+                $data['invoice_number'] = 'INV ' . $invoiceNo;
+            }
+        }
+    }
 
     public function create(Request $request): Invoice
     {
@@ -33,20 +73,40 @@ class InvoiceService
             $data['status'] = Invoice::STATUS_SENT;
         }
 
+        // Auto-add prefixes for document numbers based on template type
+        $this->addDocumentPrefixes($data, $request);
+
         $invoice = Invoice::create($data);
 
-        $serial = (new SerialNumberService)
-            ->setModel($invoice)
-            ->setCompany($invoice->company_id)
-            ->setCustomer($invoice->customer_id)
-            ->setNextNumbers();
+        // Only generate sequence numbers if invoice_number was auto-generated (not provided)
+        // For manual invoice numbers, we still track sequence for internal ordering
+        if (! $request->has('invoice_number') || empty($request->invoice_number)) {
+            $serial = (new SerialNumberService)
+                ->setModel($invoice)
+                ->setCompany($invoice->company_id)
+                ->setCustomer($invoice->customer_id)
+                ->setNextNumbers();
 
-        $invoice->sequence_number = $serial->nextSequenceNumber;
-        $invoice->customer_sequence_number = $serial->nextCustomerSequenceNumber;
+            $invoice->sequence_number = $serial->nextSequenceNumber;
+        }
+        
+        $invoice->customer_sequence_number = null;
         $invoice->unique_hash = Hashids::connection(Invoice::class)->encode($invoice->id);
         $invoice->save();
 
-        $this->documentItemService->createItems($invoice, $request->items);
+        // Transport receipt templates (lr_receipt, lorry_receipt, office_invoice)
+        // use custom fields instead of line items — only create items if present
+        // and each item has a non-empty name (empty stubs are filtered out).
+        if ($request->has('items') && ! empty($request->items)) {
+            $validItems = array_filter(
+                $request->items,
+                fn ($item) => ! empty($item['name'])
+            );
+
+            if (! empty($validItems)) {
+                $this->documentItemService->createItems($invoice, $validItems);
+            }
+        }
 
         $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
 
@@ -62,12 +122,22 @@ class InvoiceService
             $invoice->addCustomFields($request->customFields);
         }
 
+        // Recalculate profit/loss for Office Invoice and Lorry Receipt
+        if ($invoice->template_name === 'office_invoice') {
+            $this->profitLossService->recalculateFromOfficeInvoice($invoice);
+        } elseif ($invoice->template_name === 'lorry_receipt') {
+            $this->profitLossService->recalculateFromLorryReceipt($invoice);
+        }
+
         return Invoice::with([
             'items',
             'items.fields',
             'items.fields.customField',
             'customer',
+            'consigneeCustomer',
             'taxes',
+            'fields',
+            'fields.customField',
         ])->find($invoice->id);
     }
 
@@ -110,6 +180,9 @@ class InvoiceService
         $data['base_due_amount'] = $data['due_amount'] * $data['exchange_rate'];
         $data['customer_sequence_number'] = $serial->nextCustomerSequenceNumber;
 
+        // Auto-add prefixes for document numbers based on template type (for updates)
+        $this->addDocumentPrefixes($data, $request);
+
         $invoice->update($data);
 
         $statusData = $invoice->getInvoiceStatusByAmount($data['due_amount']);
@@ -134,7 +207,18 @@ class InvoiceService
         $invoice->items()->delete();
         $invoice->taxes()->delete();
 
-        $this->documentItemService->createItems($invoice, $request->items);
+        // Transport receipt templates may not send items — only create if
+        // present and each item has a non-empty name (empty stubs filtered out).
+        if ($request->has('items') && ! empty($request->items)) {
+            $validItems = array_filter(
+                $request->items,
+                fn ($item) => ! empty($item['name'])
+            );
+
+            if (! empty($validItems)) {
+                $this->documentItemService->createItems($invoice, $validItems);
+            }
+        }
 
         if ($request->has('taxes') && (! empty($request->taxes))) {
             $this->documentItemService->createTaxes($invoice, $request->taxes);
@@ -144,13 +228,24 @@ class InvoiceService
             $invoice->updateCustomFields($request->customFields);
         }
 
+        // Recalculate profit/loss for Office Invoice and Lorry Receipt on update
+        if ($invoice->template_name === 'office_invoice') {
+            $this->profitLossService->recalculateFromOfficeInvoice($invoice);
+        } elseif ($invoice->template_name === 'lorry_receipt') {
+            $this->profitLossService->recalculateFromLorryReceipt($invoice);
+        }
+
         return Invoice::with([
             'items',
             'items.fields',
             'items.fields.customField',
             'customer',
+            'consigneeCustomer',
             'taxes',
+            'fields',
+            'fields.customField',
         ])->find($invoice->id);
+
     }
 
     public function delete(Collection $ids): bool

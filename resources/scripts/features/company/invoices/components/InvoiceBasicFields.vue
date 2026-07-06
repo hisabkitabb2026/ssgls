@@ -4,8 +4,143 @@
       :valid="v.customer_id"
       :content-loading="isLoading"
       type="invoice"
-      class="col-span-12 lg:col-span-6 pr-0"
+      :label="isTransportReceipt ? customerLabel : ''"
+      :customer-type="null"
+      :show-lorry-profiles="isLorryReceipt"
+      :class="showConsignee ? 'order-1 col-span-12 lg:col-span-4 pr-0' : 'col-span-12 lg:col-span-6 pr-0'"
     />
+
+    <!-- Consignee Selector (LR Receipt only) -->
+    <div
+      v-if="showConsignee"
+      class="order-2 col-span-12 lg:col-span-4 pr-0"
+    >
+      <BaseContentPlaceholders v-if="isLoading">
+        <BaseContentPlaceholdersBox
+          :rounded="true"
+          class="w-full"
+          style="min-height: 170px"
+        />
+      </BaseContentPlaceholders>
+      <div v-else>
+        <!-- Selected consignee card -->
+        <div
+          v-if="selectedConsignee"
+          class="flex flex-col p-4 bg-surface border border-line-default border-solid min-h-[170px] rounded-md"
+        >
+          <div class="flex relative justify-between gap-3 mb-2">
+            <div class="flex-1 flex items-center gap-2">
+              <BaseText
+                :text="selectedConsignee.name || selectedConsignee.display_name"
+                class="text-base font-medium text-left text-heading"
+              />
+            </div>
+            <div class="flex flex-wrap justify-end gap-x-4 gap-y-2">
+              <a
+                class="relative my-0 text-sm flex items-center font-medium cursor-pointer text-primary-500"
+                @click.stop="editConsignee"
+              >
+                <BaseIcon name="PencilIcon" class="text-muted h-4 w-4 mr-1" />
+                {{ $t('general.edit') }}
+              </a>
+              <a
+                class="relative my-0 text-sm flex items-center font-medium cursor-pointer text-primary-500"
+                @click="resetConsignee"
+              >
+                <BaseIcon name="XCircleIcon" class="text-muted h-4 w-4 mr-1" />
+                {{ $t('general.deselect') }}
+              </a>
+            </div>
+          </div>
+          <div v-if="selectedConsignee.billing" class="flex flex-col mt-2">
+            <label class="mb-1 text-sm font-medium text-left text-muted uppercase whitespace-nowrap">Bill To</label>
+            <div class="flex flex-col flex-1 p-0 text-left">
+              <label
+                v-for="(line, index) in formatAddressLines(selectedConsignee.billing)"
+                :key="`billing-${index}-${line}`"
+                class="relative w-11/12 text-sm truncate"
+              >
+                {{ line }}
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unselected: Popover search selector -->
+        <Popover v-else v-slot="{ open }" class="relative flex flex-col rounded-md">
+          <PopoverButton
+            :class="{
+              'focus:ring-2 focus:ring-primary-400': !open,
+            }"
+            class="w-full outline-hidden rounded-md"
+            @click="ensureConsigneesLoaded"
+          >
+            <div class="relative flex justify-center px-0 p-0 py-16 bg-surface border border-line-default border-solid rounded-md min-h-[170px]">
+              <BaseIcon name="UserIcon" class="flex justify-center !w-10 !h-10 p-2 mr-5 text-sm text-white bg-surface-muted rounded-full font-base" />
+              <div class="mt-1">
+                <label class="text-lg font-medium text-heading">Consignee</label>
+              </div>
+            </div>
+          </PopoverButton>
+
+          <transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="translate-y-1 opacity-0"
+            enter-to-class="translate-y-0 opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="translate-y-0 opacity-100"
+            leave-to-class="translate-y-1 opacity-0"
+          >
+            <div v-if="open" class="absolute min-w-full z-10">
+              <PopoverPanel
+                v-slot="{ close }"
+                static
+                class="overflow-hidden rounded-md shadow-lg ring-1 ring-black/5 bg-surface"
+              >
+                <div class="relative">
+                  <BaseInput
+                    v-model="consigneeSearch"
+                    container-class="m-4"
+                    :placeholder="$t('general.search')"
+                    type="text"
+                    icon="search"
+                    @update:model-value="debounceSearchConsignees"
+                  />
+
+                  <ul class="max-h-80 flex flex-col overflow-auto list border-t border-line-light">
+                    <li
+                      v-for="customer in consigneeResults"
+                      :key="customer.id"
+                      class="flex px-6 py-2 border-b border-line-light border-solid cursor-pointer hover:cursor-pointer hover:bg-hover focus:outline-hidden focus:bg-hover"
+                      @click="selectConsignee(customer, close)"
+                    >
+                      <div class="flex items-center justify-center h-10 w-10 mr-4 rounded-full bg-surface-muted uppercase text-primary-500">
+                        {{ (customer.name || customer.display_name || 'C').charAt(0) }}
+                      </div>
+                      <div class="flex-1 flex flex-col text-left">
+                        <span class="text-sm font-medium text-heading">{{ customer.name || customer.display_name }}</span>
+                        <span class="text-xs text-muted">{{ customer.phone || customer.tax_id }}</span>
+                      </div>
+                    </li>
+                  </ul>
+
+                  <button
+                    type="button"
+                    class="flex items-center justify-center w-full px-6 py-3 bg-hover cursor-pointer"
+                    @click="openCustomerModal(close)"
+                  >
+                    <BaseIcon name="PlusIcon" class="h-5 text-primary-400" />
+                    <label class="m-0 ml-3 text-sm leading-none cursor-pointer font-base text-primary-400">
+                      {{ $t('customers.add_new_customer') }}
+                    </label>
+                  </button>
+                </div>
+              </PopoverPanel>
+            </div>
+          </transition>
+        </Popover>
+      </div>
+    </div>
 
     <RecurringFields
       v-if="isRecurring"
@@ -15,10 +150,11 @@
 
     <BaseInputGrid
       v-else
-      class="col-span-12 lg:col-span-6 rounded-xl shadow border border-line-light bg-surface p-5"
+      :class="showConsignee ? 'order-3 col-span-12 lg:col-span-4' : 'col-span-12 lg:col-span-6'"
+      class="rounded-xl shadow border border-line-light bg-surface p-5"
     >
       <BaseInputGroup
-        :label="$t('invoices.invoice_date')"
+        :label="isTransportReceipt ? dateLabel : $t('invoices.invoice_date')"
         :content-loading="isLoading"
         required
         :error="v.invoice_date.$error && v.invoice_date.$errors[0].$message"
@@ -46,19 +182,66 @@
       </BaseInputGroup>
 
       <BaseInputGroup
-        :label="$t('invoices.invoice_number')"
+        :label="isTransportReceipt ? numberLabel : $t('invoices.invoice_number')"
         :content-loading="isLoading"
         :error="v.invoice_number.$error && v.invoice_number.$errors[0].$message"
         required
       >
+        <div class="flex gap-2">
+          <BaseInput
+            v-model="invoiceStore.newInvoice.invoice_number"
+            :content-loading="isLoading"
+            @input="v.invoice_number.$touch()"
+            class="flex-1"
+          />
+          <BaseButton
+            v-if="!isEdit && !invoiceStore.newInvoice.invoice_number"
+            type="button"
+            variant="primary-outline"
+            size="sm"
+            :loading="isGeneratingNumber"
+            @click="generateInvoiceNumber"
+          >
+            <template #left="slotProps">
+              <BaseIcon name="SparklesIcon" :class="slotProps.class" />
+            </template>
+            {{ $t('general.auto_generate') }}
+          </BaseButton>
+        </div>
+      </BaseInputGroup>
+
+      <!-- Received No Of Bilties (lorry_receipt only — right after Challan No) -->
+      <BaseInputGroup
+        v-if="isLorryReceipt && receivedBiltiesField"
+        :label="receivedBiltiesField.custom_field?.label ?? receivedBiltiesField.label ?? 'Received No Of Bilties'"
+        :content-loading="isLoading"
+      >
         <BaseInput
-          v-model="invoiceStore.newInvoice.invoice_number"
+          v-model="receivedBiltiesField.value"
           :content-loading="isLoading"
-          @input="v.invoice_number.$touch()"
+          placeholder="e.g. 1937, 471"
+          @input="onBiltiesInput"
+        />
+      </BaseInputGroup>
+
+      <!-- GST Tax Through dropdown (office_invoice template only) -->
+      <BaseInputGroup
+        v-if="gstTaxThroughField"
+        :label="gstTaxThroughField.custom_field?.label ?? gstTaxThroughField.label ?? 'GST Tax Through'"
+        :required="gstTaxThroughField.custom_field?.is_required ? true : false"
+      >
+        <BaseMultiselect
+          v-model="gstTaxThroughField.value"
+          :options="gstTaxThroughOptions"
+          label="name"
+          value-prop="name"
+          :can-deselect="false"
+          :can-clear="false"
         />
       </BaseInputGroup>
 
       <ExchangeRateConverter
+        v-if="!isTransportReceipt"
         :store="invoiceStore"
         store-prop="newInvoice"
         :v="v"
@@ -71,9 +254,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue'
+import { useDebounceFn } from '@vueuse/core'
 import { ExchangeRateConverter } from '../../../shared/document-form'
 import { useInvoiceStore } from '../store'
+import { useModalStore } from '@/scripts/stores/modal.store'
+import { useCustomerStore } from '@/scripts/features/company/customers/store'
+import { useGlobalStore } from '@/scripts/stores/global.store'
+import { customerService } from '../../../../api/services/customer.service'
 import RecurringFields from './RecurringFields.vue'
 
 interface ValidationField {
@@ -82,11 +271,44 @@ interface ValidationField {
   $touch: () => void
 }
 
+interface CustomerAddress {
+  name?: string
+  address_street_1?: string
+  address_street_2?: string
+  city?: string
+  state?: string
+  zip?: string
+}
+
+interface Customer {
+  id: number
+  name?: string
+  display_name?: string
+  phone?: string
+  tax_id?: string
+  billing?: CustomerAddress
+  shipping?: CustomerAddress
+}
+
+interface CustomFieldItem {
+  id: number
+  label?: string
+  value?: string | boolean | number | null
+  string_answer?: string
+  custom_field?: {
+    label: string
+    options?: string[] | null
+    is_required?: boolean
+  }
+}
+
 interface Props {
   v: Record<string, ValidationField>
   isLoading?: boolean
   isEdit?: boolean
   isRecurring?: boolean
+  showConsignee?: boolean
+  isTransportReceipt?: boolean
   companySettings?: Record<string, string>
 }
 
@@ -94,10 +316,22 @@ const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
   isEdit: false,
   isRecurring: false,
+  showConsignee: false,
+  isTransportReceipt: false,
   companySettings: () => ({}),
 })
 
+
 const invoiceStore = useInvoiceStore()
+const modalStore = useModalStore()
+const customerStore = useCustomerStore()
+const globalStore = useGlobalStore()
+
+const consigneeSearch = ref('')
+const consigneeResults = ref<Customer[]>([])
+const selectedConsignee = ref<Customer | null>(null)
+const isInitialized = ref(false)
+const isGeneratingNumber = ref(false)
 
 const enableTime = computed<boolean>(() => {
   return props.companySettings?.invoice_use_time === 'YES'
@@ -107,4 +341,291 @@ const time24h = computed<boolean>(() => {
   const format = props.companySettings?.carbon_time_format ?? ''
   return format.indexOf('H') > -1
 })
+
+const isTransportReceipt = computed<boolean>(() => props.isTransportReceipt || props.showConsignee)
+
+// Lorry Receipt detection — used to show "Received No Of Bilties" in the basic box
+const isLorryReceipt = computed<boolean>(() =>
+  invoiceStore.newInvoice.template_name === 'lorry_receipt',
+)
+
+// Received No Of Bilties — custom field shown in the basic fields box for lorry_receipt
+const receivedBiltiesField = computed<CustomFieldItem | undefined>(() => {
+  return getInvoiceField('Received No Of Bilties')
+})
+
+// Only allow numbers and commas in the bilties field
+function onBiltiesInput(): void {
+  const field = receivedBiltiesField.value
+  if (!field) return
+  const raw = String(field.value ?? '')
+  field.value = raw.replace(/[^0-9,]/g, '')
+}
+
+const customerLabel = computed<string>(() => {
+  const templateName = invoiceStore.newInvoice.template_name
+  if (templateName === 'lorry_receipt') return 'Party'
+  if (templateName === 'lr_receipt') return 'Consignor'
+  return 'Customer'
+})
+
+const numberLabel = computed<string>(() => {
+  const templateName = invoiceStore.newInvoice.template_name
+  if (templateName === 'lorry_receipt') return 'Challan No.'
+  if (templateName === 'lr_receipt') return 'Docket No.'
+  return 'Invoice No'
+})
+
+const dateLabel = computed<string>(() => {
+  const templateName = invoiceStore.newInvoice.template_name
+  if (templateName === 'office_invoice') return 'Invoice Date'
+  return 'Date'
+})
+
+
+// GST Tax Through dropdown — only present on the office_invoice template
+const gstTaxThroughField = computed<CustomFieldItem | undefined>(() => {
+  return getInvoiceField('GST Tax Through')
+})
+
+const gstTaxThroughOptions = computed<Array<{ name: string }>>(() => {
+  const options = gstTaxThroughField.value?.custom_field?.options
+  if (!options || !Array.isArray(options)) return []
+  return options.map((opt) => ({ name: opt }))
+})
+
+function formatAddressLines(address: CustomerAddress | undefined): string[] {
+  if (!address) return []
+  const cityState = [address.city, address.state].filter(Boolean).join(', ')
+  const cityStateZip = [cityState, address.zip].filter(Boolean).join(' ')
+  return [address.name, address.address_street_1, address.address_street_2, cityStateZip].filter(Boolean) as string[]
+}
+
+function compact(value: string | null | undefined): string {
+  return value ? String(value).trim() : ''
+}
+
+function formatPartyDetails(customer: Customer | null): string {
+  if (!customer) return ''
+  const address = customer.billing || customer.shipping
+  const lines = [
+    compact(customer.name || customer.display_name),
+    ...formatAddressLines(address).filter(
+      (line) => line !== compact(customer.name || customer.display_name),
+    ),
+  ]
+  return lines.filter(Boolean).join('\n')
+}
+
+function getInvoiceField(label: string): CustomFieldItem | undefined {
+  return (invoiceStore.newInvoice.customFields as CustomFieldItem[] | undefined)?.find(
+    (field) => (field.custom_field?.label ?? field.label) === label,
+  )
+}
+
+
+function setInvoiceField(label: string, value: string | null | undefined): void {
+  const field = getInvoiceField(label)
+  if (field) {
+    field.value = value || ''
+    field.string_answer = value || ''
+  }
+}
+
+function syncConsigneeFields(customer: Customer | null): void {
+  setInvoiceField('Consignee', formatPartyDetails(customer))
+  setInvoiceField('Consignee Phone No', customer?.phone)
+  setInvoiceField('Consignee GST No', customer?.tax_id)
+}
+
+function syncConsignorFields(customer: Customer | null): void {
+  setInvoiceField('Consignor', formatPartyDetails(customer))
+  setInvoiceField('Consignor Phone No', customer?.phone)
+  setInvoiceField('Consignor GST No', customer?.tax_id)
+}
+
+const debounceSearchConsignees = useDebounceFn(() => {
+  fetchConsignees(consigneeSearch.value)
+}, 500)
+
+async function fetchConsignees(search = ''): Promise<void> {
+  try {
+    const response = await customerService.list({
+      display_name: search,
+      page: 1,
+    } as never)
+    consigneeResults.value = (response.data as Customer[]) || []
+  } catch {
+    consigneeResults.value = []
+  }
+}
+
+
+function ensureConsigneesLoaded(): void {
+  if (!consigneeResults.value.length) {
+    fetchConsignees()
+  }
+}
+
+async function selectConsignee(customer: Customer, close: () => void): Promise<void> {
+  try {
+    const response = await customerService.get(customer.id)
+    const fullCustomer = response.data as Customer
+    selectedConsignee.value = fullCustomer
+    invoiceStore.newInvoice.consignee_customer_id = fullCustomer.id
+    syncConsigneeFields(fullCustomer)
+  } catch {
+    // ignore
+  }
+  close()
+  consigneeSearch.value = ''
+}
+
+function resetConsignee(): void {
+  selectedConsignee.value = null
+  invoiceStore.newInvoice.consignee_customer_id = null
+  syncConsigneeFields(null)
+}
+
+function openCustomerModal(close?: () => void): void {
+  close?.()
+  globalStore.fetchCurrencies()
+  globalStore.fetchCountries()
+  customerStore.resetCurrentCustomer()
+  modalStore.openModal({
+    title: 'Add Customer',
+    componentName: 'CustomerModal',
+    size: 'lg',
+  })
+}
+
+async function editConsignee(): Promise<void> {
+  if (!selectedConsignee.value?.id) return
+
+  await customerStore.fetchCustomer(selectedConsignee.value.id)
+  customerStore.isEdit = true
+  modalStore.openModal({
+    title: 'Edit Customer',
+    componentName: 'CustomerModal',
+    size: 'lg',
+  })
+}
+
+// Sync consignor fields when customer changes (LR Receipt)
+watch(
+  () => invoiceStore.newInvoice.customer,
+  (customer) => {
+    if (props.isEdit && !isInitialized.value) return
+
+    if (isTransportReceipt.value && customer) {
+      syncConsignorFields(customer as Customer)
+    }
+  },
+  { deep: true },
+)
+
+// Initialize consignee from invoice data on edit
+watch(
+  () => invoiceStore.newInvoice.consignee_customer,
+  (val) => {
+    if (val) {
+      selectedConsignee.value = val as Customer
+    }
+  },
+  { immediate: true },
+)
+
+// Initialize consignee from custom fields on edit
+watch(
+  () => props.isLoading,
+  async (loading) => {
+    if (!loading && isTransportReceipt.value) {
+      if (props.isEdit) {
+        await initializeConsigneeFromCustomFields()
+      } else {
+        if (invoiceStore.newInvoice.consignee_customer) {
+          selectedConsignee.value = invoiceStore.newInvoice.consignee_customer as Customer
+          syncConsigneeFields(selectedConsignee.value)
+        }
+        isInitialized.value = true
+      }
+    } else if (!props.isEdit) {
+      isInitialized.value = true
+    }
+  },
+  { immediate: true },
+)
+
+async function initializeConsigneeFromCustomFields(): Promise<void> {
+  if (!isTransportReceipt.value) {
+    isInitialized.value = true
+    return
+  }
+
+  if (invoiceStore.newInvoice.consignee_customer) {
+    selectedConsignee.value = invoiceStore.newInvoice.consignee_customer as Customer
+    isInitialized.value = true
+    return
+  }
+
+  const consigneeField = getInvoiceField('Consignee')
+  if (!consigneeField || !consigneeField.string_answer) {
+    isInitialized.value = true
+    return
+  }
+
+  const lines = consigneeField.string_answer.split('\n')
+  const name = lines[0]?.trim()
+
+  if (!name) {
+    isInitialized.value = true
+    return
+  }
+
+  try {
+    const response = await customerService.list({
+      display_name: name,
+      page: 1,
+    } as never)
+    const customer = (response.data as Customer[])?.find(
+      (c) => (c.name || c.display_name) === name,
+    )
+
+
+    if (customer) {
+      const fullResponse = await customerService.get(customer.id)
+      selectedConsignee.value = fullResponse.data as Customer
+      invoiceStore.newInvoice.consignee_customer_id = selectedConsignee.value.id
+    }
+  } catch {
+    // ignore
+  } finally {
+    isInitialized.value = true
+  }
+}
+
+// Generate invoice number using the format from company settings
+async function generateInvoiceNumber(): Promise<void> {
+  isGeneratingNumber.value = true
+  try {
+    const response = await fetch('/api/v1/invoices/next-number', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      if (data.data?.next_number) {
+        invoiceStore.newInvoice.invoice_number = data.data.next_number
+      }
+    }
+  } catch (error) {
+    console.error('Failed to generate invoice number:', error)
+  } finally {
+    isGeneratingNumber.value = false
+  }
+}
 </script>

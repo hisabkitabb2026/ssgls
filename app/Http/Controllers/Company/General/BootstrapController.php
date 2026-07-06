@@ -134,6 +134,7 @@ class BootstrapController extends Controller
             'current_company_currency' => $current_company_currency,
             'config' => config('invoiceshelf'),
             'global_settings' => $global_settings,
+            'transport_config' => config('transport'),
             'ai' => [
                 'enabled' => $aiResolved !== null,
                 'chat_enabled' => (bool) ($aiResolved['chat_enabled'] ?? false),

@@ -76,6 +76,7 @@ export const useGlobalStore = defineStore('global', () => {
       }
 
       config.value = response.config
+
       globalSettings.value = response.global_settings
 
       // user store

@@ -136,7 +136,8 @@
       "the_list_is_empty": "The list is empty",
       "no_results_found": "No results found"
     },
-    "copy_to_clipboard": "Copy to Clipboard"
+    "copy_to_clipboard": "Copy to Clipboard",
+    "auto_generate": "Auto Generate"
   },
   "dashboard": {
     "select_year": "Select year",
@@ -145,11 +146,13 @@
       "customers": "Customer | Customers",
       "invoices": "Invoice | Invoices",
       "estimates": "Estimate | Estimates",
-      "payments": "Payment | Payments"
+      "payments": "Payment | Payments",
+      "lr_receipts": "LR Receipt | LR Receipts",
+      "lorry_receipts": "Lorry Receipt | Lorry Receipts"
     },
     "chart_info": {
       "total_sales": "Sales",
-      "total_receipts": "Receipts",
+      "total_receipts": "LR Profit",
       "total_expense": "Expenses",
       "net_income": "Net Income",
       "year": "Select year"
@@ -1045,6 +1048,29 @@
         "mailgun": "Mailgun",
         "postmark": "Postmark"
       }
+    },
+    "whatsapp": {
+      "title": "WhatsApp Integration",
+      "section_description": "Configure WhatsApp integration to send invoices, estimates, and payment receipts via WhatsApp using OpenWa service.",
+      "enabled": "Enable WhatsApp",
+      "enabled_description": "Enable this to send documents via WhatsApp.",
+      "server_url": "WhatsApp Server URL",
+      "server_url_description": "The base URL of your OpenWa server (e.g., http://localhost:2785)",
+      "api_key": "WhatsApp API Key",
+      "api_key_description": "The API key for authenticating with your OpenWa server.",
+      "session_id": "Session ID",
+      "session_id_description": "The session ID to use for sending messages.",
+      "test_connection": "Test Connection",
+      "connection_successful": "WhatsApp connection successful!",
+      "connection_failed": "WhatsApp connection failed. Please check your configuration.",
+      "not_configured": "WhatsApp is not configured. Please configure it in Settings > Preferences > WhatsApp.",
+      "send_via_whatsapp": "Send via WhatsApp",
+      "invoice_sent_successfully": "Invoice sent successfully via WhatsApp",
+      "estimate_sent_successfully": "Estimate sent successfully via WhatsApp",
+      "payment_sent_successfully": "Payment receipt sent successfully via WhatsApp",
+      "webhook_title": "Auto-Reply Webhook",
+      "webhook_description": "Configure your OpenWa server to forward incoming messages to this webhook URL. Customers can then request documents by simply typing their invoice, challan, or docket number.",
+      "webhook_instructions": "In your OpenWa dashboard, set this URL as the webhook endpoint for incoming messages. The system will automatically search for and send the requested document."
     },
     "pdf": {
       "title": "PDF Setting",

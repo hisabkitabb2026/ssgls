@@ -42,12 +42,14 @@ const props = withDefaults(
     gridLayout?: string
     isLoading?: boolean | null
     customFieldScope: string
+    templateName?: string | null
   }>(),
   {
     isEdit: false,
     type: null,
     gridLayout: 'two-column',
     isLoading: null,
+    templateName: null,
   }
 )
 
@@ -112,6 +114,7 @@ async function getInitialCustomFields(): Promise<void> {
   const res = await customFieldService.list({
     type: props.type ?? undefined,
     limit: 'all',
+    template_name: props.templateName ?? undefined,
   })
 
   const data = (res as Record<string, unknown>).data as CustomFieldItem[]
@@ -131,6 +134,13 @@ watch(
   () => storeData.value?.fields,
   () => {
     mergeExistingValues()
+  }
+)
+
+watch(
+  () => props.templateName,
+  () => {
+    getInitialCustomFields()
   }
 )
 </script>

@@ -38,6 +38,7 @@ class InvoiceResource extends JsonResource
             'unique_hash' => $this->unique_hash,
             'template_name' => $this->template_name,
             'customer_id' => $this->customer_id,
+            'consignee_customer_id' => $this->consignee_customer_id,
             'recurring_invoice_id' => $this->recurring_invoice_id,
             'sequence_number' => $this->sequence_number,
             'exchange_rate' => $this->exchange_rate,
@@ -62,6 +63,9 @@ class InvoiceResource extends JsonResource
             }),
             'customer' => $this->when($this->customer()->exists(), function () {
                 return new CustomerResource($this->customer);
+            }),
+            'consignee_customer' => $this->when($this->consigneeCustomer()->exists(), function () {
+                return new CustomerResource($this->consigneeCustomer);
             }),
             'creator' => $this->when($this->creator()->exists(), function () {
                 return new UserResource($this->creator);

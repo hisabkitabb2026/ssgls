@@ -1,22 +1,45 @@
 <template>
+  <!-- Hidden File Input for Auto Fill -->
+  <input
+    ref="fileInput"
+    type="file"
+    accept="image/*,application/pdf"
+    class="hidden"
+    @change="onAutoFillFileSelected"
+  />
+
+  <!-- Pause/Freezing Screen Loader Overlay -->
+  <div
+    v-if="isAutoFilling"
+    class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gray-900/60 backdrop-blur-xs"
+  >
+    <div class="p-8 bg-surface rounded-xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 border border-line-light">
+      <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-primary-500 mb-6"></div>
+      <h3 class="text-xl font-bold text-heading mb-2">LR Receipt is being Auto Filled</h3>
+      <p class="text-sm text-muted text-center leading-relaxed">
+        Please wait a moment while we process your document. To ensure all fields are populated correctly, please do not close or navigate away from this screen.
+      </p>
+    </div>
+  </div>
+
   <BasePage class="relative invoice-create-page">
     <form @submit.prevent="submitForm">
       <BasePageHeader :title="pageTitle">
         <BaseBreadcrumb>
           <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
-          <BaseBreadcrumbItem :title="$t('invoices.invoice', 2)" to="/admin/invoices" />
+          <BaseBreadcrumbItem :title="indexTitle" :to="indexPath" />
           <BaseBreadcrumbItem
             v-if="isEdit"
-            :title="$t('invoices.edit_invoice')"
+            :title="editTitle"
             to="#"
             active
           />
-          <BaseBreadcrumbItem v-else :title="$t('invoices.new_invoice')" to="#" active />
+          <BaseBreadcrumbItem v-else :title="createTitle" to="#" active />
         </BaseBreadcrumb>
 
         <template #actions>
-          <!-- Make Recurring Toggle -->
-          <div v-if="!isEdit" class="flex items-center mr-4">
+          <!-- Make Recurring Toggle (regular invoices only) -->
+          <div v-if="!isEdit && !isTransportReceipt" class="flex items-center mr-4">
             <BaseSwitch v-model="isRecurring" class="mr-2" />
             <span class="text-sm font-medium text-heading whitespace-nowrap">{{ $t('recurring_invoices.make_recurring') }}</span>
           </div>
@@ -34,6 +57,25 @@
           </router-link>
 
           <BaseButton
+            v-if="isLrReceipt"
+            class="mr-3"
+            variant="primary-outline"
+            type="button"
+            :loading="isAutoFilling"
+            :disabled="isAutoFilling"
+            @click="triggerAutoFill"
+          >
+            <template #left="slotProps">
+              <BaseIcon
+                v-if="!isAutoFilling"
+                name="SparklesIcon"
+                :class="slotProps.class"
+              />
+            </template>
+            Auto Fill LR
+          </BaseButton>
+
+          <BaseButton
             :loading="isSaving"
             :disabled="isSaving"
             variant="primary"
@@ -46,23 +88,130 @@
                 :class="slotProps.class"
               />
             </template>
-            {{ isRecurring ? $t('recurring_invoices.save_invoice') : $t('invoices.save_invoice') }}
+            {{ isTransportReceipt ? saveButtonLabel : (isRecurring ? $t('recurring_invoices.save_invoice') : $t('invoices.save_invoice')) }}
           </BaseButton>
         </template>
       </BasePageHeader>
 
-      <!-- Select Customer & Basic Fields -->
+
+      <!-- Booking Information box (LR Receipt only) -->
+      <BaseCard v-if="isLrReceipt" class="mb-6">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <BaseIcon name="ClipboardIcon" class="h-5 w-5 text-primary-500" />
+            <h3 class="text-base font-semibold text-heading">Booking Information</h3>
+          </div>
+        </template>
+        <InvoiceBasicFields
+          :v="v$"
+          :is-loading="isLoadingContent"
+          :is-edit="isEdit"
+          :is-recurring="isRecurring"
+          :show-consignee="isLrReceipt"
+          :is-transport-receipt="isTransportReceipt"
+        />
+      </BaseCard>
+
+      <!-- Invoice Information box (office_invoice only) -->
+      <BaseCard v-else-if="isOfficeInvoice" class="mb-6">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <BaseIcon name="DocumentTextIcon" class="h-5 w-5 text-primary-500" />
+            <h3 class="text-base font-semibold text-heading">Invoice Information</h3>
+          </div>
+        </template>
+        <InvoiceBasicFields
+          :v="v$"
+          :is-loading="isLoadingContent"
+          :is-edit="isEdit"
+          :is-recurring="isRecurring"
+          :show-consignee="false"
+          :is-transport-receipt="isTransportReceipt"
+        />
+      </BaseCard>
+
+      <!-- Regular invoices: basic fields without a card wrapper -->
       <InvoiceBasicFields
+        v-else
         :v="v$"
         :is-loading="isLoadingContent"
         :is-edit="isEdit"
         :is-recurring="isRecurring"
+        :show-consignee="isLrReceipt"
+        :is-transport-receipt="isTransportReceipt"
       />
 
+
+
+
+
+      <!-- Transport-specific: Custom fields & Lorry Receipt party fields -->
+      <div v-if="isTransportReceipt" class="mb-8">
+        <!-- Lorry Receipt: Owner/Driver/Broker party selector -->
+        <LorryReceiptPartyFields v-if="isLorryReceipt" />
+
+        <!-- Office Invoice: Consignment items table with Add New Item -->
+        <OfficeInvoiceItemsTable
+          v-if="isOfficeInvoice"
+          :is-edit="isEdit"
+          :is-loading="isLoadingContent"
+          :store="invoiceStore"
+          store-prop="newInvoice"
+          :item-validation-scope="invoiceValidationScope"
+        />
+
+        <!-- Transport custom fields — sectioned card layout (lr_receipt, lorry_receipt only) -->
+        <TransportCustomFields
+          v-if="!isOfficeInvoice"
+          type="Invoice"
+          :is-edit="isEdit"
+          :is-loading="isLoadingContent"
+          :store="invoiceStore"
+          store-prop="newInvoice"
+          :custom-field-scope="invoiceValidationScope"
+          :template-name="transportTemplateName"
+          :class="isLorryReceipt ? 'mt-6' : ''"
+        />
+
+        <!-- Lorry Receipt: Document uploads (Aadhar, PAN, RC copies) -->
+        <BaseCard v-if="isLorryReceipt" class="mt-6">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <BaseIcon name="PaperClipIcon" class="h-5 w-5 text-primary-500" />
+              <h3 class="text-base font-semibold text-heading">
+                Attached Document
+              </h3>
+            </div>
+          </template>
+
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <BaseInputGroup
+              v-for="document in lorryDocumentFields"
+              :key="document.key"
+              :label="document.label"
+              variant="vertical"
+            >
+              <BaseFileUploader
+                accept="image/*,application/pdf"
+                base64
+                :input-field-name="document.key"
+                :model-value="getLorryDocumentValue(document.key)"
+                :recommended-text="getLorryDocumentHint(document.key)"
+                @change="onLorryDocumentChange"
+                @remove="onLorryDocumentRemove(document.key)"
+              />
+            </BaseInputGroup>
+          </div>
+        </BaseCard>
+      </div>
+
       <BaseScrollPane>
-        <!-- Invoice Items -->
+        <!-- Invoice Items (hidden for transport receipt templates which use custom fields) -->
         <DocumentItemsTable
+          v-if="!isTransportEntryTemplate"
+
           :currency="invoiceStore.newInvoice.selectedCurrency"
+
           :is-loading="isLoadingContent"
           :item-validation-scope="invoiceValidationScope"
           :store="invoiceStore"
@@ -74,24 +223,39 @@
           class="block mt-10 invoice-foot lg:flex lg:justify-between lg:items-start"
         >
           <div class="relative w-full lg:w-1/2 lg:mr-4">
-            <!-- Invoice Custom Notes -->
+            <!-- Invoice Custom Notes (hidden for transport entry templates) -->
             <DocumentNotes
+              v-if="!isTransportEntryTemplate"
               :store="invoiceStore"
               store-prop="newInvoice"
               :fields="invoiceNoteFieldList"
               type="Invoice"
             />
 
-            <!-- Invoice Template Button -->
+            <!-- Invoice Custom Fields (for regular invoices only) -->
+            <InvoiceCustomFields
+              v-if="!isTransportReceipt"
+              type="Invoice"
+              :is-edit="isEdit"
+              :is-loading="isLoadingContent"
+              :store="invoiceStore"
+              store-prop="newInvoice"
+              :custom-field-scope="invoiceValidationScope"
+              class="mb-6"
+            />
+
+            <!-- Invoice Template Button (hidden for transport receipts) -->
             <TemplateSelectButton
+              v-if="!isTransportReceipt"
               :store="invoiceStore"
               store-prop="newInvoice"
               :is-mark-as-default="isMarkAsDefault"
             />
-            <SelectTemplateModal />
+            <SelectTemplateModal v-if="!isTransportReceipt" />
           </div>
 
           <DocumentTotals
+            v-if="!isTransportEntryTemplate"
             :currency="invoiceStore.newInvoice.selectedCurrency"
             :is-loading="isLoadingContent"
             :store="invoiceStore"
@@ -121,7 +285,13 @@ import useVuelidate from '@vuelidate/core'
 import { useInvoiceStore } from '../store'
 import { useRecurringInvoiceStore } from '@/scripts/features/company/recurring-invoices/store'
 import { useCompanyStore } from '@/scripts/stores/company.store'
+import { useNotificationStore } from '@/scripts/stores/notification.store'
+import { client as httpClient } from '@/scripts/api/client'
 import InvoiceBasicFields from '../components/InvoiceBasicFields.vue'
+import InvoiceCustomFields from '@/scripts/features/company/customers/components/CreateCustomFields.vue'
+import TransportCustomFields from '../components/TransportCustomFields.vue'
+import LorryReceiptPartyFields from '../components/LorryReceiptPartyFields.vue'
+import OfficeInvoiceItemsTable from '../components/OfficeInvoiceItemsTable.vue'
 import {
   DocumentItemsTable,
   DocumentTotals,
@@ -133,6 +303,7 @@ import {
 const invoiceStore = useInvoiceStore()
 const recurringInvoiceStore = useRecurringInvoiceStore()
 const companyStore = useCompanyStore()
+const notificationStore = useNotificationStore()
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -141,6 +312,189 @@ const invoiceValidationScope = 'newInvoice'
 const isSaving = ref<boolean>(false)
 const isMarkAsDefault = ref<boolean>(false)
 const isRecurring = ref<boolean>(false)
+
+// --- Auto Fill LR ---
+const isAutoFilling = ref<boolean>(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+function triggerAutoFill(): void {
+  fileInput.value?.click()
+}
+
+async function onAutoFillFileSelected(event: Event): Promise<void> {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  isAutoFilling.value = true
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const response = await httpClient.post('/api/v1/invoices/auto-fill', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+
+    const data = response.data as Record<string, unknown>
+
+    // 1. Populate Consignor and Consignee (customer)
+    if (data.consignor) {
+      invoiceStore.newInvoice.customer = data.consignor as typeof invoiceStore.newInvoice.customer
+      invoiceStore.newInvoice.customer_id = (data.consignor as Record<string, unknown>).id as string
+    }
+    if (data.consignee) {
+      invoiceStore.newInvoice.consignee_customer = data.consignee as typeof invoiceStore.newInvoice.consignee_customer
+      invoiceStore.newInvoice.consignee_customer_id = (data.consignee as Record<string, unknown>).id as string
+    }
+
+    // 2. Populate basic fields
+    if (data.date) {
+      invoiceStore.newInvoice.invoice_date = data.date as string
+    }
+    if (data.due_date) {
+      invoiceStore.newInvoice.due_date = data.due_date as string
+    }
+    if (data.docket_no) {
+      invoiceStore.newInvoice.invoice_number = data.docket_no as string
+    }
+
+    // 3. Populate custom fields (From, To, Truck No, Mode of Payment, GST Tax Payable By, etc.)
+    if (data.fields) {
+      Object.entries(data.fields as Record<string, string>).forEach(([label, value]) => {
+        setInvoiceCustomField(label, value)
+      })
+    }
+
+    // 4. Populate item custom fields on the first item row
+    if (data.item_fields && invoiceStore.newInvoice.items?.[0]) {
+      Object.entries(data.item_fields as Record<string, string>).forEach(([label, value]) => {
+        setItemCustomField(0, label, value)
+      })
+    }
+  } catch (error) {
+    console.error('Failed to auto-fill LR receipt:', error)
+    notificationStore.showNotification({
+      type: 'error',
+      message: (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to auto-fill LR receipt. Please try again.',
+    })
+  } finally {
+    isAutoFilling.value = false
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+}
+
+function setInvoiceCustomField(label: string, value: string | null): void {
+  const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const field = invoiceStore.newInvoice.customFields?.find(
+    (f) => (f.custom_field?.label ?? '').toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedLabel,
+  )
+  if (field) {
+    if (field.custom_field?.type === 'Number') {
+      field.number_answer = value ? parseFloat(value) || 0 : 0
+    } else {
+      field.string_answer = value || ''
+    }
+  }
+}
+
+function setItemCustomField(itemIndex: number, label: string, value: string | null): void {
+  const item = invoiceStore.newInvoice.items?.[itemIndex]
+  if (!item) return
+
+  const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const field = item.customFields?.find(
+    (f) => (f.custom_field?.label ?? '').toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedLabel,
+  )
+  if (field) {
+    if (field.custom_field?.type === 'Number') {
+      field.number_answer = value ? parseFloat(value) || 0 : 0
+    } else {
+      field.string_answer = value || ''
+    }
+  }
+}
+
+
+// --- Lorry Receipt: Document uploads ---
+interface LorryDocumentField {
+  key: string
+  label: string
+}
+
+const lorryDocumentFields: LorryDocumentField[] = [
+  { key: 'aadhar_front_copy', label: 'Aadhar Front Copy' },
+  { key: 'aadhar_back_copy', label: 'Aadhar Back Copy' },
+  { key: 'pan_card_front_copy', label: 'Pan Card Copy Front' },
+  { key: 'pan_card_back_copy', label: 'Pan Card Copy Back' },
+  { key: 'rc_copy_front', label: 'RC Copy Front' },
+  { key: 'rc_copy_back', label: 'RC Copy Back' },
+]
+
+interface LorryDocument {
+  name?: string
+  data?: string
+  file_name?: string
+  url?: string
+  image?: string
+  mime_type?: string
+}
+
+function onLorryDocumentChange(
+  fieldName: string,
+  data: FileList | File | string,
+  _fileCount: number,
+  file?: File,
+): void {
+  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
+    | Record<string, LorryDocument>
+    | undefined
+  ;(invoiceStore.newInvoice as Record<string, unknown>).lorry_documents = {
+    ...(docs || {}),
+    [fieldName]: {
+      name: file?.name,
+      data: data as string,
+    },
+  }
+}
+
+function onLorryDocumentRemove(fieldName: string): void {
+  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
+    | Record<string, LorryDocument>
+    | undefined
+  if (!docs) return
+  delete docs[fieldName]
+}
+
+function getLorryDocumentHint(fieldName: string): string {
+  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
+    | Record<string, LorryDocument>
+    | undefined
+  const document = docs?.[fieldName]
+  if (document?.file_name) {
+    return `Uploaded: ${document.file_name}`
+  }
+  return 'PNG, JPEG, or PDF'
+}
+
+function getLorryDocumentValue(fieldName: string): Array<{ name: string; image: string | null }> {
+  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
+    | Record<string, LorryDocument>
+    | undefined
+  const doc = docs?.[fieldName]
+  if (!doc) return []
+  const name = doc.file_name || doc.name || ''
+  const isPdf = name.toLowerCase().endsWith('.pdf') || doc.mime_type === 'application/pdf'
+  const isImage = !isPdf
+  return [
+    {
+      name,
+      image: isImage ? (doc.url || doc.image || null) : null,
+    },
+  ]
+}
 
 // Auto-due-date bookkeeping: tracks whether the user has manually edited the
 // due date, so the invoice_date watcher can avoid clobbering a manual value.
@@ -154,14 +508,80 @@ const isLoadingContent = computed<boolean>(
   () => invoiceStore.isFetchingInvoice || invoiceStore.isFetchingInitialSettings,
 )
 
-const pageTitle = computed<string>(() => {
-  if (isRecurringEdit.value) return t('recurring_invoices.edit_invoice')
-  if (isEdit.value) return t('invoices.edit_invoice')
+// --- Transport receipt detection (mirrors ssgls InvoiceCreate.vue) ---
+const isLrReceipt = computed<boolean>(() => route.path.includes('/admin/lr-receipts'))
+const isLorryReceipt = computed<boolean>(() => route.path.includes('/admin/lorry-receipts'))
+// All invoice types use transport receipt layout (office_invoice is the
+// default for regular invoices; lr_receipt and lorry_receipt have their
+// own routes). No company setting toggle needed.
+const isTransportReceipt = computed<boolean>(() => true)
+const transportTemplateName = computed<string>(() => {
+  if (isLorryReceipt.value) return 'lorry_receipt'
+  if (isLrReceipt.value) return 'lr_receipt'
+  return 'office_invoice'
+})
+
+const isOfficeInvoice = computed<boolean>(() =>
+  transportTemplateName.value === 'office_invoice',
+)
+
+
+
+// Templates that use custom fields instead of the standard items table
+const isTransportEntryTemplate = computed<boolean>(() => {
+  return ['office_invoice', 'lr_receipt', 'lorry_receipt'].includes(
+    invoiceStore.newInvoice.template_name ?? '',
+  )
+})
+
+// Templates that have NO items at all (lr_receipt, lorry_receipt use only
+// Invoice-level custom fields). office_invoice DOES use Item-level fields.
+const isItemlessTransportTemplate = computed<boolean>(() => {
+  return ['lr_receipt', 'lorry_receipt'].includes(
+    invoiceStore.newInvoice.template_name ?? '',
+  )
+})
+
+const indexTitle = computed<string>(() => {
+  if (isLorryReceipt.value) return 'Lorry Receipts'
+  if (isLrReceipt.value) return 'LR Receipts'
+  return t('invoices.invoice', 2)
+})
+
+const indexPath = computed<string>(() => {
+  if (isLorryReceipt.value) return '/admin/lorry-receipts'
+  if (isLrReceipt.value) return '/admin/lr-receipts'
+  return '/admin/invoices'
+})
+
+const createTitle = computed<string>(() => {
+  if (isLorryReceipt.value) return 'New Lorry Receipt'
+  if (isLrReceipt.value) return 'New LR Receipt'
   return t('invoices.new_invoice')
 })
 
+const editTitle = computed<string>(() => {
+  if (isLorryReceipt.value) return 'Edit Lorry Receipt'
+  if (isLrReceipt.value) return 'Edit LR Receipt'
+  return t('invoices.edit_invoice')
+})
+
+const saveButtonLabel = computed<string>(() => {
+  if (isLorryReceipt.value) return 'Save Lorry Receipt'
+  if (isLrReceipt.value) return 'Save LR'
+  return t('invoices.save_invoice')
+})
+
+
+const pageTitle = computed<string>(() =>
+  isEdit.value ? editTitle.value : createTitle.value,
+)
+
 const isEdit = computed<boolean>(() =>
-  route.name === 'invoices.edit' || route.name === 'recurring-invoices.edit',
+  route.name === 'invoices.edit' ||
+  route.name === 'recurring-invoices.edit' ||
+  route.name === 'lr-receipts.edit' ||
+  route.name === 'lorry-receipts.edit',
 )
 
 const isRecurringEdit = computed<boolean>(() =>
@@ -176,7 +596,8 @@ const rules = computed(() => {
       },
     }
   }
-  return {
+
+  const baseRules: Record<string, unknown> = {
     invoice_date: {
       required: helpers.withMessage(t('validation.required'), required),
     },
@@ -184,15 +605,19 @@ const rules = computed(() => {
       maxLength: helpers.withMessage(t('validation.price_maxlength'), maxLength(255)),
     },
     customer_id: {
-      required: helpers.withMessage(t('validation.required'), required),
+      required: helpers.withMessage(t('validation.required'),
+        requiredIf(() => !isLrReceipt.value && !isLorryReceipt.value && !isOfficeInvoice.value)),
     },
     invoice_number: {
       required: helpers.withMessage(t('validation.required'), required),
     },
     exchange_rate: {
-      required: requiredIf(() => invoiceStore.showExchangeRate),
+      required: requiredIf(() => invoiceStore.showExchangeRate && !isTransportReceipt.value),
+      decimal: helpers.withMessage(t('validation.valid_exchange_rate'), decimal),
     },
   }
+
+  return baseRules
 })
 
 const v$ = useVuelidate(
@@ -204,6 +629,11 @@ const v$ = useVuelidate(
 // Initialization
 invoiceStore.resetCurrentInvoice()
 v$.value.$reset
+
+// Set the transport template name before fetching initial settings
+if (isTransportReceipt.value) {
+  invoiceStore.newInvoice.template_name = transportTemplateName.value
+}
 
 // Check for recurring mode
 if (route.query.recurring === '1' || isRecurringEdit.value) {
@@ -239,7 +669,7 @@ if (isRecurringEdit.value) {
     invoiceStore.newInvoice.customFields = ri.customFields as typeof invoiceStore.newInvoice.customFields
   })
 } else if (!isRecurring.value) {
-  // Normal invoice create/edit
+  // Normal invoice / LR / Lorry Receipt create/edit
   invoiceStore.fetchInvoiceInitialSettings(
     isEdit.value,
     { id: route.params.id as string, query: route.query as Record<string, string> },
@@ -252,6 +682,16 @@ if (isRecurringEdit.value) {
     { query: route.query as Record<string, string> },
   )
 }
+
+// Ensure transport template is preserved after initial settings load
+watch(
+  () => invoiceStore.isFetchingInitialSettings,
+  (loading) => {
+    if (!loading && isTransportReceipt.value && !isEdit.value) {
+      invoiceStore.newInvoice.template_name = transportTemplateName.value
+    }
+  },
+)
 
 // Initialize recurring store when toggled on manually
 watch(isRecurring, (newVal) => {
@@ -401,22 +841,31 @@ async function submitForm(): Promise<void> {
         tax: Math.round(invoiceStore.getTotalTax),
       }
 
-      const items = data.items as Array<Record<string, unknown>>
-      if (data.discount_per_item === 'YES') {
-        items.forEach((item, index) => {
-          if (item.discount_type === 'fixed') {
-            items[index].discount = (item.discount as number) * 100
+      // lr_receipt and lorry_receipt use only Invoice-level custom fields —
+      // strip the default empty item stubs so the backend doesn't try to
+      // insert rows with null names. office_invoice DOES use Item-level
+      // custom fields, so items are kept.
+      if (isItemlessTransportTemplate.value) {
+        delete data.items
+        delete data.taxes
+      } else if (!isOfficeInvoice.value) {
+        const items = data.items as Array<Record<string, unknown>>
+        if (data.discount_per_item === 'YES') {
+          items.forEach((item, index) => {
+            if (item.discount_type === 'fixed') {
+              items[index].discount = (item.discount as number) * 100
+            }
+          })
+        } else {
+          if (data.discount_type === 'fixed') {
+            data.discount = (data.discount as number) * 100
           }
-        })
-      } else {
-        if (data.discount_type === 'fixed') {
-          data.discount = (data.discount as number) * 100
         }
-      }
 
-      const taxes = data.taxes as Array<Record<string, unknown>>
-      if (data.tax_per_item !== 'YES' && taxes.length) {
-        data.tax_type_ids = taxes.map((tax) => tax.tax_type_id)
+        const taxes = data.taxes as Array<Record<string, unknown>>
+        if (data.tax_per_item !== 'YES' && taxes.length) {
+          data.tax_type_ids = taxes.map((tax) => tax.tax_type_id)
+        }
       }
 
       const action = isEdit.value
@@ -424,7 +873,14 @@ async function submitForm(): Promise<void> {
         : invoiceStore.addInvoice
 
       const response = await action(data)
-      router.push(`/admin/invoices/${response.data.data.id}/view`)
+
+      // Redirect based on the route
+      const redirectPath = isLorryReceipt.value
+        ? `/admin/lorry-receipts/${response.data.data.id}/view`
+        : isLrReceipt.value
+          ? `/admin/lr-receipts/${response.data.data.id}/view`
+          : `/admin/invoices/${response.data.data.id}/view`
+      router.push(redirectPath)
     }
   } catch (err) {
     console.error(err)

@@ -24,6 +24,14 @@ class InvoicesRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Transport receipt templates (lr_receipt, lorry_receipt, office_invoice)
+        // use custom fields instead of line items, and LR receipts don't require
+        // a customer — mirroring ssgls behavior.
+        $isTransportTemplate = in_array(
+            $this->template_name,
+            ['lr_receipt', 'lorry_receipt', 'office_invoice'],
+        );
+
         $rules = [
             'invoice_date' => [
                 'required',
@@ -32,7 +40,9 @@ class InvoicesRequest extends FormRequest
                 'nullable',
             ],
             'customer_id' => [
-                'required',
+                $isTransportTemplate && in_array($this->template_name, ['lr_receipt', 'lorry_receipt'])
+                    ? 'nullable'
+                    : 'required',
             ],
             'invoice_number' => [
                 'required',
@@ -41,52 +51,34 @@ class InvoicesRequest extends FormRequest
             'exchange_rate' => [
                 'nullable',
             ],
-            'discount' => [
-                'numeric',
-                'required',
-            ],
-            'discount_val' => [
-                'integer',
-                'required',
-            ],
-            'sub_total' => [
-                'numeric',
-                'required',
-            ],
-            'total' => [
-                'numeric',
-                'max:999999999999',
-                'required',
-            ],
-            'tax' => [
-                'required',
-            ],
+            'discount' => $isTransportTemplate
+                ? ['nullable']
+                : ['numeric', 'required'],
+            'discount_val' => $isTransportTemplate
+                ? ['nullable']
+                : ['integer', 'required'],
+            'sub_total' => $isTransportTemplate
+                ? ['nullable']
+                : ['numeric', 'required'],
+            'total' => $isTransportTemplate
+                ? ['nullable']
+                : ['numeric', 'max:999999999999', 'required'],
+            'tax' => $isTransportTemplate
+                ? ['nullable']
+                : ['required'],
             'template_name' => [
                 'required',
             ],
-            'items' => [
-                'required',
-                'array',
-            ],
-            'items.*' => [
-                'required',
-                'max:255',
-            ],
-            'items.*.description' => [
-                'nullable',
-            ],
-            'items.*.name' => [
-                'required',
-            ],
-            'items.*.quantity' => [
-                'numeric',
-                'required',
-            ],
-            'items.*.price' => [
-                'numeric',
-                'required',
-            ],
         ];
+
+        if (! $isTransportTemplate) {
+            $rules['items'] = ['required', 'array'];
+            $rules['items.*'] = ['required', 'max:255'];
+            $rules['items.*.description'] = ['nullable'];
+            $rules['items.*.name'] = ['required'];
+            $rules['items.*.quantity'] = ['numeric', 'required'];
+            $rules['items.*.price'] = ['numeric', 'required'];
+        }
 
         $companyCurrency = CompanySetting::getSetting('currency', $this->header('company'));
 
@@ -117,18 +109,23 @@ class InvoicesRequest extends FormRequest
         $company_currency = CompanySetting::getSetting('currency', $this->header('company'));
         $current_currency = $this->currency_id;
         $exchange_rate = $company_currency != $current_currency ? $this->exchange_rate : 1;
-        $currency = Customer::find($this->customer_id)->currency_id;
+
+        // Transport receipt templates may not have a customer, so resolve the
+        // currency safely — falling back to the company currency.
+        $customer = Customer::find($this->customer_id);
+        $currency = $customer ? $customer->currency_id : $company_currency;
 
         $tax_per_item = CompanySetting::getSetting('tax_per_item', $this->header('company')) ?? 'NO ';
         $discount_per_item = CompanySetting::getSetting('discount_per_item', $this->header('company')) ?? 'NO';
 
         // Recompute the document totals server-side from the line items so a
         // tampered total/sub_total/tax/due_amount in the request is ignored
-        // (GHSA-8c69).
+        // (GHSA-8c69). Transport receipt templates send no items, so the
+        // computed totals will all be zero — which is correct.
         $totals = DocumentTotals::compute(
             $this->items ?? [],
             $this->taxes ?? [],
-            $this->discount_val,
+            $this->discount_val ?? 0,
             $tax_per_item,
             (bool) $this->tax_included,
             $discount_per_item
@@ -150,7 +147,7 @@ class InvoicesRequest extends FormRequest
                 'viewed' => (bool) $this->viewed ?? false,
                 'exchange_rate' => $exchange_rate,
                 'base_total' => $totals['total'] * $exchange_rate,
-                'base_discount_val' => $this->discount_val * $exchange_rate,
+                'base_discount_val' => ($this->discount_val ?? 0) * $exchange_rate,
                 'base_sub_total' => $totals['sub_total'] * $exchange_rate,
                 'base_tax' => $totals['tax'] * $exchange_rate,
                 'base_due_amount' => $totals['total'] * $exchange_rate,

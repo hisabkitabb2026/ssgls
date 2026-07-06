@@ -4,9 +4,9 @@
          per row — stacked HeadlessUI dialogs would otherwise close each other). -->
     <ItemModal />
 
-    <!-- Tax Included Toggle -->
+    <!-- Tax Included Toggle (hidden for transport templates) -->
     <div
-      v-if="taxIncludedSetting === 'YES'"
+      v-if="taxIncludedSetting === 'YES' && !isTransportEntryTemplate"
       class="flex items-center justify-end w-full px-6 text-base border-b border-line-light cursor-pointer text-primary-400 bg-surface"
     >
       <BaseSwitchSection
@@ -29,7 +29,10 @@
         <col style="width: 15%; min-width: 120px" />
       </colgroup>
 
-      <thead class="bg-surface-secondary border-b border-line-light">
+      <thead
+        v-if="!isTransportEntryTemplate"
+        class="bg-surface-secondary border-b border-line-light"
+      >
         <tr>
           <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-left text-body">
             <BaseContentPlaceholders v-if="isLoading">
@@ -100,6 +103,7 @@
     </table>
 
     <div
+      v-if="!isTransportEntryTemplate"
       class="flex items-center justify-center w-full px-6 py-3 text-base border-t border-line-light cursor-pointer text-primary-400 hover:bg-primary-100"
       @click="store.addItem()"
     >
@@ -108,6 +112,7 @@
     </div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -138,7 +143,14 @@ const formData = computed<DocumentFormData>(() => {
   return props.store[props.storeProp] as DocumentFormData
 })
 
+const isTransportEntryTemplate = computed<boolean>(() =>
+  ['office_invoice', 'lr_receipt', 'lorry_receipt'].includes(
+    formData.value.template_name ?? '',
+  ),
+)
+
 const defaultCurrency = computed(() => {
+
   if (props.currency) {
     return props.currency
   }

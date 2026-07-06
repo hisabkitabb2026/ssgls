@@ -11,6 +11,8 @@ export interface DashboardStats {
   totalCustomerCount: number
   totalInvoiceCount: number
   totalEstimateCount: number
+  totalLrReceiptCount: number
+  totalLorryReceiptCount: number
 }
 
 export interface DashboardChartData {
@@ -63,6 +65,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     totalCustomerCount: 0,
     totalInvoiceCount: 0,
     totalEstimateCount: 0,
+    totalLrReceiptCount: 0,
+    totalLorryReceiptCount: 0,
   })
 
   const chartData = ref<DashboardChartData>({
@@ -93,6 +97,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       stats.value.totalCustomerCount = response.total_customer_count
       stats.value.totalInvoiceCount = response.total_invoice_count
       stats.value.totalEstimateCount = response.total_estimate_count
+      stats.value.totalLrReceiptCount = response.total_lr_receipt_count
+      stats.value.totalLorryReceiptCount = response.total_lorry_receipt_count
 
       // Chart Data
       if (response.chart_data) {

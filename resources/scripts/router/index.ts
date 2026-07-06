@@ -22,6 +22,8 @@ import itemRoutes from '../features/company/items/routes'
 import memberRoutes from '../features/company/members/routes'
 import reportRoutes from '../features/company/reports/routes'
 import settingsRoutes from '../features/company/settings/routes'
+import lorryReceiptRoutes from '../features/company/lorry-receipts/routes'
+import lrReceiptRoutes from '../features/company/lr-receipts/routes'
 
 // Guard
 import { authGuard } from './guards'
@@ -56,6 +58,8 @@ const companyChildren: RouteRecordRaw[] = [
   ...memberRoutes,
   ...reportRoutes,
   ...settingsRoutes,
+  ...lorryReceiptRoutes,
+  ...lrReceiptRoutes,
 ]
 
 /**

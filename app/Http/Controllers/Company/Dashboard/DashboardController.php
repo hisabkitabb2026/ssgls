@@ -10,6 +10,7 @@ use App\Models\Estimate;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\Report\ProfitLossCalculationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,9 @@ use Silber\Bouncer\BouncerFacade;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly ProfitLossCalculationService $profitLossService,
+    ) {}
     /**
      * Handle the incoming request.
      *
@@ -28,14 +32,8 @@ class DashboardController extends Controller
 
         $this->authorize('view dashboard', $company);
 
-        $invoice_totals = [];
-        $expense_totals = [];
-        $receipt_totals = [];
-        $net_income_totals = [];
-
-        $i = 0;
-        $months = [];
-        $monthCounter = 0;
+        // Use Profit & Loss calculation based on LR Receipts (transport module)
+        // This matches the Profit Loss Report calculation
         $fiscalYear = CompanySetting::getSetting('fiscal_year', $request->header('company'));
         $startDate = Carbon::now();
         $start = Carbon::now();
@@ -59,28 +57,49 @@ class DashboardController extends Controller
             $end->subYear()->endOfMonth();
         }
 
+        // Calculate monthly data for the chart
+        $invoice_totals = []; // Sales (Invoice totals)
+        $receipt_totals = []; // LR Amount (amount_credit - amount_debit from LR Receipts)
+        $expense_totals = []; // Expenses (from Expenses module)
+        $net_income_totals = []; // Net Income (LR Amount - Expenses)
+        $months = [];
+        $i = 0;
+        $monthCounter = 0;
+
         while ($monthCounter < 12) {
+            // Sales: Sum of invoice totals for the month
             $invoice_totals[] = Invoice::whereBetween(
                 'invoice_date',
                 [$start->format('Y-m-d'), $end->format('Y-m-d')]
             )
                 ->whereCompany()
                 ->sum('base_total');
-            $expense_totals[] = Expense::whereBetween(
+
+            // Calculate LR Amount from LR Receipts (amount_credit - amount_debit)
+            $lrReceipts = Invoice::where('template_name', 'lr_receipt')
+                ->where('company_id', $request->header('company'))
+                ->whereBetween('invoice_date', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+                ->get();
+
+            // LR Amount = Sum of (amount_credit - amount_debit) from LR Receipts
+            $lrAmount = $lrReceipts->sum('amount_credit') - $lrReceipts->sum('amount_debit');
+            $receipt_totals[] = $lrAmount;
+
+            // Expenses: Sum from Expenses module
+            $expenses = Expense::whereBetween(
                 'expense_date',
                 [$start->format('Y-m-d'), $end->format('Y-m-d')]
             )
                 ->whereCompany()
                 ->sum('base_amount');
-            $receipt_totals[] = Payment::whereBetween(
-                'payment_date',
-                [$start->format('Y-m-d'), $end->format('Y-m-d')]
-            )
-                ->whereCompany()
-                ->sum('base_amount');
-            $net_income_totals[] = ($receipt_totals[$i] - $expense_totals[$i]);
-            $i++;
+            $expense_totals[] = $expenses;
+
+            // Net Income = LR Amount - Expenses
+            $net_income_totals[] = $lrAmount - $expenses;
+            
             $months[] = $start->translatedFormat('M');
+            
+            $i++;
             $monthCounter++;
             $end->startOfMonth();
             $start->addMonth()->startOfMonth();
@@ -89,6 +108,8 @@ class DashboardController extends Controller
 
         $start->subMonth()->endOfMonth();
 
+        // Calculate yearly totals
+        // Sales: Sum of all invoice totals
         $total_sales = Invoice::whereBetween(
             'invoice_date',
             [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
@@ -96,13 +117,15 @@ class DashboardController extends Controller
             ->whereCompany()
             ->sum('base_total');
 
-        $total_receipts = Payment::whereBetween(
-            'payment_date',
-            [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
-        )
-            ->whereCompany()
-            ->sum('base_amount');
+        // LR Amount: Sum of (amount_credit - amount_debit) from LR Receipts
+        $totalLrReceipts = Invoice::where('template_name', 'lr_receipt')
+            ->where('company_id', $request->header('company'))
+            ->whereBetween('invoice_date', [$startDate->format('Y-m-d'), $start->format('Y-m-d')])
+            ->get();
 
+        $total_receipts = $totalLrReceipts->sum('amount_credit') - $totalLrReceipts->sum('amount_debit');
+
+        // Expenses: Sum from Expenses module
         $total_expenses = Expense::whereBetween(
             'expense_date',
             [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
@@ -110,20 +133,30 @@ class DashboardController extends Controller
             ->whereCompany()
             ->sum('base_amount');
 
-        $total_net_income = (int) $total_receipts - (int) $total_expenses;
+        // Net Income = LR Amount - Expenses
+        $total_net_income = $total_receipts - $total_expenses;
 
         $chart_data = [
             'months' => $months,
-            'invoice_totals' => $invoice_totals,
-            'expense_totals' => $expense_totals,
-            'receipt_totals' => $receipt_totals,
-            'net_income_totals' => $net_income_totals,
+            'invoice_totals' => $invoice_totals, // Sales
+            'expense_totals' => $expense_totals, // Expenses
+            'receipt_totals' => $receipt_totals, // LR Amount
+            'net_income_totals' => $net_income_totals, // Net Income
         ];
 
         $total_customer_count = Customer::whereCompany()->count();
         $total_invoice_count = Invoice::whereCompany()
             ->count();
         $total_estimate_count = Estimate::whereCompany()->count();
+        
+        // Count LR Receipts and Lorry Receipts (transport module)
+        $total_lr_receipt_count = Invoice::whereCompany()
+            ->where('template_name', 'lr_receipt')
+            ->count();
+        $total_lorry_receipt_count = Invoice::whereCompany()
+            ->where('template_name', 'lorry_receipt')
+            ->count();
+        
         $total_amount_due = Invoice::whereCompany()
             ->sum('base_due_amount');
 
@@ -140,6 +173,8 @@ class DashboardController extends Controller
             'total_customer_count' => $total_customer_count,
             'total_invoice_count' => $total_invoice_count,
             'total_estimate_count' => $total_estimate_count,
+            'total_lr_receipt_count' => $total_lr_receipt_count,
+            'total_lorry_receipt_count' => $total_lorry_receipt_count,
 
             'recent_due_invoices' => BouncerFacade::can('view-invoice', Invoice::class) ? $recent_due_invoices : [],
             'recent_estimates' => BouncerFacade::can('view-estimate', Estimate::class) ? $recent_estimates : [],

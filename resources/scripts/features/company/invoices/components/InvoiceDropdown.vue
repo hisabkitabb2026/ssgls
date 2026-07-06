@@ -93,13 +93,13 @@
       {{ $t('invoices.clone_invoice') }}
     </BaseDropdownItem>
 
-    <!-- Convert to Estimate -->
-    <BaseDropdownItem v-if="canCreateEstimate" @click="convertToEstimate">
+    <!-- Download Invoice PDF -->
+    <BaseDropdownItem @click="downloadInvoicePdf">
       <BaseIcon
-        name="DocumentIcon"
+        name="ArrowDownTrayIcon"
         class="w-5 h-5 mr-3 text-subtle group-hover:text-muted"
       />
-      {{ $t('invoices.convert_to_estimate') }}
+      Download Invoice
     </BaseDropdownItem>
 
     <!-- Delete Invoice -->
@@ -218,21 +218,9 @@ function cloneInvoiceData(): void {
   })
 }
 
-function convertToEstimate(): void {
-  dialogStore.openDialog({
-    title: t('general.are_you_sure'),
-    message: t('invoices.confirm_convert_to_estimate'),
-    yesLabel: t('general.ok'),
-    noLabel: t('general.cancel'),
-    variant: 'primary',
-    hideNoButton: false,
-    size: 'lg',
-  }).then(async (res: boolean) => {
-    if (res) {
-      const response = await invoiceStore.convertToEstimate({ id: props.row.id })
-      router.push(`/admin/estimates/${response.data.data.id}/edit`)
-    }
-  })
+function downloadInvoicePdf(): void {
+  const pdfUrl = `${window.location.origin}/invoices/pdf/${props.row.unique_hash}`
+  window.open(pdfUrl, '_blank')
 }
 
 function onMarkAsSent(): void {

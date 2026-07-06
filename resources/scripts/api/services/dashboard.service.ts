@@ -18,6 +18,8 @@ export interface DashboardResponse {
   total_customer_count: number
   total_invoice_count: number
   total_estimate_count: number
+  total_lr_receipt_count: number
+  total_lorry_receipt_count: number
   chart_data: ChartData
   total_sales: string
   total_receipts: string

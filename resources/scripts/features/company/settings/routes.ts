@@ -61,22 +61,31 @@ const settingsRoutes: RouteRecordRaw[] = [
         redirect: { name: 'settings.modules' },
       },
       {
-        path: 'company-info',
-        name: 'settings.company-info',
+        path: 'mail-configuration',
+        name: 'settings.mail-config',
         meta: {
           requiresAuth: true,
           isOwner: true,
         },
-        component: () => import('./views/CompanyInfoView.vue'),
+        component: () => import('./views/MailConfigView.vue'),
       },
       {
-        path: 'preferences',
-        name: 'settings.preferences',
+        path: 'whatsapp-configuration',
+        name: 'settings.whatsapp-config',
         meta: {
           requiresAuth: true,
           isOwner: true,
         },
-        component: () => import('./views/PreferencesView.vue'),
+        component: () => import('./components/WhatsAppConfiguration.vue'),
+      },
+      {
+        path: 'ai-config',
+        name: 'settings.ai-config',
+        meta: {
+          requiresAuth: true,
+          isOwner: true,
+        },
+        component: () => import('./views/AiConfigView.vue'),
       },
       {
         path: 'customization',

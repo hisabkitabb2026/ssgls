@@ -64,6 +64,8 @@ export interface InvoiceFormData {
   invoice_number: string
   customer: Customer | null
   customer_id: number | null
+  consignee_customer_id: number | null
+  consignee_customer: Customer | null
   template_name: string | null
   invoice_date: string
   due_date: string
@@ -97,6 +99,8 @@ function createInvoiceStub(): InvoiceFormData {
     invoice_number: '',
     customer: null,
     customer_id: null,
+    consignee_customer_id: null,
+    consignee_customer: null,
     template_name: null,
     invoice_date: '',
     due_date: '',

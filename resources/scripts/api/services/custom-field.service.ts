@@ -6,6 +6,7 @@ import type { ApiResponse, ListParams } from '@/scripts/types/api'
 export interface CustomFieldListParams extends ListParams {
   model_type?: string
   type?: string
+  template_name?: string
 }
 
 export interface CreateCustomFieldPayload {

@@ -11,7 +11,10 @@ import { useCustomerStore } from '@/scripts/features/company/customers/store'
 import { useInvoiceStore } from '@/scripts/features/company/invoices/store'
 import { useEstimateStore } from '@/scripts/features/company/estimates/store'
 import { useRecurringInvoiceStore } from '@/scripts/features/company/recurring-invoices/store'
+import { useLorryPartyProfileStore } from '@/scripts/features/company/lorry-party-profiles/store'
+import type { LorryPartyProfile } from '@/scripts/types/domain/lorry-party-profile'
 import CustomerModal from '@/scripts/features/company/customers/components/CustomerModal.vue'
+
 
 type DocumentType = 'estimate' | 'invoice' | 'recurring-invoice'
 
@@ -29,6 +32,9 @@ interface Props {
   customerId?: number | null
   type?: DocumentType | null
   contentLoading?: boolean
+  label?: string
+  customerType?: string | null
+  showLorryProfiles?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -36,7 +42,11 @@ const props = withDefaults(defineProps<Props>(), {
   customerId: null,
   type: null,
   contentLoading: false,
+  label: '',
+  customerType: null,
+  showLorryProfiles: false,
 })
+
 
 const userStore = useUserStore()
 const modalStore = useModalStore()
@@ -47,9 +57,42 @@ const customerStore = useCustomerStore()
 const invoiceStore = useInvoiceStore()
 const estimateStore = useEstimateStore()
 const recurringInvoiceStore = useRecurringInvoiceStore()
+const lorryPartyProfileStore = useLorryPartyProfileStore()
 
 const search = ref<string | null>(null)
 const isSearchingCustomer = ref<boolean>(false)
+const lorryProfiles = ref<LorryPartyProfile[]>([])
+
+interface SearchResult {
+  id: number
+  name: string
+  contact_name?: string
+  phone?: string
+  isLorryProfile?: boolean
+  profileType?: string
+  profile?: LorryPartyProfile
+}
+
+const combinedResults = computed<SearchResult[]>(() => {
+  const customers: SearchResult[] = customerStore.customers.map((c: { id: number; name: string; contact_name?: string; phone?: string }) => ({
+    id: c.id,
+    name: c.name,
+    contact_name: c.contact_name,
+    phone: c.phone,
+  }))
+
+  const profiles: SearchResult[] = lorryProfiles.value.map((p: LorryPartyProfile) => ({
+    id: p.id ?? 0,
+    name: p.name ?? '',
+    phone: p.phone ?? '',
+    isLorryProfile: true,
+    profileType: p.type ?? '',
+    profile: p,
+  }))
+
+  return [...customers, ...profiles]
+})
+
 
 const selectedCustomer = computed(() => {
   switch (props.type) {
@@ -69,8 +112,26 @@ async function fetchInitialCustomers(): Promise<void> {
   await customerStore.fetchCustomers({
     orderByField: '',
     orderBy: '',
+    ...(props.customerType ? { type: props.customerType } : {}),
   })
+
+  if (props.showLorryProfiles) {
+    await fetchLorryProfiles()
+  }
 }
+
+async function fetchLorryProfiles(): Promise<void> {
+  try {
+    const response = await lorryPartyProfileStore.fetchProfiles({
+      search: search.value ?? '',
+      limit: 'all',
+    })
+    lorryProfiles.value = response.data || []
+  } catch {
+    lorryProfiles.value = []
+  }
+}
+
 
 // Select customer on setup if customerId is provided
 if (props.customerId) {
@@ -94,9 +155,47 @@ async function searchCustomer(): Promise<void> {
   await customerStore.fetchCustomers({
     display_name: search.value ?? '',
     page: 1,
+    ...(props.customerType ? { type: props.customerType } : {}),
   })
+
+  if (props.showLorryProfiles) {
+    await fetchLorryProfiles()
+  }
+
   isSearchingCustomer.value = false
 }
+
+function selectLorryProfile(profile: LorryPartyProfile, close: () => void): void {
+  // Create a pseudo-customer object from the lorry party profile
+  // so the invoice form can display it in the selected customer card
+  const pseudoCustomer = {
+    id: 0,
+    name: profile.name ?? '',
+    phone: profile.phone ?? '',
+    billing: {
+      name: profile.name ?? '',
+      address_street_1: profile.address ?? '',
+      city: '',
+      state: '',
+      zip: '',
+    },
+    shipping: {
+      name: profile.name ?? '',
+      address_street_1: profile.address ?? '',
+      city: '',
+      state: '',
+      zip: '',
+    },
+  }
+
+  if (props.type === 'invoice') {
+    invoiceStore.newInvoice.customer = pseudoCustomer as never
+  }
+
+  close()
+  search.value = null
+}
+
 
 function selectNewCustomer(id: number, close: () => void): void {
   const params: Record<string, unknown> = { userId: id }
@@ -135,7 +234,8 @@ async function editCustomer(): Promise<void> {
   })
 }
 
-function openCustomerModal(): void {
+function openCustomerModal(close?: () => void): void {
+  close?.()
   customerStore.resetCurrentCustomer()
   modalStore.openModal({
     title: t('customers.add_customer'),
@@ -368,7 +468,7 @@ function initGenerator(name: string): string {
 
           <div class="mt-1">
             <label class="text-lg font-medium text-heading">
-              {{ $t('customers.new_customer') }}
+              {{ label || $t('customers.new_customer') }}
               <span class="text-red-500"> * </span>
             </label>
 
@@ -394,7 +494,6 @@ function initGenerator(name: string): string {
         <div v-if="open" class="absolute min-w-full z-10">
           <PopoverPanel
             v-slot="{ close }"
-            focus
             static
             class="
               overflow-hidden
@@ -424,7 +523,7 @@ function initGenerator(name: string): string {
                 "
               >
                 <li
-                  v-for="(customer, index) in customerStore.customers"
+                  v-for="(item, index) in (showLorryProfiles ? combinedResults : customerStore.customers.map((c: { id: number; name: string; contact_name?: string }) => ({ ...c, isLorryProfile: false })))"
                   :key="index"
                   href="#"
                   class="
@@ -437,7 +536,7 @@ function initGenerator(name: string): string {
                     focus:outline-hidden focus:bg-surface-tertiary
                     last:border-b-0
                   "
-                  @click="selectNewCustomer(customer.id, close)"
+                  @click="item.isLorryProfile ? selectLorryProfile(item.profile!, close) : selectNewCustomer(item.id, close)"
                 >
                   <span
                     class="
@@ -457,24 +556,32 @@ function initGenerator(name: string): string {
                       avatar
                     "
                   >
-                    {{ initGenerator(customer.name) }}
+                    {{ initGenerator(item.name) }}
                   </span>
 
                   <div class="flex flex-col justify-center text-left">
+                    <div class="flex items-center gap-2">
+                      <BaseText
+                        v-if="item.name"
+                        :text="item.name"
+                        class="
+                          m-0
+                          text-base
+                          font-normal
+                          leading-tight
+                          cursor-pointer
+                        "
+                      />
+                      <span
+                        v-if="item.isLorryProfile"
+                        class="text-xs px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-medium"
+                      >
+                        {{ item.profileType }}
+                      </span>
+                    </div>
                     <BaseText
-                      v-if="customer.name"
-                      :text="customer.name"
-                      class="
-                        m-0
-                        text-base
-                        font-normal
-                        leading-tight
-                        cursor-pointer
-                      "
-                    />
-                    <BaseText
-                      v-if="customer.contact_name"
-                      :text="customer.contact_name"
+                      v-if="item.contact_name"
+                      :text="item.contact_name"
                       class="
                         m-0
                         text-sm
@@ -483,10 +590,20 @@ function initGenerator(name: string): string {
                         cursor-pointer
                       "
                     />
+                    <BaseText
+                      v-if="item.phone"
+                      :text="item.phone"
+                      class="
+                        m-0
+                        text-xs
+                        text-muted
+                        cursor-pointer
+                      "
+                    />
                   </div>
                 </li>
                 <div
-                  v-if="customerStore.customers.length === 0"
+                  v-if="(showLorryProfiles ? combinedResults : customerStore.customers).length === 0"
                   class="flex justify-center p-5 text-subtle"
                 >
                   <label class="text-base text-muted cursor-pointer">
@@ -512,7 +629,7 @@ function initGenerator(name: string): string {
                 outline-hidden
                 focus:bg-surface-muted
               "
-              @click="openCustomerModal"
+              @click="openCustomerModal(close)"
             >
               <BaseIcon name="UserPlusIcon" class="text-primary-400" />
 

@@ -13,8 +13,9 @@
           <col style="width: 15%; min-width: 120px" />
         </colgroup>
         <tbody>
-          <tr>
+          <tr v-if="!isTransportEntryTemplate">
             <!-- Item Name + Description -->
+
             <td class="px-5 py-4 text-left align-top">
               <div class="flex justify-start">
                 <div
@@ -183,23 +184,98 @@
               />
             </td>
           </tr>
+
+          <!-- Item custom fields (for transport receipt templates) -->
+          <tr v-if="itemCustomFields.length > 0">
+            <td
+              v-if="!isTransportEntryTemplate"
+              class="px-5 pb-4 text-left align-top"
+            />
+            <td
+              :colspan="isTransportEntryTemplate ? 5 : 4"
+              class="px-5 pb-4 text-left align-top"
+            >
+              <div
+                v-if="isTransportEntryTemplate"
+                class="grid gap-3"
+                style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));"
+              >
+                <SingleField
+                  v-for="(field, fieldIndex) in itemCustomFields"
+                  :key="field.id"
+                  :custom-field-scope="`${itemValidationScope}.items.${index}.customFields`"
+                  :store="store"
+                  :store-prop="storeProp"
+                  :index="fieldIndex"
+                  :field="field"
+                />
+                <BaseInputGroup
+                  v-if="isLrReceiptTemplate"
+                  :label="'Net Amount'"
+                >
+                  <BaseFormatMoney
+                    :amount="transportAmount"
+                    :currency="selectedCurrency"
+                  />
+                </BaseInputGroup>
+              </div>
+              <BaseInputGrid v-else layout="three-column">
+                <SingleField
+                  v-for="(field, fieldIndex) in itemCustomFields"
+                  :key="field.id"
+                  :custom-field-scope="`${itemValidationScope}.items.${index}.customFields`"
+                  :store="store"
+                  :store-prop="storeProp"
+                  :index="fieldIndex"
+                  :field="field"
+                />
+              </BaseInputGrid>
+            </td>
+          </tr>
         </tbody>
+
       </table>
     </td>
   </tr>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { required, between, maxLength, helpers, minValue } from '@vuelidate/validators'
 import useVuelidate from '@vuelidate/core'
+import lodash from 'lodash'
 import { useCompanyStore } from '../../../stores/company.store'
+import { customFieldService } from '@/scripts/api/services/custom-field.service'
 import DocumentItemRowTax from './DocumentItemRowTax.vue'
 import DragIcon from '@/scripts/components/icons/DragIcon.vue'
+import SingleField from '@/scripts/features/company/customers/components/CreateCustomFieldsSingle.vue'
 import { generateClientId } from '../../../utils'
 import type { Currency } from '../../../types/domain/currency'
 import type { DocumentItem, DocumentFormData, DocumentTax } from './use-document-calculations'
+
+
+interface CustomFieldItem {
+  id: number
+  value: string | boolean | number | null
+  default_answer: string | boolean | number | null
+  label: string
+  options: string[] | null
+  is_required: boolean
+  placeholder: string | null
+  order: number | null
+  type: string
+  custom_field_id?: number
+  custom_field?: {
+    label: string
+    options: string[] | null
+    is_required: boolean
+    placeholder: string | null
+    order: number | null
+    type: string
+  }
+}
+
 
 interface Props {
   store: Record<string, unknown> & {
@@ -237,6 +313,36 @@ const companyStore = useCompanyStore()
 const formData = computed<DocumentFormData>(() => {
   return props.store[props.storeProp] as DocumentFormData
 })
+
+// --- Transport receipt detection ---
+const templateName = computed<string>(() => formData.value.template_name ?? '')
+const isTransportEntryTemplate = computed<boolean>(() =>
+  ['office_invoice', 'lr_receipt', 'lorry_receipt'].includes(templateName.value),
+)
+const isLrReceiptTemplate = computed<boolean>(() => templateName.value === 'lr_receipt')
+
+const itemCustomFields = computed<CustomFieldItem[]>(
+  () => (props.itemData.customFields as CustomFieldItem[] | undefined) ?? [],
+)
+
+// LR Receipt: sum of Number-type item custom fields for the "Net Amount"
+const lrReceiptAmount = computed<number>(() => {
+  const numberFields = ['Basic Freight', 'Local Collection', 'Door Delivery', 'Hamali', 'Docket Charge', 'Other Charge', 'FOV']
+  return Math.round(
+    numberFields.reduce((sum, label) => {
+      const field = itemCustomFields.value.find(
+        (f) => f.label?.toLowerCase() === label.toLowerCase(),
+      )
+      const val = field?.value
+      if (val === null || val === undefined || val === '') return 0
+      const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''))
+      return sum + (Number.isNaN(num) ? 0 : num)
+    }, 0) * 100,
+  )
+})
+
+const transportAmount = computed<number>(() => lrReceiptAmount.value)
+
 
 const currencySymbol = computed<string>(() => {
   const curr = props.currency as Record<string, unknown>
@@ -455,4 +561,96 @@ function updateItemAttribute(attribute: string, value: unknown): void {
 
   syncItemToStore()
 }
+
+// --- Item custom fields (for transport receipt templates) ---
+async function loadItemCustomFields(): Promise<void> {
+  if (props.itemData.customFields && (props.itemData.customFields as CustomFieldItem[]).length) {
+    return
+  }
+
+  const res = await customFieldService.list({
+    type: 'Item',
+    limit: 'all',
+    template_name: templateName.value || undefined,
+  })
+
+  const data = (res as Record<string, unknown>).data as CustomFieldItem[]
+  let fields = data.map((d) => ({ ...d, value: d.default_answer }))
+
+  // Merge existing saved values when editing
+  const existingFields = (props.itemData.fields as CustomFieldItem[] | undefined) ?? []
+  if (existingFields.length) {
+    fields = fields.map((field) => {
+      const existing = existingFields.find(
+        (f) => f.custom_field_id === field.id,
+      )
+      if (!existing) return field
+      return {
+        ...field,
+        ...existing,
+        id: existing.custom_field_id ?? field.id,
+        value: existing.default_answer,
+        label: existing.custom_field?.label ?? field.label,
+        options: existing.custom_field?.options ?? field.options,
+        is_required: existing.custom_field?.is_required ?? field.is_required,
+        placeholder: existing.custom_field?.placeholder ?? field.placeholder,
+        order: existing.custom_field?.order ?? field.order,
+        type: existing.custom_field?.type ?? field.type,
+      }
+    })
+  }
+
+  updateItemAttribute(
+    'customFields',
+    lodash.sortBy(fields, (f: CustomFieldItem) => f.order),
+  )
+
+  syncTransportAmountToStore()
+}
+
+function syncTransportAmountToStore(): void {
+  if (!isTransportEntryTemplate.value) return
+
+  const amount = transportAmount.value
+  props.store.$patch((state: Record<string, unknown>) => {
+    const form = state[props.storeProp] as DocumentFormData
+    const item = form.items[props.index] as Record<string, unknown>
+    item.quantity = 1
+    item.price = amount
+    item.discount = 0
+    item.discount_val = 0
+    item.tax = 0
+    item.total = amount
+  })
+
+  syncItemToStore()
+}
+
+onMounted(() => {
+  loadItemCustomFields()
+})
+
+watch(
+  () => props.itemData.fields,
+  () => {
+    loadItemCustomFields()
+  },
+)
+
+watch(
+  () => templateName.value,
+  () => {
+    updateItemAttribute('customFields', [])
+    loadItemCustomFields()
+  },
+)
+
+watch(
+  () => itemCustomFields.value.map((f) => f.value),
+  () => {
+    syncTransportAmountToStore()
+  },
+  { deep: true },
+)
 </script>
+

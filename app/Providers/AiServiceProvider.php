@@ -15,6 +15,8 @@ use App\Services\Ai\Tools\RankTopItemsTool;
 use App\Services\Ai\Tools\SearchCustomersTool;
 use App\Services\Ai\Tools\SearchInvoicesTool;
 use App\Services\Ai\Tools\SearchItemsTool;
+use App\Services\Ai\Tools\SearchLorryReceiptsTool;
+use App\Services\Ai\Tools\SearchLrReceiptsTool;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
@@ -43,6 +45,10 @@ class AiServiceProvider extends ServiceProvider
             $registry->register(new SearchItemsTool);
             $registry->register(new ListExpenseCategoriesTool);
             $registry->register(new GetCompanyStatsTool);
+
+            // Transport module tools
+            $registry->register(new SearchLrReceiptsTool);
+            $registry->register(new SearchLorryReceiptsTool);
 
             // Ranking tools — group-by aggregates the individual-record
             // tools above can't express.

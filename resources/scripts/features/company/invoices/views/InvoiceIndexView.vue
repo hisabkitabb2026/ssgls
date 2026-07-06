@@ -748,6 +748,7 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
     from_date: filters.from_date || undefined,
     to_date: filters.to_date || undefined,
     invoice_number: filters.invoice_number || undefined,
+    template_name: 'office_invoice',
     orderByField: sort.fieldName || 'created_at',
     orderBy: (sort.order || 'desc') as 'asc' | 'desc',
     page,

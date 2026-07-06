@@ -69,6 +69,10 @@ class Invoice extends Model implements HasMedia
             'discount' => 'float',
             'discount_val' => 'integer',
             'exchange_rate' => 'float',
+            'amount_credit' => 'integer',
+            'amount_debit' => 'integer',  // Now in cents (BIGINT) like all other money fields
+            'amount_credit_date' => 'date',
+            'amount_debit_date' => 'date',
         ];
     }
 
@@ -110,6 +114,11 @@ class Invoice extends Model implements HasMedia
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    public function consigneeCustomer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'consignee_customer_id');
     }
 
     public function recurringInvoice(): BelongsTo
@@ -285,7 +294,10 @@ class Invoice extends Model implements HasMedia
             $query->invoicesBetween($start, $end);
         })->when($filters['customer_id'] ?? null, function ($query, $customerId) {
             $query->where('customer_id', $customerId);
+        })->when($filters['template_name'] ?? null, function ($query, $templateName) {
+            $query->where('invoices.template_name', $templateName);
         })->when($filters['orderByField'] ?? null, function ($query, $orderByField) use ($filters) {
+
             $orderBy = $filters['orderBy'] ?? 'desc';
 
             SafeOrderBy::apply($query, $orderByField, $orderBy);

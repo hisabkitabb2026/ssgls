@@ -8,6 +8,7 @@
 import { Chart } from 'chart.js/auto'
 import type { ChartConfiguration, ChartDataset } from 'chart.js/auto'
 import { ref, computed, onMounted, watchEffect, inject } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCompanyStore } from '@/scripts/stores/company.store'
 
 interface FormatUtils {
@@ -27,6 +28,7 @@ interface Props {
   income?: number[]
 }
 
+const { t } = useI18n()
 const utils = inject<FormatUtils>('utils')
 
 const props = withDefaults(defineProps<Props>(), {
@@ -90,7 +92,7 @@ onMounted(() => {
       data: props.invoices.map((invoice) => invoice / 100),
     },
     {
-      label: 'Receipts',
+      label: t('dashboard.chart_info.total_receipts'),
       fill: false,
       tension: 0.3,
       backgroundColor: 'rgba(230, 254, 249)',

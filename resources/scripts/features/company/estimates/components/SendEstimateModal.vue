@@ -145,11 +145,13 @@
         >
           {{ $t('general.cancel') }}
         </BaseButton>
+
         <BaseButton
           :loading="isLoading"
           :disabled="isLoading"
           variant="primary"
           type="button"
+          class="mr-3"
           @click="submitForm"
         >
           <BaseIcon
@@ -158,6 +160,21 @@
             class="h-5 mr-2"
           />
           {{ $t('general.send') }}
+        </BaseButton>
+
+        <BaseButton
+          :loading="isWhatsAppLoading"
+          :disabled="isWhatsAppLoading"
+          variant="primary-outline"
+          type="button"
+          @click="sendViaWhatsApp"
+        >
+          <BaseIcon
+            v-if="!isWhatsAppLoading"
+            name="ChatBubbleLeftRightIcon"
+            class="h-5 mr-2"
+          />
+          {{ $t('settings.whatsapp.send_via_whatsapp') }}
         </BaseButton>
       </div>
     </div>
@@ -173,6 +190,7 @@ import { useModalStore } from '../../../../stores/modal.store'
 import { useCompanyStore } from '../../../../stores/company.store'
 import { useNotificationStore } from '../../../../stores/notification.store'
 import { useEstimateStore } from '../store'
+import { whatsappService } from '../../../../api/services/whatsapp.service'
 
 const modalStore = useModalStore()
 const companyStore = useCompanyStore()
@@ -181,6 +199,7 @@ const estimateStore = useEstimateStore()
 
 const { t } = useI18n()
 const isLoading = ref(false)
+const isWhatsAppLoading = ref(false)
 const templateUrl = ref<string>('')
 const isPreview = ref(false)
 
@@ -318,5 +337,42 @@ function closeSendEstimateModal() {
     isPreview.value = false
     templateUrl.value = ''
   }, 300)
+}
+
+async function sendViaWhatsApp() {
+  try {
+    isWhatsAppLoading.value = true
+
+    const result = await whatsappService.sendEstimate({
+      id: modalStore.id as number,
+    })
+
+    if (result.success) {
+      notificationStore.showNotification({
+        type: 'success',
+        message: 'settings.whatsapp.estimate_sent_successfully',
+      })
+
+      if (modalStore.refreshData) {
+        modalStore.refreshData()
+      }
+
+      emit('update')
+      closeSendEstimateModal()
+    } else {
+      notificationStore.showNotification({
+        type: 'error',
+        message: result.error || 'Failed to send via WhatsApp',
+      })
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    notificationStore.showNotification({
+      type: 'error',
+      message: errorMessage || 'estimates.something_went_wrong',
+    })
+  } finally {
+    isWhatsAppLoading.value = false
+  }
 }
 </script>

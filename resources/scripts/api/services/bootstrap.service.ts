@@ -34,6 +34,13 @@ export interface BootstrapResponse {
     chat_enabled: boolean
     text_generation_enabled: boolean
   }
+  transport_config?: {
+    enabled: boolean
+    invoice_fields: Record<string, boolean>
+    company_fields: Record<string, boolean>
+    customer_fields: Record<string, boolean>
+    pdf_templates: Record<string, boolean>
+  }
   user_menu?: Array<{ title: string; link: string; icon: string; priority: number; name: string }>
   admin_mode?: boolean
   pending_invitations?: Array<{

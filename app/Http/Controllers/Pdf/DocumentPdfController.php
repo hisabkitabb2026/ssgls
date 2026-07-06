@@ -23,8 +23,21 @@ class DocumentPdfController extends Controller
             return $this->invoiceService->getPdfData($invoice);
         }
 
+        // When a specific copy is requested (e.g. ?copy=multi for LR Receipt
+        // multi-copy PDF), bypass the cached single-copy PDF and generate a
+        // fresh one so the Blade template can render all requested copies.
+        if ($request->has('copy')) {
+            $pdf = $this->invoiceService->getPdfData($invoice);
+
+            return response()->make($pdf->stream(), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.$invoice->invoice_number.'.pdf"',
+            ]);
+        }
+
         return $invoice->getGeneratedPDFOrStream('invoice');
     }
+
 
     public function estimate(Request $request, Estimate $estimate)
     {

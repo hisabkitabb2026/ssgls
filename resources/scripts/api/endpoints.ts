@@ -46,6 +46,9 @@ export const API = {
   INVOICES_DELETE: '/api/v1/invoices/delete',
   INVOICE_TEMPLATES: '/api/v1/invoices/templates',
 
+  // Lorry Party Profiles (Owner / Driver / Broker)
+  LORRY_PARTY_PROFILES: '/api/v1/lorry-party-profiles',
+
   // Recurring Invoices
   RECURRING_INVOICES: '/api/v1/recurring-invoices',
   RECURRING_INVOICES_DELETE: '/api/v1/recurring-invoices/delete',
@@ -190,4 +193,10 @@ export const API = {
   SUPER_ADMIN_COMPANIES: '/api/v1/super-admin/companies',
   SUPER_ADMIN_USERS: '/api/v1/super-admin/users',
   SUPER_ADMIN_STOP_IMPERSONATING: '/api/v1/super-admin/stop-impersonating',
+
+  // WhatsApp
+  WHATSAPP_INVOICE_SEND: '/api/v1/whatsapp/invoice/send',
+  WHATSAPP_ESTIMATE_SEND: '/api/v1/whatsapp/estimate/send',
+  WHATSAPP_PAYMENT_SEND: '/api/v1/whatsapp/payment/send',
+  WHATSAPP_REPORT_SEND: '/api/v1/whatsapp/report/send',
 } as const

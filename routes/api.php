@@ -41,8 +41,12 @@ use App\Http\Controllers\Company\General\SearchController;
 use App\Http\Controllers\Company\General\SerialNumberController;
 use App\Http\Controllers\Company\Invoice\InvoicesController;
 use App\Http\Controllers\Company\Invoice\InvoiceTemplatesController;
+use App\Http\Controllers\Company\Invoice\LorryPartyProfileController;
+use App\Http\Controllers\Company\Invoice\LrReceiptAutoFillController;
+use App\Http\Controllers\Company\Invoice\LrReceiptController;
 use App\Http\Controllers\Company\Item\ItemsController;
 use App\Http\Controllers\Company\Item\UnitsController;
+use App\Http\Controllers\Company\LorryReceipt\LorryReceiptController;
 use App\Http\Controllers\Company\Members\MembersController;
 use App\Http\Controllers\Company\Modules\CompanyModulesController;
 use App\Http\Controllers\Company\Modules\ModuleSettingsController;
@@ -80,6 +84,8 @@ use App\Http\Controllers\Setup\LoginController;
 use App\Http\Controllers\Setup\OnboardingWizardController;
 use App\Http\Controllers\Setup\RequirementsController;
 use App\Http\Controllers\Webhook\CronJobController;
+use App\Http\Controllers\Company\WhatsApp\WhatsAppController;
+use App\Http\Controllers\Company\WhatsApp\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -287,7 +293,24 @@ Route::prefix('/v1')->group(function () {
 
             Route::get('/invoices/templates', InvoiceTemplatesController::class);
 
+            Route::get('/invoices/next-number', [InvoicesController::class, 'getNextNumber']);
+
             Route::apiResource('invoices', InvoicesController::class);
+
+            // Transport module - LR Receipt Auto Fill (AI-powered)
+            Route::post('/invoices/auto-fill', LrReceiptAutoFillController::class);
+
+            // Transport module - Lorry Receipts
+
+            Route::post('/lorry-receipts/delete', [LorryReceiptController::class, 'destroy']);
+            Route::apiResource('lorry-receipts', LorryReceiptController::class);
+
+            // Transport module - LR Receipts (invoices with template_name = lr_receipt)
+            Route::get('/lr-receipts', [LrReceiptController::class, 'index']);
+            Route::get('/lr-receipts/{id}', [LrReceiptController::class, 'show']);
+
+            // Transport module - Lorry Party Profiles (Owner/Driver/Broker)
+            Route::apiResource('lorry-party-profiles', LorryPartyProfileController::class);
 
             // Recurring Invoice
             // -------------------------------------------------
@@ -529,6 +552,17 @@ Route::prefix('/v1')->group(function () {
         // Company-context Active Modules index (read-only, lists every
         // instance-activated module with a has_settings flag)
         Route::get('/company-modules', [CompanyModulesController::class, 'index']);
+
+        // WhatsApp Routes
+        Route::prefix('whatsapp')->group(function () {
+            Route::post('invoice/send', [WhatsAppController::class, 'sendInvoice']);
+            Route::post('estimate/send', [WhatsAppController::class, 'sendEstimate']);
+            Route::post('payment/send', [WhatsAppController::class, 'sendPayment']);
+            Route::post('report/send', [WhatsAppController::class, 'sendReport']);
+            
+            // Webhook for inbound messages (auto-reply with PDF)
+            Route::post('webhook', [WhatsAppWebhookController::class, 'handleWebhook']);
+        });
     });
 
     Route::prefix('/{company:slug}/customer')->group(function () {

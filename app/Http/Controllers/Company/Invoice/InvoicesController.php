@@ -9,9 +9,11 @@ use App\Http\Requests\SendInvoiceRequest;
 use App\Http\Resources\EstimateResource;
 use App\Http\Resources\InvoiceResource;
 use App\Jobs\GenerateInvoicePdfJob;
+use App\Models\CompanySetting;
 use App\Models\Estimate;
 use App\Models\Invoice;
 use App\Services\Document\InvoiceService;
+use App\Services\Document\SerialNumberService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Mail\Markdown;
@@ -35,14 +37,21 @@ class InvoicesController extends Controller
 
         $invoices = Invoice::whereCompany()
             ->applyFilters($request->all())
-            ->with('customer')
+            ->with(['customer', 'consigneeCustomer'])
             ->latest()
             ->paginateData($limit);
 
+        $totalCountQuery = Invoice::whereCompany();
+
+        if ($request->filled('template_name')) {
+            $totalCountQuery->where('template_name', $request->input('template_name'));
+        }
+
         return InvoiceResource::collection($invoices)
             ->additional(['meta' => [
-                'invoice_total_count' => Invoice::whereCompany()->count(),
+                'invoice_total_count' => $totalCountQuery->count(),
             ]]);
+
     }
 
     /**
@@ -169,6 +178,31 @@ class InvoicesController extends Controller
 
         return response()->json([
             'success' => true,
+        ]);
+    }
+
+    /**
+     * Get the next invoice number based on company settings format.
+     *
+     * @return JsonResponse
+     */
+    public function getNextNumber(Request $request)
+    {
+        $this->authorize('create', Invoice::class);
+
+        $serial = (new SerialNumberService)
+            ->setModel(Invoice::class)
+            ->setCompany($request->header('company'))
+            ->setCustomer($request->get('customer_id'))
+            ->setNextNumbers();
+
+        $nextNumber = $serial->getNextNumber();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'next_number' => $nextNumber,
+            ],
         ]);
     }
 }
