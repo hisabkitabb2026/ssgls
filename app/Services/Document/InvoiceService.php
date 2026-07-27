@@ -36,31 +36,31 @@ class InvoiceService
     private function addDocumentPrefixes(array &$data, Request $request): void
     {
         $templateName = $data['template_name'] ?? $request->input('template_name', '');
-        
+
         // For LR Receipt (template: lr_receipt) - add CH prefix to challan_no
-        if ($templateName === 'lr_receipt' && !empty($data['challan_no'])) {
+        if ($templateName === 'lr_receipt' && ! empty($data['challan_no'])) {
             $challanNo = trim($data['challan_no']);
             // Only add prefix if it doesn't already start with "CH"
-            if (!preg_match('/^CH[-\s]?/i', $challanNo)) {
-                $data['challan_no'] = 'CH ' . $challanNo;
+            if (! preg_match('/^CH[-\s]?/i', $challanNo)) {
+                $data['challan_no'] = 'CH '.$challanNo;
             }
         }
-        
+
         // For Lorry Receipt (template: lorry_receipt) - add DOC prefix to docket_no
-        if ($templateName === 'lorry_receipt' && !empty($data['docket_no'])) {
+        if ($templateName === 'lorry_receipt' && ! empty($data['docket_no'])) {
             $docketNo = trim($data['docket_no']);
             // Only add prefix if it doesn't already start with "DOC"
-            if (!preg_match('/^DOC[-\s]?/i', $docketNo)) {
-                $data['docket_no'] = 'DOC ' . $docketNo;
+            if (! preg_match('/^DOC[-\s]?/i', $docketNo)) {
+                $data['docket_no'] = 'DOC '.$docketNo;
             }
         }
-        
+
         // For Office Invoice - add INV prefix to invoice_number (only if manually provided)
-        if ($templateName === 'office_invoice' && $request->has('invoice_number') && !empty($request->invoice_number)) {
+        if ($templateName === 'office_invoice' && $request->has('invoice_number') && ! empty($request->invoice_number)) {
             $invoiceNo = trim($data['invoice_number']);
             // Only add prefix if it doesn't already start with "INV"
-            if (!preg_match('/^INV[-\s]?/i', $invoiceNo)) {
-                $data['invoice_number'] = 'INV ' . $invoiceNo;
+            if (! preg_match('/^INV[-\s]?/i', $invoiceNo)) {
+                $data['invoice_number'] = 'INV '.$invoiceNo;
             }
         }
     }

@@ -191,15 +191,9 @@ class ProfitLossReportController extends Controller
             $grandTotalNetProfit += ($standardRevenue - $standardExpenses);
         }
 
-        $from_date = Carbon::createFromFormat('Y-m-d', $request->from_date)->translatedFormat($dateFormat);
-        $to_date = Carbon::createFromFormat('Y-m-d', $request->to_date)->translatedFormat($dateFormat);
+        $from_date = Carbon::createFromFormat('Y-m-d', $fromDate)->translatedFormat($dateFormat);
+        $to_date = Carbon::createFromFormat('Y-m-d', $toDate)->translatedFormat($dateFormat);
         $currency = Currency::findOrFail(CompanySetting::getSetting('currency', $company->id));
-
-        // Calculate total gross income for the view (amount_credit is already in cents)
-        $totalIncome = 0;
-        foreach ($lrReceipts as $lrReceipt) {
-            $totalIncome += (float) $lrReceipt->amount_credit;
-        }
 
         view()->share([
             'company' => $company,

@@ -9,7 +9,6 @@ use App\Http\Requests\SendInvoiceRequest;
 use App\Http\Resources\EstimateResource;
 use App\Http\Resources\InvoiceResource;
 use App\Jobs\GenerateInvoicePdfJob;
-use App\Models\CompanySetting;
 use App\Models\Estimate;
 use App\Models\Invoice;
 use App\Services\Document\InvoiceService;
@@ -34,11 +33,13 @@ class InvoicesController extends Controller
         $this->authorize('viewAny', Invoice::class);
 
         $limit = $request->input('limit', 10);
+        $templateName = $request->input('template_name');
 
+        // Build base query - exclude transport templates only when no specific template is requested
         $baseQuery = Invoice::whereCompany();
 
         // Exclude all transport receipt templates (lr_receipt, lorry_receipt,
-        // office_invoice) when no template_name is specified - this makes the
+        // office_invoice) when no template_name is specified â€” this makes the
         // standard Invoices list show only standard invoice templates (invoice1,
         // invoice2, etc.). When a specific template_name IS provided (e.g.
         // office_invoice for Invoice Receipts, lorry_receipt, lr_receipt), only
@@ -47,9 +48,10 @@ class InvoicesController extends Controller
             $baseQuery->whereNotIn('template_name', ['lr_receipt', 'lorry_receipt', 'office_invoice']);
         }
 
+        // Eager load all necessary relations to prevent N+1 queries
         $invoices = $baseQuery
             ->applyFilters($request->all())
-            ->with(['customer', 'consigneeCustomer'])
+            ->with(['customer', 'consigneeCustomer', 'currency', 'items', 'taxes'])
             ->latest()
             ->paginateData($limit);
 

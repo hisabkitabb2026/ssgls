@@ -190,20 +190,6 @@
           {{ $t('general.send') }}
         </BaseButton>
 
-        <BaseButton
-          :loading="isWhatsAppLoading"
-          :disabled="isWhatsAppLoading"
-          variant="primary-outline"
-          type="button"
-          @click="sendViaWhatsApp"
-        >
-          <BaseIcon
-            v-if="!isWhatsAppLoading"
-            name="ChatBubbleLeftRightIcon"
-            class="h-5 mr-2"
-          />
-          Send via WhatsApp
-        </BaseButton>
       </div>
     </div>
   </BaseModal>
@@ -218,7 +204,6 @@ import { useModalStore } from '../../../../stores/modal.store'
 import { useCompanyStore } from '../../../../stores/company.store'
 import { useNotificationStore } from '../../../../stores/notification.store'
 import { useInvoiceStore } from '../store'
-import { whatsappService } from '../../../../api/services/whatsapp.service'
 
 interface InvoiceMailForm {
   id: number | string | null
@@ -239,7 +224,6 @@ const invoiceStore = useInvoiceStore()
 const { t } = useI18n()
 
 const isLoading = ref<boolean>(false)
-const isWhatsAppLoading = ref<boolean>(false)
 const templateUrl = ref<string>('')
 const isPreview = ref<boolean>(false)
 
@@ -392,41 +376,5 @@ function closeModal(): void {
     isPreview.value = false
     templateUrl.value = ''
   }, 300)
-}
-
-async function sendViaWhatsApp(): Promise<void> {
-  try {
-    isWhatsAppLoading.value = true
-
-    const result = await whatsappService.sendInvoice({
-      id: modalStore.id as number,
-    })
-
-    if (result.success) {
-      notificationStore.showNotification({
-        type: 'success',
-        message: 'Invoice sent successfully via WhatsApp',
-      })
-      
-      if (modalStore.refreshData) {
-        modalStore.refreshData()
-      }
-      
-      closeModal()
-    } else {
-      notificationStore.showNotification({
-        type: 'error',
-        message: result.error || 'Failed to send via WhatsApp',
-      })
-    }
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    notificationStore.showNotification({
-      type: 'error',
-      message: errorMessage || 'Something went wrong',
-    })
-  } finally {
-    isWhatsAppLoading.value = false
-  }
 }
 </script>

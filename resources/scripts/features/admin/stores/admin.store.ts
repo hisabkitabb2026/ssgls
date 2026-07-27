@@ -43,6 +43,9 @@ export interface UpdateCompanyData {
   owner_id: number
   vat_id?: string
   tax_id?: string
+  enrollment_no?: string
+  gstin?: string
+  pan_no?: string
   address?: {
     address_street_1?: string
     address_street_2?: string

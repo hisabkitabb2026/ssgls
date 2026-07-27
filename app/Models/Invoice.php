@@ -52,11 +52,9 @@ class Invoice extends Model implements HasMedia
         'id',
     ];
 
+    // Removed appends to prevent N+1 queries on list views
+    // These are now computed only when explicitly needed via makeAppends() helper
     protected $appends = [
-        'formattedCreatedAt',
-        'formattedInvoiceDate',
-        'formattedDueDate',
-        'formattedDueAmount',
         'invoicePdfUrl',
     ];
 

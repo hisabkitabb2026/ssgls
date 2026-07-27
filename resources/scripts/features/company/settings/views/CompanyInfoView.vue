@@ -12,6 +12,9 @@ interface CompanyFormData {
   logo: string | null
   tax_id: string | null
   vat_id: string | null
+  enrollment_no: string | null
+  gstin: string | null
+  pan_no: string | null
   address: {
     address_street_1: string
     address_street_2: string
@@ -40,6 +43,9 @@ const companyForm = reactive<CompanyFormData>({
   logo: companyStore.selectedCompany?.logo ?? null,
   tax_id: companyStore.selectedCompany?.tax_id ?? null,
   vat_id: companyStore.selectedCompany?.vat_id ?? null,
+  enrollment_no: companyStore.selectedCompany?.enrollment_no ?? null,
+  gstin: companyStore.selectedCompany?.gstin ?? null,
+  pan_no: companyStore.selectedCompany?.pan_no ?? null,
   address: {
     address_street_1: (companyStore.selectedCompany?.address as Record<string, string>)?.address_street_1 ?? '',
     address_street_2: (companyStore.selectedCompany?.address as Record<string, string>)?.address_street_2 ?? '',
@@ -105,6 +111,9 @@ async function updateCompanyData(): Promise<void> {
     name: companyForm.name ?? '',
     tax_id: companyForm.tax_id,
     vat_id: companyForm.vat_id,
+    enrollment_no: companyForm.enrollment_no,
+    gstin: companyForm.gstin,
+    pan_no: companyForm.pan_no,
     address: companyForm.address,
   })
 
@@ -200,25 +209,29 @@ async function updateCompanyData(): Promise<void> {
           <BaseInput v-model="companyForm.address.zip" />
         </BaseInputGroup>
 
-        <div>
-          <BaseInputGroup :label="$t('settings.company_info.address')">
-            <BaseTextarea v-model="companyForm.address.address_street_1" rows="2" />
-          </BaseInputGroup>
-          <BaseTextarea
-            v-model="companyForm.address.address_street_2"
-            rows="2"
-            class="mt-2"
-          />
-        </div>
+        <BaseInputGroup :label="$t('settings.company_info.address')">
+          <BaseTextarea v-model="companyForm.address.address_street_1" rows="2" />
+        </BaseInputGroup>
 
-        <div class="space-y-6">
-          <BaseInputGroup :label="$t('settings.company_info.tax_id')">
-            <BaseInput v-model="companyForm.tax_id" type="text" />
-          </BaseInputGroup>
-          <BaseInputGroup :label="$t('settings.company_info.vat_id')">
-            <BaseInput v-model="companyForm.vat_id" type="text" />
-          </BaseInputGroup>
-        </div>
+        <BaseInputGroup :label="$t('settings.company_info.tax_id')">
+          <BaseInput v-model="companyForm.tax_id" type="text" />
+        </BaseInputGroup>
+
+        <BaseInputGroup :label="$t('settings.company_info.vat_id')">
+          <BaseInput v-model="companyForm.vat_id" type="text" />
+        </BaseInputGroup>
+
+        <BaseInputGroup :label="$t('settings.company_info.enrollment_no')">
+          <BaseInput v-model="companyForm.enrollment_no" type="text" />
+        </BaseInputGroup>
+
+        <BaseInputGroup :label="$t('settings.company_info.gstin')">
+          <BaseInput v-model="companyForm.gstin" type="text" />
+        </BaseInputGroup>
+
+        <BaseInputGroup :label="$t('settings.company_info.pan_no')">
+          <BaseInput v-model="companyForm.pan_no" type="text" />
+        </BaseInputGroup>
       </BaseInputGrid>
 
       <BaseButton

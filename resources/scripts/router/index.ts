@@ -29,6 +29,9 @@ import lrReceiptRoutes from '../features/company/lr-receipts/routes'
 // Guard
 import { authGuard } from './guards'
 
+// Store
+import { useUserStore } from '@/scripts/stores/user.store'
+
 // Layouts (lazy-loaded)
 const CompanyLayout = () => import('../layouts/CompanyLayout.vue')
 const NotFoundView = () => import('../features/errors/NotFoundView.vue')
@@ -68,6 +71,15 @@ const companyChildren: RouteRecordRaw[] = [
  * Top-level route definitions assembled from all feature modules.
  */
 const routes: RouteRecordRaw[] = [
+  // Root redirect: if not logged in â†’ /login, if logged in â†’ /admin/dashboard
+  {
+    path: '/',
+    redirect: () => {
+      const userStore = useUserStore()
+      return userStore.currentUser ? { name: 'dashboard' } : { name: 'login' }
+    },
+  },
+
   // Installation wizard (no auth)
   ...installationRoutes,
 

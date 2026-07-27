@@ -48,6 +48,9 @@ class CompaniesController extends Controller
             'name' => $request->name,
             'vat_id' => $request->vat_id,
             'tax_id' => $request->tax_id,
+            'enrollment_no' => $request->enrollment_no,
+            'gstin' => $request->gstin,
+            'pan_no' => $request->pan_no,
             'owner_id' => $request->owner_id,
         ]);
 

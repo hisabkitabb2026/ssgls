@@ -602,7 +602,7 @@
                             <td class="logo-cell">
                                 <div class="jurisdiction">{{ $companyTopHeading }}</div>
                                 @if ($logo)
-                                    <img class="company-logo" src="{{ \App\Space\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
+                                    <img class="company-logo" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
                                 @else
                                     <div class="brand-fallback">{{ $companyInitials }}</div>
                                 @endif
@@ -827,7 +827,7 @@
                 <td width="38%" class="signature-cell">
                     <span class="emp-box">EMP Code<br>{{ $empCode }}</span>
                     @if (file_exists($signaturePath))
-                        <img class="signature-image" src="{{ \App\Space\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
+                        <img class="signature-image" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
                     @endif
                     <div class="signature">Signature</div>
                 </td>

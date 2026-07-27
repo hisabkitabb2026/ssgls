@@ -67,6 +67,9 @@ class CompaniesRequest extends FormRequest
                 'name',
                 'vat_id',
                 'tax_id',
+                'enrollment_no',
+                'gstin',
+                'pan_no',
             ])
             ->merge([
                 'owner_id' => $this->user()->id,

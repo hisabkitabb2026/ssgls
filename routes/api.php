@@ -85,8 +85,6 @@ use App\Http\Controllers\Setup\LoginController;
 use App\Http\Controllers\Setup\OnboardingWizardController;
 use App\Http\Controllers\Setup\RequirementsController;
 use App\Http\Controllers\Webhook\CronJobController;
-use App\Http\Controllers\Company\WhatsApp\WhatsAppController;
-use App\Http\Controllers\Company\WhatsApp\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -563,17 +561,6 @@ Route::prefix('/v1')->group(function () {
         // Company-context Active Modules index (read-only, lists every
         // instance-activated module with a has_settings flag)
         Route::get('/company-modules', [CompanyModulesController::class, 'index']);
-
-        // WhatsApp Routes
-        Route::prefix('whatsapp')->group(function () {
-            Route::post('invoice/send', [WhatsAppController::class, 'sendInvoice']);
-            Route::post('estimate/send', [WhatsAppController::class, 'sendEstimate']);
-            Route::post('payment/send', [WhatsAppController::class, 'sendPayment']);
-            Route::post('report/send', [WhatsAppController::class, 'sendReport']);
-            
-            // Webhook for inbound messages (auto-reply with PDF)
-            Route::post('webhook', [WhatsAppWebhookController::class, 'handleWebhook']);
-        });
     });
 
     Route::prefix('/{company:slug}/customer')->group(function () {

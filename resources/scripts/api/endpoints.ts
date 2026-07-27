@@ -194,9 +194,4 @@ export const API = {
   SUPER_ADMIN_USERS: '/api/v1/super-admin/users',
   SUPER_ADMIN_STOP_IMPERSONATING: '/api/v1/super-admin/stop-impersonating',
 
-  // WhatsApp
-  WHATSAPP_INVOICE_SEND: '/api/v1/whatsapp/invoice/send',
-  WHATSAPP_ESTIMATE_SEND: '/api/v1/whatsapp/estimate/send',
-  WHATSAPP_PAYMENT_SEND: '/api/v1/whatsapp/payment/send',
-  WHATSAPP_REPORT_SEND: '/api/v1/whatsapp/report/send',
 } as const

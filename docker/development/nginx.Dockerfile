@@ -54,5 +54,3 @@ server {
     }
 }
 EOF
-
-    RUN rm -f /etc/nginx/conf.d/default.conf

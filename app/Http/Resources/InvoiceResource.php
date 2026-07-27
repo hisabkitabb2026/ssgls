@@ -51,39 +51,20 @@ class InvoiceResource extends JsonResource
             'base_tax' => $this->base_tax,
             'base_due_amount' => $this->base_due_amount,
             'currency_id' => $this->currency_id,
-            'formatted_created_at' => $this->formattedCreatedAt,
             'invoice_pdf_url' => $this->invoicePdfUrl,
-            'formatted_invoice_date' => $this->formattedInvoiceDate,
-            'formatted_due_date' => $this->formattedDueDate,
-            'allow_edit' => $this->allow_edit,
-            'payment_module_enabled' => $this->payment_module_enabled,
             'sales_tax_type' => $this->sales_tax_type,
             'sales_tax_address_type' => $this->sales_tax_address_type,
             'overdue' => $this->overdue,
-            'items' => $this->when($this->items()->exists(), function () {
-                return InvoiceItemResource::collection($this->items);
-            }),
-            'customer' => $this->when($this->customer()->exists(), function () {
-                return new CustomerResource($this->customer);
-            }),
-            'consignee_customer' => $this->when($this->consigneeCustomer()->exists(), function () {
-                return new CustomerResource($this->consigneeCustomer);
-            }),
-            'creator' => $this->when($this->creator()->exists(), function () {
-                return new UserResource($this->creator);
-            }),
-            'taxes' => $this->when($this->taxes()->exists(), function () {
-                return TaxResource::collection($this->taxes);
-            }),
-            'fields' => $this->when($this->fields()->exists(), function () {
-                return CustomFieldValueResource::collection($this->fields);
-            }),
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
-            'currency' => $this->when($this->currency()->exists(), function () {
-                return new CurrencyResource($this->currency);
-            }),
+            // CRITICAL FIX: Use whenLoaded() instead of when(exists()) to prevent N+1 queries
+            // whenLoaded() only serializes if the relation was eager loaded - NO extra queries
+            'items' => $this->whenLoaded('items', fn () => InvoiceItemResource::collection($this->items)),
+            'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
+            'consignee_customer' => $this->whenLoaded('consigneeCustomer', fn () => new CustomerResource($this->consigneeCustomer)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
+            'taxes' => $this->whenLoaded('taxes', fn () => TaxResource::collection($this->taxes)),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
         ];
     }
 }

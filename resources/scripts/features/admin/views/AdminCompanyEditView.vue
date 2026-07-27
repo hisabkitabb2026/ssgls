@@ -61,6 +61,18 @@
           <BaseInputGroup :label="$t('settings.company_info.vat_id')">
             <BaseInput v-model="formData.vat_id" type="text" />
           </BaseInputGroup>
+
+          <BaseInputGroup :label="$t('settings.company_info.enrollment_no')">
+            <BaseInput v-model="formData.enrollment_no" type="text" />
+          </BaseInputGroup>
+
+          <BaseInputGroup :label="$t('settings.company_info.gstin')">
+            <BaseInput v-model="formData.gstin" type="text" />
+          </BaseInputGroup>
+
+          <BaseInputGroup :label="$t('settings.company_info.pan_no')">
+            <BaseInput v-model="formData.pan_no" type="text" />
+          </BaseInputGroup>
         </BaseInputGrid>
 
         <BaseDivider class="my-6" />
@@ -151,6 +163,9 @@ interface CompanyFormData {
   owner_id: OwnerOption | null
   vat_id: string
   tax_id: string
+  enrollment_no: string
+  gstin: string
+  pan_no: string
   address: {
     address_street_1: string
     address_street_2: string
@@ -176,6 +191,9 @@ const formData = reactive<CompanyFormData>({
   owner_id: null,
   vat_id: '',
   tax_id: '',
+  enrollment_no: '',
+  gstin: '',
+  pan_no: '',
   address: {
     address_street_1: '',
     address_street_2: '',
@@ -209,6 +227,9 @@ onMounted(async () => {
   formData.name = company.name
   formData.vat_id = company.vat_id ?? ''
   formData.tax_id = company.tax_id ?? ''
+  formData.enrollment_no = company.enrollment_no ?? ''
+  formData.gstin = company.gstin ?? ''
+  formData.pan_no = company.pan_no ?? ''
 
   if (company.owner) {
     formData.owner_id = {
@@ -264,6 +285,9 @@ async function submitForm(): Promise<void> {
     owner_id: formData.owner_id?.id ?? 0,
     vat_id: formData.vat_id,
     tax_id: formData.tax_id,
+    enrollment_no: formData.enrollment_no,
+    gstin: formData.gstin,
+    pan_no: formData.pan_no,
     address: formData.address,
   })
 

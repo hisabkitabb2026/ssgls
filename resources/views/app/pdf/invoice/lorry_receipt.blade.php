@@ -280,7 +280,7 @@
 </head>
 <body>
 <div class="sheet">
-    <div class="a c" style="left:12pt; top:9pt; width:93pt;">@if($logo && file_exists($logo))<img class="logo" src="{{ \App\Space\ImageUtils::toBase64Src($logo) }}">@else<div class="brand">{{ $companyInitials }}</div>@endif</div>
+    <div class="a c" style="left:12pt; top:9pt; width:93pt;">@if($logo && file_exists($logo))<img class="logo" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}">@else<div class="brand">{{ $companyInitials }}</div>@endif</div>
     <div class="a c" style="left:124pt; top:1pt; width:286pt;">
         <div class="brand">{{ $companyName }}</div>
         <div class="sub">{{ $companyTagline }}</div>

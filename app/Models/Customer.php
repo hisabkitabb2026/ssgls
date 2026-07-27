@@ -30,12 +30,6 @@ class Customer extends Authenticatable implements HasMedia
 
     const TYPE_CONSIGNEE = 'CONSIGNEE'; // Consignee
 
-    const TYPE_OWNER = 'OWNER';
-
-    const TYPE_DRIVER = 'DRIVER';
-
-    const TYPE_BROKER = 'BROKER';
-
     protected $guarded = [
         'id',
     ];

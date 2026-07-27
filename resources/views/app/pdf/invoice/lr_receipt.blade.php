@@ -704,7 +704,7 @@
                                     E-mail : {{ $email }}
                                 </div>
                                 @if ($logo)
-                                    <img class="company-logo" src="{{ \App\Space\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
+                                    <img class="company-logo" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
                                 @else
                                     <div class="brand-mark">
                                         {{ $companyInitials }}
@@ -889,7 +889,7 @@
                             <td class="for-company">
                                 <div class="company-separator"></div>For {{ $companyName }}
                                 @if (file_exists($signaturePath))
-                                    <img class="signature-image" src="{{ \App\Space\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
+                                    <img class="signature-image" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
                                 @endif
                             </td>
                         </tr>

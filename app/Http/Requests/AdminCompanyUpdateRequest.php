@@ -32,6 +32,18 @@ class AdminCompanyUpdateRequest extends FormRequest
                 'nullable',
                 'string',
             ],
+            'enrollment_no' => [
+                'nullable',
+                'string',
+            ],
+            'gstin' => [
+                'nullable',
+                'string',
+            ],
+            'pan_no' => [
+                'nullable',
+                'string',
+            ],
             'address.name' => ['nullable', 'string'],
             'address.address_street_1' => ['nullable', 'string'],
             'address.address_street_2' => ['nullable', 'string'],

@@ -9,7 +9,6 @@ use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\Expense;
 use App\Models\Invoice;
-use App\Models\Payment;
 use App\Services\Report\ProfitLossCalculationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +20,7 @@ class DashboardController extends Controller
     public function __construct(
         private readonly ProfitLossCalculationService $profitLossService,
     ) {}
+
     /**
      * Handle the incoming request.
      *
@@ -146,6 +146,7 @@ class DashboardController extends Controller
 
         $total_customer_count = Customer::whereCompany()->count();
         $total_invoice_count = Invoice::whereCompany()
+            ->whereNotIn('template_name', ['lr_receipt', 'lorry_receipt'])
             ->count();
         $total_estimate_count = Estimate::whereCompany()->count();
         

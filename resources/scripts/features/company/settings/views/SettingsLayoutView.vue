@@ -28,10 +28,20 @@ const showDangerZone = computed<boolean>(() => {
 const currentSetting = ref<DropdownMenuItem | undefined>(undefined)
 
 const dropdownMenuItems = computed<DropdownMenuItem[]>(() => {
-  const items = (globalStore.settingMenu as SettingMenuItem[]).map((item) => ({
+  // Add Account Settings as the first item
+  const items: DropdownMenuItem[] = [{
+    title: t('settings.account_settings.account_settings'),
+    link: '/admin/settings/account-settings',
+    icon: 'UserCircleIcon',
+  }]
+
+  // Add all company settings menu items
+  const companySettingsItems = (globalStore.settingMenu as SettingMenuItem[]).map((item) => ({
     ...item,
     title: t(item.title),
   }))
+
+  items.push(...companySettingsItems)
 
   if (showDangerZone.value) {
     items.push({
@@ -46,9 +56,8 @@ const dropdownMenuItems = computed<DropdownMenuItem[]>(() => {
 
 watchEffect(() => {
   if (route.path === '/admin/settings') {
-    // Redirect to first available setting menu item, or account settings as fallback
-    const firstItem = globalStore.settingMenu?.[0]
-    router.push(firstItem?.link ?? '/admin/settings/account-settings')
+    // Redirect to account settings as the default settings page (first item in menu)
+    router.push('/admin/settings/account-settings')
   }
 
   const item = dropdownMenuItems.value.find((item) => item.link === route.path)
@@ -94,13 +103,27 @@ function navigateToSetting(setting: DropdownMenuItem): void {
     <div class="flex gap-8">
       <div class="hidden mt-1 xl:block min-w-[240px] sticky top-20 self-start">
         <BaseList>
+          <!-- Account Settings - First item -->
+          <BaseListItem
+            :title="$t('settings.account_settings.account_settings')"
+            :to="'/admin/settings/account-settings'"
+            :active="hasActiveUrl('/admin/settings/account-settings')"
+            :index="0"
+            class="py-3"
+          >
+            <template #icon>
+              <BaseIcon name="UserCircleIcon" />
+            </template>
+          </BaseListItem>
+
+          <!-- Company Settings menu items -->
           <BaseListItem
             v-for="(menuItem, index) in globalStore.settingMenu"
             :key="index"
             :title="$t(menuItem.title)"
             :to="menuItem.link"
             :active="hasActiveUrl(menuItem.link)"
-            :index="index"
+            :index="index + 1"
             class="py-3"
           >
             <template #icon>
