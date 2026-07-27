@@ -13,7 +13,7 @@
     v-if="isAutoFilling"
     class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gray-900/60 backdrop-blur-xs"
   >
-    <div class="p-8 bg-surface rounded-xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 border border-line-light">
+    <div class="p-8 bg-surface ronded-xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 border border-line-light">
       <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-primary-500 mb-6"></div>
       <h3 class="text-xl font-bold text-heading mb-2">LR Receipt is being Auto Filled</h3>
       <p class="text-sm text-muted text-center leading-relaxed">
@@ -244,14 +244,13 @@
               class="mb-6"
             />
 
-            <!-- Invoice Template Button (hidden for transport receipts) -->
+            <!-- Invoice Template Button -->
             <TemplateSelectButton
-              v-if="!isTransportReceipt"
               :store="invoiceStore"
               store-prop="newInvoice"
               :is-mark-as-default="isMarkAsDefault"
             />
-            <SelectTemplateModal v-if="!isTransportReceipt" />
+            <SelectTemplateModal />
           </div>
 
           <DocumentTotals
@@ -511,10 +510,12 @@ const isLoadingContent = computed<boolean>(
 // --- Transport receipt detection (mirrors ssgls InvoiceCreate.vue) ---
 const isLrReceipt = computed<boolean>(() => route.path.includes('/admin/lr-receipts'))
 const isLorryReceipt = computed<boolean>(() => route.path.includes('/admin/lorry-receipts'))
-// All invoice types use transport receipt layout (office_invoice is the
-// default for regular invoices; lr_receipt and lorry_receipt have their
-// own routes). No company setting toggle needed.
-const isTransportReceipt = computed<boolean>(() => true)
+const isStandardInvoice = computed<boolean>(() => route.path.includes('/admin/standard-invoices'))
+// Standard invoices (via /admin/standard-invoices) use the upstream
+// InvoiceShelf flow (items table, taxes, discounts, template selector).
+// Invoice Receipts (/admin/invoices), LR Receipts, and Lorry Receipts
+// are transport receipts with their own custom field layouts.
+const isTransportReceipt = computed<boolean>(() => !isStandardInvoice.value)
 const transportTemplateName = computed<string>(() => {
   if (isLorryReceipt.value) return 'lorry_receipt'
   if (isLrReceipt.value) return 'lr_receipt'
@@ -545,12 +546,14 @@ const isItemlessTransportTemplate = computed<boolean>(() => {
 const indexTitle = computed<string>(() => {
   if (isLorryReceipt.value) return 'Lorry Receipts'
   if (isLrReceipt.value) return 'LR Receipts'
+  if (isStandardInvoice.value) return t('invoices.invoice', 2)
   return t('invoices.invoice', 2)
 })
 
 const indexPath = computed<string>(() => {
   if (isLorryReceipt.value) return '/admin/lorry-receipts'
   if (isLrReceipt.value) return '/admin/lr-receipts'
+  if (isStandardInvoice.value) return '/admin/standard-invoices'
   return '/admin/invoices'
 })
 
@@ -579,6 +582,7 @@ const pageTitle = computed<string>(() =>
 
 const isEdit = computed<boolean>(() =>
   route.name === 'invoices.edit' ||
+  route.name === 'standard-invoices.edit' ||
   route.name === 'recurring-invoices.edit' ||
   route.name === 'lr-receipts.edit' ||
   route.name === 'lorry-receipts.edit',
@@ -879,7 +883,9 @@ async function submitForm(): Promise<void> {
         ? `/admin/lorry-receipts/${response.data.data.id}/view`
         : isLrReceipt.value
           ? `/admin/lr-receipts/${response.data.data.id}/view`
-          : `/admin/invoices/${response.data.data.id}/view`
+          : isStandardInvoice.value
+            ? `/admin/standard-invoices/${response.data.data.id}/view`
+            : `/admin/invoices/${response.data.data.id}/view`
       router.push(redirectPath)
     }
   } catch (err) {

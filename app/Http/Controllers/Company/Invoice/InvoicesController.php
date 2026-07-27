@@ -35,21 +35,42 @@ class InvoicesController extends Controller
 
         $limit = $request->input('limit', 10);
 
-        $invoices = Invoice::whereCompany()
+        $baseQuery = Invoice::whereCompany();
+
+        // Exclude all transport receipt templates (lr_receipt, lorry_receipt,
+        // office_invoice) when no template_name is specified - this makes the
+        // standard Invoices list show only standard invoice templates (invoice1,
+        // invoice2, etc.). When a specific template_name IS provided (e.g.
+        // office_invoice for Invoice Receipts, lorry_receipt, lr_receipt), only
+        // that template's invoices are returned.
+        if (! $request->filled('template_name')) {
+            $baseQuery->whereNotIn('template_name', ['lr_receipt', 'lorry_receipt', 'office_invoice']);
+        }
+
+        $invoices = $baseQuery
             ->applyFilters($request->all())
             ->with(['customer', 'consigneeCustomer'])
             ->latest()
             ->paginateData($limit);
 
-        $totalCountQuery = Invoice::whereCompany();
+        // When limit=all, paginateData returns a Collection (not a Paginator),
+        // so we can't call ->total() or ->additional() on it.
+        if ($limit === 'all') {
+            $totalCount = $invoices->count();
 
-        if ($request->filled('template_name')) {
-            $totalCountQuery->where('template_name', $request->input('template_name'));
+            return InvoiceResource::collection($invoices)
+                ->additional(['meta' => [
+                    'invoice_total_count' => $totalCount,
+                ]]);
         }
+
+        // Use cached count from paginator metadata instead of separate count() query
+        // This is much faster as it uses the same query as the pagination
+        $totalCount = $invoices->total();
 
         return InvoiceResource::collection($invoices)
             ->additional(['meta' => [
-                'invoice_total_count' => $totalCountQuery->count(),
+                'invoice_total_count' => $totalCount,
             ]]);
 
     }
@@ -182,6 +203,45 @@ class InvoicesController extends Controller
     }
 
     /**
+     * Find an invoice by its invoice_number (e.g. LR Receipt Docket No).
+     * Used by the Office Invoice form to auto-fill Consignment Details
+     * when the user enters a Consignment No that matches an existing
+     * LR Receipt's Docket No.
+     *
+     * @return JsonResponse
+     */
+    public function findByInvoiceNumber(Request $request)
+    {
+        $this->authorize('viewAny', Invoice::class);
+
+        $request->validate([
+            'invoice_number' => 'required|string',
+            'template_name' => 'nullable|string',
+        ]);
+
+        $invoiceNumber = $request->input('invoice_number');
+        $templateName = $request->input('template_name', 'lr_receipt');
+
+        $invoice = Invoice::whereCompany()
+            ->where('invoice_number', $invoiceNumber)
+            ->where('template_name', $templateName)
+            ->with(['customer', 'consigneeCustomer', 'fields', 'items.fields.customField', 'currency'])
+            ->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invoice not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => new InvoiceResource($invoice),
+        ]);
+    }
+
+    /**
      * Get the next invoice number based on company settings format.
      *
      * @return JsonResponse
@@ -194,6 +254,7 @@ class InvoicesController extends Controller
             ->setModel(Invoice::class)
             ->setCompany($request->header('company'))
             ->setCustomer($request->get('customer_id'))
+            ->setTemplateName($request->get('template_name'))
             ->setNextNumbers();
 
         $nextNumber = $serial->getNextNumber();

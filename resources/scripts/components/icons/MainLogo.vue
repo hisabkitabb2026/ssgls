@@ -16,14 +16,14 @@ const color = computed(() => props.lightColor)
 </script>
 
 <template>
-  <!-- Redesigned brand lockup: "receipt + check" mark + InvoiceShelf wordmark, monochrome. -->
+  <!-- Redesigned brand lockup: "receipt + check" mark + HisabKitabb wordmark, monochrome. -->
   <svg
     viewBox="0 0 235 48"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     :style="{ color }"
     role="img"
-    aria-label="InvoiceShelf"
+    aria-label="HisabKitabb"
   >
     <g stroke="currentColor" fill="none">
       <path
@@ -49,6 +49,6 @@ const color = computed(() => props.lightColor)
       font-size="27"
       letter-spacing="-0.7"
       fill="currentColor"
-    >InvoiceShelf</text>
+    >HisabKitabb</text>
   </svg>
 </template>

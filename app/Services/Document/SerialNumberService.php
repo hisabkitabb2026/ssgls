@@ -18,6 +18,15 @@ class SerialNumberService
     private $company;
 
     /**
+     * The template_name for invoice-type models (e.g. 'lr_receipt', 'office_invoice').
+     * When set, the service uses '{template_name}_number_format' as the setting key
+     * and filters the sequence counter by template_name.
+     *
+     * @var string|null
+     */
+    private $templateName;
+
+    /**
      * @var string
      */
     public $nextSequenceNumber;
@@ -73,12 +82,32 @@ class SerialNumberService
     }
 
     /**
+     * Set the template_name for invoice-type models so the service can
+     * use a per-type number format setting and filter the sequence counter.
+     *
+     * @return $this
+     */
+    public function setTemplateName(?string $templateName)
+    {
+        $this->templateName = $templateName;
+
+        return $this;
+    }
+
+    /**
      * @return string
      */
     public function getNextNumber($data = null)
     {
         $modelName = strtolower(class_basename($this->model));
         $settingKey = $modelName.'_number_format';
+
+        // For invoice models with a template_name, use the per-type format setting
+        // (e.g. 'lr_receipt_number_format') instead of the generic 'invoice_number_format'.
+        if ($modelName === 'invoice' && $this->templateName) {
+            $settingKey = $this->templateName.'_number_format';
+        }
+
         $companyId = $this->company;
 
         if (request()->has('format')) {
@@ -116,11 +145,20 @@ class SerialNumberService
     {
         $companyId = $this->company;
 
-        $last = $this->model::orderBy('sequence_number', 'desc')
+        $query = $this->model::orderBy('sequence_number', 'desc')
             ->where('company_id', $companyId)
-            ->where('sequence_number', '<>', null)
-            ->take(1)
-            ->first();
+            ->where('sequence_number', '<>', null);
+
+        // For invoice models with a template_name, filter the sequence counter
+        // by template_name so each invoice type has its own independent counter.
+        if ($this->templateName && method_exists($this->model, 'getTable')) {
+            $table = (new $this->model)->getTable();
+            if (in_array('template_name', \Schema::getColumnListing($table))) {
+                $query->where('template_name', $this->templateName);
+            }
+        }
+
+        $last = $query->take(1)->first();
 
         $this->nextSequenceNumber = ($last) ? $last->sequence_number + 1 : 1;
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Company\Auth\LoginController;
 use App\Http\Controllers\Company\Expense\ExpensesController;
+use App\Http\Controllers\Company\Report\CustomerNameSalesReportController;
 use App\Http\Controllers\Company\Report\CustomerSalesReportController;
 use App\Http\Controllers\Company\Report\ExpensesReportController;
 use App\Http\Controllers\Company\Report\ItemSalesReportController;
@@ -59,6 +60,10 @@ Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
     // sales report by items
     // ----------------------------------
     Route::get('/sales/items/{hash}', ItemSalesReportController::class);
+
+    // sales report by customer name (text search)
+    // ----------------------------------
+    Route::get('/sales/customer-name/{hash}', CustomerNameSalesReportController::class);
 
     // report for expenses
     // ----------------------------------

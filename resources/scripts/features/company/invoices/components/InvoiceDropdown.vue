@@ -62,10 +62,10 @@
       {{ $t('invoices.resend_invoice') }}
     </BaseDropdownItem>
 
-    <!-- Record Payment -->
+    <!-- Record Payment — shown for any invoice that isn't fully paid -->
     <router-link :to="`/admin/payments/${row.id}/create`">
       <BaseDropdownItem
-        v-if="row.status === 'SENT' && !isDetailView && canCreatePayment"
+        v-if="row.paid_status !== 'PAID' && !isDetailView && canCreatePayment"
       >
         <BaseIcon
           name="CreditCardIcon"

@@ -1,5 +1,5 @@
 @component('mail::message')
-# Test Email from InvoiceShelf
+# Test Email from HisabKitabb
 
 {{ $my_message }}
 

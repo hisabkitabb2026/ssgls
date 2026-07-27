@@ -204,6 +204,9 @@ class CompanyService
             'payment_email_attachment' => 'NO',
             'retrospective_edits' => 'allow',
             'invoice_number_format' => '{{SERIES:INV}}{{DELIMITER:-}}{{SEQUENCE:6}}',
+            'office_invoice_number_format' => '{{SERIES:INV}}{{DELIMITER:-}}{{SEQUENCE:6}}',
+            'lr_receipt_number_format' => '{{SERIES:LR}}{{DELIMITER:-}}{{SEQUENCE:6}}',
+            'lorry_receipt_number_format' => '{{SERIES:LR}}{{DELIMITER:-}}{{SEQUENCE:6}}',
             'estimate_number_format' => '{{SERIES:EST}}{{DELIMITER:-}}{{SEQUENCE:6}}',
             'payment_number_format' => '{{SERIES:PAY}}{{DELIMITER:-}}{{SEQUENCE:6}}',
             'estimate_set_expiry_date_automatically' => 'YES',
@@ -214,6 +217,11 @@ class CompanyService
             'estimate_convert_action' => 'no_action',
             'automatically_expire_public_links' => 'YES',
             'link_expiry_days' => 7,
+            'support_phone' => '+91 XXXXX XXXXX',
+            'enable_standard_invoices' => 'YES',
+            'enable_invoice_receipts' => 'YES',
+            'enable_lr_receipts' => 'YES',
+            'enable_lorry_receipts' => 'YES',
         ];
 
         CompanySetting::setSettings($settings, $company->id);

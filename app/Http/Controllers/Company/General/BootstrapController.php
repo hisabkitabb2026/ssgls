@@ -94,6 +94,31 @@ class BootstrapController extends Controller
         $main_menu = $this->generateMenu('main_menu', $current_user);
         $setting_menu = $this->generateMenu('setting_menu', $current_user);
 
+        // Filter out disabled document types from the sidebar menu.
+        // Each document type has a company-level enable/disable setting.
+        $current_company = Company::find($request->header('company'));
+
+        if ((! $current_company) || ($current_company && ! $current_user->hasCompany($current_company->id))) {
+            $current_company = $current_user->companies()->first();
+        }
+
+        $documentTypeSettings = [
+            '/admin/standard-invoices' => 'enable_standard_invoices',
+            '/admin/invoices' => 'enable_invoice_receipts',
+            '/admin/lr-receipts' => 'enable_lr_receipts',
+            '/admin/lorry-receipts' => 'enable_lorry_receipts',
+        ];
+
+        $main_menu = array_values(array_filter($main_menu, function ($item) use ($documentTypeSettings, $current_company) {
+            foreach ($documentTypeSettings as $path => $settingKey) {
+                if ($item['link'] === $path) {
+                    return CompanySetting::getSetting($settingKey, $current_company->id) !== 'NO';
+                }
+            }
+
+            return true;
+        }));
+
         // Merge module-registered menu items into the main menu so they
         // participate in the unified group + priority ordering.
         foreach (ModuleRegistry::allMenu() as $slug => $item) {
@@ -106,12 +131,6 @@ class BootstrapController extends Controller
                 'group_label' => $item['group_label'] ?? 'navigation.modules',
                 'priority' => $item['priority'] ?? 100,
             ];
-        }
-
-        $current_company = Company::find($request->header('company'));
-
-        if ((! $current_company) || ($current_company && ! $current_user->hasCompany($current_company->id))) {
-            $current_company = $current_user->companies()->first();
         }
 
         $current_company_settings = CompanySetting::getAllSettings($current_company->id);

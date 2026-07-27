@@ -77,10 +77,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { customFieldService } from '@/scripts/api/services/custom-field.service'
+import { invoiceService } from '@/scripts/api/services/invoice.service'
+import { useNotificationStore } from '@/scripts/stores/notification.store'
 import SingleField from '@/scripts/features/company/customers/components/CreateCustomFieldsSingle.vue'
 import { generateClientId } from '@/scripts/utils'
+import { useDebounceFn } from '@vueuse/core'
 
 interface CustomFieldItem {
   id: number
@@ -275,4 +278,112 @@ async function fetchItemCustomFields(): Promise<void> {
 }
 
 fetchItemCustomFields()
+
+// --- Auto-fill from LR Receipt when Consignment No matches ---
+// When the user types a Consignment No in the first item that matches an
+// existing LR Receipt's Docket No (invoice_number), fetch that LR Receipt
+// and copy its custom field values into the matching Office Invoice item fields.
+const notificationStore = useNotificationStore()
+const isAutoFillingFromLr = ref(false)
+
+function getItemFieldValue(itemIndex: number, label: string): CustomFieldItem | undefined {
+  const fields = items.value[itemIndex]?.customFields ?? []
+  return fields.find((f) => (f.custom_field?.label ?? f.label) === label)
+}
+
+// Get the Consignment No value from the first item
+function getConsignmentNo(): string {
+  const field = getItemFieldValue(0, 'Consignment No')
+  return String(field?.value ?? field?.string_answer ?? '').trim()
+}
+
+// Map LR Receipt Invoice-level custom fields to Office Invoice Item-level custom fields.
+// Both templates share the same field labels (From, To, Truck No, etc.) so we
+// match by label.
+function autofillFromLrReceipt(lrFields: Array<Record<string, unknown>>): void {
+  if (!items.value[0]) return
+
+  // Build a lookup of LR Receipt field values by label
+  const lrFieldMap = new Map<string, string>()
+  lrFields.forEach((f) => {
+    const label = (f.custom_field as { label?: string })?.label ?? (f.label as string) ?? ''
+    const value = (f.string_answer as string) ?? (f.value as string) ?? ''
+    if (label && value) {
+      lrFieldMap.set(label, value)
+    }
+  })
+
+  // Copy matching fields into the first item
+  const itemFields = items.value[0]?.customFields ?? []
+  itemFields.forEach((field) => {
+    const label = field.custom_field?.label ?? field.label
+    if (!label) return
+    // Don't overwrite Consignment No itself
+    if (label === 'Consignment No') return
+    // Don't overwrite Amount (auto-calculated)
+    if (label === 'Amount') return
+
+    const lrValue = lrFieldMap.get(label)
+    if (lrValue !== undefined) {
+      field.value = lrValue
+      field.string_answer = lrValue
+      // If it's a number field, also set number_answer
+      if (field.type === 'Number' || field.custom_field?.type === 'Number') {
+        const num = Number(lrValue)
+        if (!isNaN(num)) {
+          field.number_answer = num
+        }
+      }
+    }
+  })
+
+  // Recalculate Amount after auto-fill
+  recalcAmount(0)
+}
+
+const debouncedAutoFill = useDebounceFn(async () => {
+  const consignmentNo = getConsignmentNo()
+  if (!consignmentNo || consignmentNo.length < 2) return
+
+  isAutoFillingFromLr.value = true
+  try {
+    const response = await invoiceService.findByInvoiceNumber(consignmentNo, 'lr_receipt')
+    if (response?.data) {
+      const lrInvoice = response.data as Record<string, unknown>
+      const lrFields = (lrInvoice.fields as Array<Record<string, unknown>>) ?? []
+      if (lrFields.length > 0) {
+        autofillFromLrReceipt(lrFields)
+
+        // Also copy the customer (consignor) from the LR Receipt to the Office Invoice
+        const lrCustomer = lrInvoice.customer as Record<string, unknown> | undefined
+        if (lrCustomer && formData.value) {
+          formData.value.customer = lrCustomer
+          formData.value.customer_id = lrCustomer.id as number
+        }
+
+        notificationStore.showNotification({
+          type: 'success',
+          message: `Auto-filled from LR Receipt: ${consignmentNo}`,
+        })
+      }
+    }
+  } catch {
+    // Silently fail — the user might be typing a new consignment number
+  } finally {
+    isAutoFillingFromLr.value = false
+  }
+}, 600)
+
+// Watch the Consignment No field on the first item for changes
+watch(
+  () => {
+    const field = getItemFieldValue(0, 'Consignment No')
+    return field?.value ?? field?.string_answer ?? ''
+  },
+  (newVal) => {
+    if (newVal && String(newVal).trim().length >= 2 && !props.isEdit) {
+      debouncedAutoFill()
+    }
+  },
+)
 </script>

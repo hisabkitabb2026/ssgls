@@ -31,15 +31,55 @@ interface Props {
   type: string
   typeStore: TypeStore
   defaultSeries?: string
+  settingKey?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   defaultSeries: 'INV',
+  settingKey: '',
 })
 
 const { t } = useI18n()
 const companyStore = useCompanyStore()
 const globalStore = useGlobalStore()
+
+// Map setting keys to user-friendly labels so each document type shows its
+// own name (e.g. "Docket Number Format" for LR Receipts, "Challan Number Format"
+// for Lorry Receipts) instead of the generic "Invoice Number Format".
+const formatTitle = computed<string>(() => {
+  const keyMap: Record<string, string> = {
+    lr_receipt_number_format: 'Docket Number Format',
+    lorry_receipt_number_format: 'Challan Number Format',
+    office_invoice_number_format: 'Invoice Number Format',
+    invoice_number_format: 'Invoice Number Format',
+    estimate_number_format: 'Estimate Number Format',
+    payment_number_format: 'Payment Number Format',
+  }
+  return keyMap[props.settingKey] ?? t(`settings.customization.${props.type}s.${props.type}_number_format`)
+})
+
+const formatDescription = computed<string>(() => {
+  const keyMap: Record<string, string> = {
+    lr_receipt_number_format: 'Set the format for Docket Numbers on LR Receipts',
+    lorry_receipt_number_format: 'Set the format for Challan Numbers on Lorry Receipts',
+    office_invoice_number_format: 'Set the format for Invoice Numbers on Office Invoices',
+    invoice_number_format: t(`settings.customization.${props.type}s.${props.type}_number_format_description`),
+    estimate_number_format: t(`settings.customization.${props.type}s.${props.type}_number_format_description`),
+    payment_number_format: t(`settings.customization.${props.type}s.${props.type}_number_format_description`),
+  }
+  return keyMap[props.settingKey] ?? t(`settings.customization.${props.type}s.${props.type}_number_format_description`)
+})
+
+const previewLabel = computed<string>(() => {
+  const keyMap: Record<string, string> = {
+    lr_receipt_number_format: 'Preview Docket Number',
+    lorry_receipt_number_format: 'Preview Challan Number',
+    office_invoice_number_format: 'Preview Invoice Number',
+    invoice_number_format: t(`settings.customization.${props.type}s.preview_${props.type}_number`),
+  }
+  return keyMap[props.settingKey] ?? t(`settings.customization.${props.type}s.preview_${props.type}_number`)
+})
+
 
 const selectedFields = ref<NumberField[]>([])
 const isSaving = ref<boolean>(false)
@@ -148,8 +188,9 @@ watch(selectedFields, () => {
 setInitialFields()
 
 async function setInitialFields(): Promise<void> {
+  const formatKey = props.settingKey || `${props.type}_number_format`
   const data = {
-    format: companyStore.selectedCompanySettings[`${props.type}_number_format`],
+    format: companyStore.selectedCompanySettings[formatKey],
   }
 
   isLoadingPlaceholders.value = true
@@ -233,8 +274,9 @@ async function submitForm(): Promise<boolean> {
 
   isSaving.value = true
 
+  const formatKey = props.settingKey || `${props.type}_number_format`
   const data: { settings: Record<string, string> } = { settings: {} }
-  data.settings[props.type + '_number_format'] = getNumberFormat.value
+  data.settings[formatKey] = getNumberFormat.value
 
   await companyStore.updateCompanySettings({
     data,
@@ -248,10 +290,10 @@ async function submitForm(): Promise<boolean> {
 
 <template>
   <h6 class="text-heading text-lg font-medium">
-    {{ $t(`settings.customization.${type}s.${type}_number_format`) }}
+    {{ formatTitle }}
   </h6>
   <p class="mt-1 text-sm text-muted">
-    {{ $t(`settings.customization.${type}s.${type}_number_format_description`) }}
+    {{ formatDescription }}
   </p>
 
   <div class="overflow-x-auto">
@@ -343,7 +385,7 @@ async function submitForm(): Promise<boolean> {
           <tr>
             <td colspan="2" class="px-5 py-4">
               <BaseInputGroup
-                :label="$t(`settings.customization.${type}s.preview_${type}_number`)"
+                :label="previewLabel"
               >
                 <BaseInput
                   v-model="nextNumber"

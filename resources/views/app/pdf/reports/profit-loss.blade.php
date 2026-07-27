@@ -272,6 +272,46 @@
             </tr>
         </table>
 
+        {{-- Standard Invoice P&L section --}}
+        @if($hasStandardInvoices)
+        <p class="expenses-title">Standard Invoice Revenue</p>
+        <div class="expenses-table-container">
+            <table class="expenses-table">
+                <tr>
+                    <td>
+                        <p class="expense-title">Invoice Revenue (base_total)</p>
+                    </td>
+                    <td>
+                        <p class="expense-amount">
+                            {!! format_money_pdf($standardRevenue, $currency) !!}
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <p class="expense-title">Total Expenses</p>
+                    </td>
+                    <td>
+                        <p class="expense-amount">
+                            {!! format_money_pdf($standardExpenses, $currency) !!}
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <table class="expense-total-indicator-table">
+            <tr>
+                <td class="expense-total-cell">
+                    <p class="expense-total">
+                        Net Profit (Standard): {!! format_money_pdf($standardRevenue - $standardExpenses, $currency) !!}
+                    </p>
+                </td>
+            </tr>
+        </table>
+        @endif
+
+        {{-- Transport Receipt P&L section (LR Receipts) --}}
+        @if($hasTransportReceipts)
         <!-- Detailed Lorry Receipt Breakdown grouped by Customer -->
         @if(count($customersData) > 0)
             @foreach ($customersData as $customerData)
@@ -344,6 +384,7 @@
                 </tr>
             </table>
         @endif
+        @endif {{-- end hasTransportReceipts --}}
     </div>
 
     <table class="report-footer">

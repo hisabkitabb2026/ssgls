@@ -19,6 +19,7 @@ interface ReportTypeOption {
 interface ReportFormData {
   from_date: string
   to_date: string
+  customer_name: string
 }
 
 const { t } = useI18n()
@@ -42,16 +43,19 @@ const selectedRange = ref<DateRangeOption>(dateRange[2])
 const reportTypes = ref<ReportTypeOption[]>([
   { label: t('reports.sales.sort.by_customer'), value: 'By Customer' },
   { label: t('reports.sales.sort.by_item'), value: 'By Item' },
+  { label: 'By Customer Name', value: 'By Customer Name' },
 ])
 const selectedType = ref<string>('By Customer')
 const url = ref<string | null>(null)
 const customerSiteURL = ref<string | null>(null)
 const itemsSiteURL = ref<string | null>(null)
+const customerNameSiteURL = ref<string | null>(null)
 
 const initialRange = defaultMonthRange()
 const formData = reactive<ReportFormData>({
   from_date: initialRange.from,
   to_date: initialRange.to,
+  customer_name: '',
 })
 
 const getReportUrl = computed<string | null>(() => url.value)
@@ -66,11 +70,20 @@ const itemDateRangeUrl = computed<string>(() => {
   return `${itemsSiteURL.value}?from_date=${formatDate(formData.from_date)}&to_date=${formatDate(formData.to_date)}`
 })
 
+const customerNameDateRangeUrl = computed<string>(() => {
+  let url = `${customerNameSiteURL.value}?from_date=${formatDate(formData.from_date)}&to_date=${formatDate(formData.to_date)}`
+  if (formData.customer_name) {
+    url += `&customer_name=${encodeURIComponent(formData.customer_name)}`
+  }
+  return url
+})
+
 globalStore.downloadReport = downloadReport
 
 onMounted(() => {
   customerSiteURL.value = `/reports/sales/customers/${selectedCompany.value?.unique_hash}`
   itemsSiteURL.value = `/reports/sales/items/${selectedCompany.value?.unique_hash}`
+  customerNameSiteURL.value = `/reports/sales/customer-name/${selectedCompany.value?.unique_hash}`
   getInitialReport()
 })
 
@@ -87,12 +100,20 @@ function getInitialReport(): void {
     url.value = customerDateRangeUrl.value
     return
   }
+  if (selectedType.value === 'By Customer Name') {
+    url.value = customerNameDateRangeUrl.value
+    return
+  }
   url.value = itemDateRangeUrl.value
 }
 
 function getReports(): boolean {
   if (selectedType.value === 'By Customer') {
     url.value = customerDateRangeUrl.value
+    return true
+  }
+  if (selectedType.value === 'By Customer Name') {
+    url.value = customerNameDateRangeUrl.value
     return true
   }
   url.value = itemDateRangeUrl.value
@@ -112,6 +133,10 @@ function downloadReport(): void {
   setTimeout(() => {
     if (selectedType.value === 'By Customer') {
       url.value = customerDateRangeUrl.value
+      return
+    }
+    if (selectedType.value === 'By Customer Name') {
+      url.value = customerNameDateRangeUrl.value
       return
     }
     url.value = itemDateRangeUrl.value
@@ -162,6 +187,18 @@ function downloadReport(): void {
           :placeholder="$t('reports.sales.report_type')"
           class="mt-1"
           @update:model-value="getInitialReport"
+        />
+      </BaseInputGroup>
+
+      <!-- Customer Name input — shown only when "By Customer Name" is selected -->
+      <BaseInputGroup
+        v-if="selectedType === 'By Customer Name'"
+        label="Customer Name"
+        class="col-span-12 md:col-span-8 mt-6"
+      >
+        <BaseInput
+          v-model="formData.customer_name"
+          placeholder="Type customer name to search"
         />
       </BaseInputGroup>
 

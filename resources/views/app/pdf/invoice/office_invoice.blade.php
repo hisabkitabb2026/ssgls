@@ -558,7 +558,40 @@
     }
     $officeGrandTotal = 0;
     $signaturePath = base_path('resources/static/img/PDF/authorized_signature.jpeg');
+
+    // Auto-fit font sizing: shrinks font size for text that would overflow
+    // its container. Each block shrinks independently so other blocks are
+    // not disturbed. Uses the same pattern as lorry_receipt.blade.php.
+    // $widthLimit is in px (matching the template's unit system).
+    // $baseSize is the default font size; $minSize is the floor.
+    $getFontForWidth = function ($value, $widthLimit, $baseSize = 11.5, $minSize = 6.5) {
+        $length = strlen((string) $value);
+        if ($length === 0) {
+            return '';
+        }
+        $estimatedWidth = $length * ($baseSize * 0.55);
+        if ($estimatedWidth > $widthLimit) {
+            $shrunkSize = ($widthLimit / $length) / 0.55;
+            return 'font-size: ' . number_format(max($minSize, min($baseSize, $shrunkSize)), 1) . 'px;';
+        }
+        return '';
+    };
+
+    // Pre-calculate auto-fit styles for key fields that commonly overflow.
+    // Widths are estimated from the landscape A4 layout (297mm ≈ 1123px at 96 DPI).
+    // Party box is 50% of left-zone (65% of page) ≈ 349px usable.
+    $partyDisplayNameStyle = $getFontForWidth($partyDisplayName, 330, 11.5, 6.5);
+    // Party GSTIN box is 55% of party box ≈ 184px usable, nowrap.
+    $partyGstinStyle = $getFontForWidth($partyGstin, 170, 11, 6.5);
+    // Company name is in center cell (63% of left zone) ≈ 450px usable.
+    $companyNameStyle = $getFontForWidth($companyName, 430, 27, 10);
+    // Billing branch address is in right zone (35%) ≈ 370px usable.
+    $branchAddressStyle = $getFontForWidth($billingBranchLines->implode(' '), 360, 11, 6.5);
+    // Item table column widths (percentages of ~1123px page width).
+    // From/Destination: 7% ≈ 73px usable.
+    // Consignment No: 7% ≈ 73px. Vehicle No: 9% ≈ 88px. Invoice No: 8% ≈ 78px.
 @endphp
+
 
     <div class="invoice-shell">
         <table class="master">
@@ -575,7 +608,7 @@
                                 @endif
                             </td>
                             <td class="company-cell">
-                                <div class="company-name">{{ $companyName }}</div>
+                                <div class="company-name" style="{{ $companyNameStyle }}">{{ $companyName }}</div>
                                 <div class="company-tagline">{{ $companyTagline }}</div>
                                 <div class="company-address">{!! $displayCompanyAddress !!}</div>
                             </td>
@@ -601,10 +634,10 @@
                         </tr>
                     </table>
                     <div class="party-address-lines">
-                        <div class="party-display-name">{{ $partyDisplayName }}</div>
+                        <div class="party-display-name" style="{{ $partyDisplayNameStyle }}">{{ $partyDisplayName }}</div>
                         {!! nl2br(e($partyAddressLines->implode("\n"))) ?: "\u{00A0}" !!}
                     </div>
-                    <div class="party-gstin"><b>GSTIN :</b> {{ $partyGstin }}</div>
+                    <div class="party-gstin" style="{{ $partyGstinStyle }}"><b>GSTIN :</b> {{ $partyGstin }}</div>
                 </td>
                 <td class="tax-box">
                     <div>PAN No.: {{ $panNo }}</div>
@@ -701,6 +734,25 @@
                         $lrCharge = $itemField($item, ['lr_charge']);
                         $ddCharge = $itemField($item, ['dd_charge']);
                         $amount = $itemField($item, ['amount']);
+
+                        // Auto-fit styles for item table cells that commonly overflow.
+                        // Column widths: consignment_no 7%≈73px, from 6.8%≈71px,
+                        // destination 6.8%≈71px, vehicle_no 9%≈88px, invoice_no 8%≈78px.
+                        $consignmentNo = $itemField($item, ['consignment_no', 'consignment_number', 'old_bill_number']);
+                        $consignmentDate = $itemField($item, ['consignment_date', 'old_bill_date', 'date']);
+                        $partyInvNo = $itemField($item, ['party_inv_no', 'invoice_no', 'invoice_number']) ?: $invoice->invoice_number;
+                        $fromPlace = $itemField($item, ['from']);
+                        $toPlace = $itemField($item, ['destination', 'to']);
+                        $vehicleNo = $itemField($item, ['vehicle_no', 'vehicle_number']);
+                        $pkg = $itemField($item, ['pkg', 'package', 'packages']);
+                        $weight = $itemField($item, ['weight', 'charged_weight_kgs', 'charged_weight']);
+
+                        $consignmentNoStyle = $getFontForWidth($consignmentNo, 65, 11.8, 6.5);
+                        $fromStyle = $getFontForWidth($fromPlace, 63, 11.8, 6.5);
+                        $toStyle = $getFontForWidth($toPlace, 63, 11.8, 6.5);
+                        $vehicleNoStyle = $getFontForWidth($vehicleNo, 80, 11.8, 6.5);
+                        $partyInvNoStyle = $getFontForWidth($partyInvNo, 70, 11.8, 6.5);
+
                         $calculatedAmount = null;
 
                         if ($rate !== '' || $otherCharge !== '' || $lrCharge !== '' || $ddCharge !== '') {
@@ -718,14 +770,14 @@
                     @endphp
                     <tr>
                         <td>{{ $slNo }}</td>
-                        <td>{{ $itemField($item, ['consignment_no', 'consignment_number', 'old_bill_number']) }}</td>
-                        <td>{{ $itemField($item, ['consignment_date', 'old_bill_date', 'date']) }}</td>
-                        <td>{{ $itemField($item, ['party_inv_no', 'invoice_no', 'invoice_number']) ?: $invoice->invoice_number }}</td>
-                        <td class="text-left">{{ $itemField($item, ['from']) }}</td>
-                        <td class="text-left">{{ $itemField($item, ['destination', 'to']) }}</td>
-                        <td>{{ $itemField($item, ['vehicle_no', 'vehicle_number']) }}</td>
-                        <td>{{ $itemField($item, ['pkg', 'package', 'packages']) }}</td>
-                        <td>{{ $itemField($item, ['weight', 'charged_weight_kgs', 'charged_weight']) }}</td>
+                        <td style="{{ $consignmentNoStyle }}">{{ $consignmentNo }}</td>
+                        <td>{{ $consignmentDate }}</td>
+                        <td style="{{ $partyInvNoStyle }}">{{ $partyInvNo }}</td>
+                        <td class="text-left" style="{{ $fromStyle }}">{{ $fromPlace }}</td>
+                        <td class="text-left" style="{{ $toStyle }}">{{ $toPlace }}</td>
+                        <td style="{{ $vehicleNoStyle }}">{{ $vehicleNo }}</td>
+                        <td>{{ $pkg }}</td>
+                        <td>{{ $weight }}</td>
                         <td class="text-right">{{ $rate }}</td>
                         <td class="text-right">{{ $otherCharge }}</td>
                         <td class="text-right">{{ $lrCharge }}</td>

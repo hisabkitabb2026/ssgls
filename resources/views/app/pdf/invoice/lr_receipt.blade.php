@@ -597,6 +597,35 @@
     }
     $signaturePath = base_path('resources/static/img/PDF/authorized_signature.jpeg');
 
+    // Auto-fit font sizing: shrinks font size for text that would overflow
+    // its container. Each block shrinks independently so other blocks are
+    // not disturbed. Uses the same pattern as lorry_receipt.blade.php.
+    $getFontForWidth = function ($value, $widthLimit, $baseSize = 11.5, $minSize = 6.5) {
+        $length = strlen((string) $value);
+        if ($length === 0) {
+            return '';
+        }
+        $estimatedWidth = $length * ($baseSize * 0.55);
+        if ($estimatedWidth > $widthLimit) {
+            $shrunkSize = ($widthLimit / $length) / 0.55;
+            return 'font-size: ' . number_format(max($minSize, min($baseSize, $shrunkSize)), 1) . 'px;';
+        }
+        return '';
+    };
+
+    // Pre-calculate auto-fit styles for key fields that commonly overflow.
+    // Landscape A4: 297mm ≈ 1123px. Party cell is 50% of party-table ≈ 540px.
+    // Consignor/Consignee name: after "Consignor" label + padding ≈ 420px usable.
+    $consignorNameStyle = $getFontForWidth($consignorName, 420, 11.5, 6.5);
+    $consigneeNameStyle = $getFontForWidth($consigneeName, 420, 11.5, 6.5);
+    // Company name: in company-panel, full width ≈ 480px usable.
+    $companyNameStyle = $getFontForWidth($companyName, 460, 31, 10);
+    // GSTIN fields: after "GST No.:" label ≈ 380px usable.
+    $consignorGstinStyle = $getFontForWidth($consignorGstin, 380, 11, 6.5);
+    $consigneeGstinStyle = $getFontForWidth($consigneeGstin, 380, 11, 6.5);
+    // Description of goods: in goods table, full width ≈ 700px usable.
+    $descriptionOfGoodsStyle = $getFontForWidth($descriptionOfGoods, 700, 11.8, 6.5);
+
     $consignorData = [
         'name' => $consignorName,
         'address' => $consignorAddress,
@@ -681,7 +710,7 @@
                                         {{ $companyInitials }}
                                     </div>
                                 @endif
-                                <div class="company-name">{{ $companyName }}</div>
+                                <div class="company-name" style="{{ $companyNameStyle }}">{{ $companyName }}</div>
                                 <div class="company-tagline">{{ $companyTagline }}</div>
                                 <div class="company-address">{!! $displayCompanyAddress !!}</div>
                             </td>
@@ -691,23 +720,23 @@
                     <table class="party-table">
                         <tr>
                             <td class="party-cell">
-                                <span class="label">Consignor</span> <span style="font-weight: bold; font-size: 11.5px; padding-left: 5px;">{{ $consignorData['name'] }}</span>
+                                <span class="label">Consignor</span> <span style="font-weight: bold; padding-left: 5px; {{ $consignorNameStyle }}">{{ $consignorData['name'] }}</span>
                                 <div class="party-lines party-details">{!! nl2br(e($consignorData['address'])) !!}</div>
                                 <div class="party-lines"><span class="label">Phone No.:</span> {{ $consignorPhone }}</div>
-                                <div class="party-lines"><span class="label">GST No.:</span> {{ $consignorGstin }}</div>
+                                <div class="party-lines" style="{{ $consignorGstinStyle }}"><span class="label">GST No.:</span> {{ $consignorGstin }}</div>
                             </td>
                             <td class="party-cell">
-                                <span class="label">Consignee</span> <span style="font-weight: bold; font-size: 11.5px; padding-left: 5px;">{{ $consigneeData['name'] }}</span>
+                                <span class="label">Consignee</span> <span style="font-weight: bold; padding-left: 5px; {{ $consigneeNameStyle }}">{{ $consigneeData['name'] }}</span>
                                 <div class="party-lines party-details">{!! nl2br(e($consigneeData['address'])) !!}</div>
                                 <div class="party-lines"><span class="label">Phone No.:</span> {{ $consigneePhone }}</div>
-                                <div class="party-lines"><span class="label">GST No.:</span> {{ $consigneeGstin }}</div>
+                                <div class="party-lines" style="{{ $consigneeGstinStyle }}"><span class="label">GST No.:</span> {{ $consigneeGstin }}</div>
                             </td>
                         </tr>
                     </table>
 
                     <table class="goods">
                         <tr>
-                            <td width="50%" class="large"><span class="label">Description of Goods</span><br>{{ $descriptionOfGoods }}</td>
+                            <td width="50%" class="large"><span class="label">Description of Goods</span><br><span style="{{ $descriptionOfGoodsStyle }}">{{ $descriptionOfGoods }}</span></td>
                             <td width="24%"><span class="label">No. of Articles</span><br>{{ $noOfArticles }}</td>
                             <td><span class="label">Packing</span><br>{{ $invoiceField(['packing']) }}</td>
                         </tr>

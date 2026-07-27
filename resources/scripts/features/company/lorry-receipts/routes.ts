@@ -1,10 +1,12 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { useDocumentTypeGuard } from '@/scripts/composables/useDocumentTypeGuard'
 
 const routes: RouteRecordRaw[] = [
   {
     path: 'lorry-receipts',
     name: 'lorry-receipts.index',
     component: () => import('./views/LorryReceiptIndexView.vue'),
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'view-invoice',
@@ -15,6 +17,7 @@ const routes: RouteRecordRaw[] = [
     path: 'lorry-receipts/create',
     name: 'lorry-receipts.create',
     component: () => import('../invoices/views/InvoiceCreateView.vue'),
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'create-invoice',
@@ -25,6 +28,7 @@ const routes: RouteRecordRaw[] = [
     path: 'lorry-receipts/:id/edit',
     name: 'lorry-receipts.edit',
     component: () => import('../invoices/views/InvoiceCreateView.vue'),
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'edit-invoice',
@@ -35,6 +39,7 @@ const routes: RouteRecordRaw[] = [
     path: 'lorry-receipts/:id/view',
     name: 'lorry-receipts.view',
     component: () => import('../invoices/views/InvoiceDetailView.vue'),
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'view-invoice',

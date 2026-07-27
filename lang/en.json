@@ -4,6 +4,7 @@
     "customers": "Customers",
     "items": "Items",
     "invoices": "Invoices",
+    "invoice_receipts": "Invoice Receipts",
     "recurring-invoices": "Recurring Invoices",
     "expenses": "Expenses",
     "estimates": "Estimates",
@@ -1091,7 +1092,7 @@
       "tax_id": "Tax Identification Number",
       "vat_id": "VAT Identification Number",
       "company_logo": "Company Logo",
-      "section_description": "Information about your company that will be displayed on invoices, estimates and other documents created by InvoiceShelf.",
+      "section_description": "Information about your company that will be displayed on invoices, estimates and other documents created by HisabKitabb.",
       "phone": "Phone",
       "country": "Country",
       "state": "State",
@@ -1158,6 +1159,30 @@
     "customization": {
       "customization": "customization",
       "updated_message": "Company information updated successfully",
+      "custom_template_title": "Custom PDF Templates",
+      "custom_template_description": "Download built-in template code, modify it, and upload custom templates. Uploaded templates appear in the template selector.",
+      "document_types": {
+        "title": "Document Types",
+        "description": "Enable or disable document types for this company. Disabled types will be hidden from the sidebar.",
+        "standard_invoices": "Invoices",
+        "standard_invoices_desc": "Standard invoices for billing customers",
+        "invoice_receipts": "Invoice Receipts",
+        "invoice_receipts_desc": "Office invoice format with custom fields",
+        "lr_receipts": "LR Receipts",
+        "lr_receipts_desc": "Lorry Receipt for transport operations",
+        "lorry_receipts": "Lorry Receipts",
+        "lorry_receipts_desc": "Hire/vehicle payment receipts",
+        "reload_notice": "Changes take effect after page reload."
+      },
+      "invoice_receipts": {
+        "title": "Invoice Receipts"
+      },
+      "lr_receipts": {
+        "title": "LR Receipts"
+      },
+      "lorry_receipts": {
+        "title": "Lorry Receipts"
+      },
       "save": "Save",
       "insert_fields": "Insert Fields",
       "learn_custom_format": "Learn how to use custom format",
@@ -1343,7 +1368,7 @@
     "exchange_rate": {
       "exchange_rate": "Exchange Rate",
       "title": "Fix Currency Exchange issues",
-      "description": "Please enter exchange rate of all the currencies mentioned below to help InvoiceShelf properly calculate the amounts in {currency}.",
+      "description": "Please enter exchange rate of all the currencies mentioned below to help HisabKitabb properly calculate the amounts in {currency}.",
       "drivers": "Drivers",
       "new_driver": "Add New Provider",
       "edit_driver": "Edit Provider",
@@ -1376,7 +1401,7 @@
       "title": "Tax Types",
       "add_tax": "Add Tax",
       "edit_tax": "Edit Tax",
-      "description": "You can add or Remove Taxes as you please. InvoiceShelf supports Taxes on Individual Items as well as on the invoice.",
+      "description": "You can add or Remove Taxes as you please. HisabKitabb supports Taxes on Individual Items as well as on the invoice.",
       "add_new_tax": "Add New Tax",
       "tax_settings": "Tax Settings",
       "tax_per_item": "Tax Per Item",
@@ -1488,7 +1513,7 @@
     },
     "update_app": {
       "title": "Update App",
-      "description": "You can easily update InvoiceShelf by checking for a new update by clicking the button below",
+      "description": "You can easily update HisabKitabb by checking for a new update by clicking the button below",
       "check_update": "Check for updates",
       "insider_consent": "Opt-in for Insider releases. Recommended for testing purposes only.",
       "avail_update": "New Update available",
@@ -1539,7 +1564,7 @@
     },
     "disk": {
       "title": "File Disks | File Disks",
-      "description": "By default, InvoiceShelf will use your local disk for saving backups, avatar and other image files. You can configure more than one disk drivers like DigitalOcean, S3 and Dropbox according to your preference.",
+      "description": "By default, HisabKitabb will use your local disk for saving backups, avatar and other image files. You can configure more than one disk drivers like DigitalOcean, S3 and Dropbox according to your preference.",
       "created_at": "created at",
       "dropbox": "dropbox",
       "name": "Name",
@@ -1590,7 +1615,7 @@
       "disk_setting_description": " Enable this, if you wish to save a copy of each Invoice, Estimate & Payment Receipt PDF on your default disk automatically. Turning this option will decrease the load-time when viewing the PDFs.",
       "select_disk": "Select Disk",
       "disk_settings": "Disk Settings",
-      "confirm_delete": "Your existing files & folders in the specified disk will not be affected but your disk configuration will be deleted from InvoiceShelf",
+      "confirm_delete": "Your existing files & folders in the specified disk will not be affected but your disk configuration will be deleted from HisabKitabb",
       "action": "Action",
       "edit_file_disk": "Edit File Disk",
       "success_create": "Disk added successfully",
@@ -1662,7 +1687,7 @@
     "skip": "Skip",
     "install_language": {
       "title": "Choose your language",
-      "description": "Select language wizard to install InvoiceShelf"
+      "description": "Select language wizard to install HisabKitabb"
     },
     "database": {
       "database": "Site URL & Database",
@@ -1687,7 +1712,7 @@
     },
     "verify_domain": {
       "title": "Domain Verification",
-      "desc": "InvoiceShelf uses Session based authentication which requires domain verification for security purposes. Please enter the domain on which you will be accessing your web application.",
+      "desc": "HisabKitabb uses Session based authentication which requires domain verification for security purposes. Please enter the domain on which you will be accessing your web application.",
       "app_domain": "App Domain",
       "verify_now": "Verify Now",
       "success": "Domain Verify Successfully.",
@@ -1746,7 +1771,7 @@
       "system_req": "System Requirements",
       "php_req_version": "Php (version {version} required)",
       "check_req": "Check Requirements",
-      "system_req_desc": "InvoiceShelf has a few server requirements. Make sure that your server has the required php version and all the extensions mentioned below."
+      "system_req_desc": "HisabKitabb has a few server requirements. Make sure that your server has the required php version and all the extensions mentioned below."
     },
     "errors": {
       "migrate_failed": "Migrate Failed",

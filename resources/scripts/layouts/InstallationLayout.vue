@@ -17,7 +17,7 @@
         <img
           v-else
           :src="loginPageLogo"
-          alt="InvoiceShelf"
+          alt="HisabKitabb"
           class="h-12 w-auto"
         />
       </div>
@@ -66,7 +66,7 @@
             target="_blank"
             rel="noopener noreferrer"
             class="text-primary-500 hover:text-primary-600 font-medium transition-colors"
-          >InvoiceShelf</a>
+          >HisabKitabb</a>
         </span>
       </footer>
     </main>

@@ -59,9 +59,60 @@
           </template>
         </BaseButton>
 
+        <!-- Create dropdown — shows New Invoice, New LR Receipt, New Lorry Receipt, Record Payment -->
+        <BaseDropdown
+          v-if="canCreate && viewMode === 'one-time'"
+          position="bottom-end"
+          width-class="w-56"
+          class="ml-4"
+        >
+          <template #activator>
+            <BaseButton variant="primary">
+              <template #left="slotProps">
+                <BaseIcon name="PlusIcon" :class="slotProps.class" />
+              </template>
+              {{ $t('invoices.new_invoice') }}
+              <BaseIcon name="ChevronDownIcon" class="w-4 h-4 ml-1" />
+            </BaseButton>
+          </template>
+
+          <!-- New Invoice (Office Invoice / Invoice Receipt) -->
+          <router-link :to="createPath">
+            <BaseDropdownItem>
+              <BaseIcon name="DocumentTextIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
+              {{ $t('invoices.new_invoice') }}
+            </BaseDropdownItem>
+          </router-link>
+
+          <!-- New LR Receipt -->
+          <router-link to="/admin/lr-receipts/create">
+            <BaseDropdownItem>
+              <BaseIcon name="ClipboardDocumentListIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
+              New LR Receipt
+            </BaseDropdownItem>
+          </router-link>
+
+          <!-- New Lorry Receipt -->
+          <router-link to="/admin/lorry-receipts/create">
+            <BaseDropdownItem>
+              <BaseIcon name="TruckIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
+              New Lorry Receipt
+            </BaseDropdownItem>
+          </router-link>
+
+          <!-- Record Payment -->
+          <router-link to="/admin/payments/create">
+            <BaseDropdownItem>
+              <BaseIcon name="CreditCardIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
+              {{ $t('invoices.record_payment') }}
+            </BaseDropdownItem>
+          </router-link>
+        </BaseDropdown>
+
+        <!-- Recurring mode: simple create button -->
         <router-link
-          v-if="canCreate"
-          :to="viewMode === 'recurring' ? 'invoices/create?recurring=1' : 'invoices/create'"
+          v-if="canCreate && viewMode === 'recurring'"
+          :to="`${createPath}?recurring=1`"
         >
           <BaseButton variant="primary" class="ml-4">
             <template #left="slotProps">
@@ -188,7 +239,7 @@
         <template v-if="canCreate" #actions>
           <BaseButton
             variant="primary-outline"
-            @click="$router.push('/admin/invoices/create')"
+            @click="$router.push(`/admin/${createPath}`)"
           >
             <template #left="slotProps">
               <BaseIcon name="PlusIcon" :class="slotProps.class" />
@@ -475,7 +526,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { debouncedWatch } from '@vueuse/core'
@@ -486,6 +537,7 @@ import SendInvoiceModal from '../components/SendInvoiceModal.vue'
 import RecurringInvoiceDropdown from '../../recurring-invoices/components/RecurringInvoiceDropdown.vue'
 import { useUserStore } from '../../../../stores/user.store'
 import { useDialogStore } from '../../../../stores/dialog.store'
+import { useCompanyStore } from '../../../../stores/company.store'
 import type { Invoice } from '../../../../types/domain/invoice'
 import type { RecurringInvoice } from '../../../../types/domain/recurring-invoice'
 
@@ -524,9 +576,33 @@ const invoiceStore = useInvoiceStore()
 const recurringInvoiceStore = useRecurringInvoiceStore()
 const userStore = useUserStore()
 const dialogStore = useDialogStore()
+const companyStore = useCompanyStore()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+
+// Detect if we're on the standard-invoices route (vs Invoice Receipts)
+const isStandardInvoiceRoute = computed<boolean>(() =>
+  route.name?.toString().startsWith('standard-invoices') ?? false,
+)
+
+// The create path depends on which document types are enabled.
+// If Invoice Receipts are enabled, prefer that. Otherwise use Standard Invoices.
+const createPath = computed<string>(() => {
+  const settings = companyStore.selectedCompanySettings
+  const invoiceReceiptsEnabled = settings?.enable_invoice_receipts !== 'NO'
+  const standardInvoicesEnabled = settings?.enable_standard_invoices !== 'NO'
+
+  // If Invoice Receipts are enabled, prefer that (even if both are on)
+  if (invoiceReceiptsEnabled) {
+    return 'invoices/create'
+  }
+  if (standardInvoicesEnabled) {
+    return 'standard-invoices/create'
+  }
+  // Fallback: use current route context
+  return isStandardInvoiceRoute.value ? 'standard-invoices/create' : 'invoices/create'
+})
 
 // ----------------------------------------------------------------
 // Recurring invoice ability
@@ -551,6 +627,24 @@ onMounted(() => {
   }
   recurringInvoiceStore.initFrequencies(t)
 })
+
+// Both /admin/standard-invoices and /admin/invoices use this same component.
+// Vue Router reuses the instance on navigation, so the table data becomes
+// stale. Watch the route name and force a refresh when it changes.
+watch(
+  () => route.name,
+  () => {
+    invoiceStore.$patch((state) => {
+      state.invoices = []
+      state.invoiceTotalCount = 0
+      state.selectedInvoices = []
+      state.selectAllField = false
+    })
+    isRequestOngoing.value = true
+    tableKey.value += 1
+    refreshTable()
+  },
+)
 
 function setViewMode(mode: 'one-time' | 'recurring'): void {
   if (mode === 'recurring' && !canViewRecurring.value) return
@@ -742,16 +836,21 @@ interface FetchResult {
 }
 
 async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
-  const data = {
+  const data: Record<string, unknown> = {
     customer_id: filters.customer_id ? Number(filters.customer_id) : undefined,
     status: filters.status || undefined,
     from_date: filters.from_date || undefined,
     to_date: filters.to_date || undefined,
     invoice_number: filters.invoice_number || undefined,
-    template_name: 'office_invoice',
     orderByField: sort.fieldName || 'created_at',
     orderBy: (sort.order || 'desc') as 'asc' | 'desc',
     page,
+  }
+
+  // Standard invoices: don't pass template_name (backend returns all
+  // non-transport invoices). Invoice Receipts: pass office_invoice.
+  if (!isStandardInvoiceRoute.value) {
+    data.template_name = 'office_invoice'
   }
 
   isRequestOngoing.value = true

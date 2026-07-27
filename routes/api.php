@@ -60,6 +60,7 @@ use App\Http\Controllers\Company\Settings\CompanyAiConfigurationController;
 use App\Http\Controllers\Company\Settings\CompanyController;
 use App\Http\Controllers\Company\Settings\CompanyMailConfigurationController;
 use App\Http\Controllers\Company\Settings\CompanySettingsController;
+use App\Http\Controllers\Company\Settings\CustomTemplateController;
 use App\Http\Controllers\Company\Settings\InvitationController;
 use App\Http\Controllers\Company\Settings\TaxTypesController;
 use App\Http\Controllers\Company\Settings\UserProfileController;
@@ -294,6 +295,7 @@ Route::prefix('/v1')->group(function () {
             Route::get('/invoices/templates', InvoiceTemplatesController::class);
 
             Route::get('/invoices/next-number', [InvoicesController::class, 'getNextNumber']);
+            Route::get('/invoices/find-by-number', [InvoicesController::class, 'findByInvoiceNumber']);
 
             Route::apiResource('invoices', InvoicesController::class);
 
@@ -485,6 +487,15 @@ Route::prefix('/v1')->group(function () {
             // ----------------------------------
 
             Route::apiResource('tax-types', TaxTypesController::class);
+
+            // Custom PDF Templates
+            // ----------------------------------
+
+            Route::get('/custom-templates', [CustomTemplateController::class, 'index']);
+            Route::get('/custom-templates/{templateName}/download', [CustomTemplateController::class, 'download']);
+            Route::get('/custom-templates/builtin/{documentType}/download', [CustomTemplateController::class, 'downloadBuiltin']);
+            Route::post('/custom-templates', [CustomTemplateController::class, 'upload']);
+            Route::delete('/custom-templates/{templateName}', [CustomTemplateController::class, 'destroy']);
 
             // Roles
             // ----------------------------------

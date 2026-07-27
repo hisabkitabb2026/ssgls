@@ -55,13 +55,13 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => 'REST API for InvoiceShelf — open-source invoicing & expense tracking. '
+        'description' => 'REST API for HisabKitabb — open-source invoicing & expense tracking. '
             .'Authenticate with a Sanctum personal access token (Authorization: Bearer <token>). '
             .'Company-scoped endpoints additionally require a `company` header carrying the company ID.',
     ],
 
     'ui' => [
-        'title' => 'InvoiceShelf API',
+        'title' => 'HisabKitabb API',
     ],
 
     'renderer' => 'elements',
@@ -110,11 +110,11 @@ return [
      * ```
      */
     'servers' => [
-        // InvoiceShelf is self-hosted: every instance has its own host. A clean
+        // HisabKitabb is self-hosted: every instance has its own host. A clean
         // placeholder is documented here instead of baking in the build-time
         // APP_URL (which would leak a dev/CI hostname into the public spec).
         // Readers replace it with their own instance URL.
-        'Your InvoiceShelf instance' => 'https://your-instance.example.com/api/v1',
+        'Your HisabKitabb instance' => 'https://your-instance.example.com/api/v1',
     ],
 
     /**

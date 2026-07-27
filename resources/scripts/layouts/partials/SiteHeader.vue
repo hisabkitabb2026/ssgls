@@ -36,7 +36,7 @@
         v-if="hasCreateAbilities && !companyStore.isAdminMode"
         class="relative hidden float-left m-0 md:block"
       >
-        <BaseDropdown width-class="w-48">
+        <BaseDropdown width-class="w-56">
           <template #activator>
             <div
               class="
@@ -48,19 +48,21 @@
             </div>
           </template>
 
-          <router-link to="/admin/invoices/create">
+          <!-- New Customer -->
+          <router-link to="/admin/customers/create">
             <BaseDropdownItem
-              v-if="userStore.hasAbilities(ABILITIES.CREATE_INVOICE)"
+              v-if="userStore.hasAbilities(ABILITIES.CREATE_CUSTOMER)"
             >
               <BaseIcon
-                name="DocumentTextIcon"
+                name="UserIcon"
                 class="w-5 h-5 mr-3 text-subtle group-hover:text-muted"
                 aria-hidden="true"
               />
-              {{ $t('invoices.new_invoice') }}
+              {{ $t('customers.new_customer') }}
             </BaseDropdownItem>
           </router-link>
 
+          <!-- New Estimate -->
           <router-link to="/admin/estimates/create">
             <BaseDropdownItem
               v-if="userStore.hasAbilities(ABILITIES.CREATE_ESTIMATE)"
@@ -74,16 +76,59 @@
             </BaseDropdownItem>
           </router-link>
 
-          <router-link to="/admin/customers/create">
+          <!-- New LR Receipt -->
+          <router-link to="/admin/lr-receipts/create">
             <BaseDropdownItem
-              v-if="userStore.hasAbilities(ABILITIES.CREATE_CUSTOMER)"
+              v-if="userStore.hasAbilities(ABILITIES.CREATE_INVOICE)"
             >
               <BaseIcon
-                name="UserIcon"
+                name="ClipboardDocumentListIcon"
                 class="w-5 h-5 mr-3 text-subtle group-hover:text-muted"
                 aria-hidden="true"
               />
-              {{ $t('customers.new_customer') }}
+              New LR Receipt
+            </BaseDropdownItem>
+          </router-link>
+
+          <!-- New Invoice — dynamically links to Invoice Receipt or Standard Invoice -->
+          <router-link :to="invoiceCreatePath">
+            <BaseDropdownItem
+              v-if="userStore.hasAbilities(ABILITIES.CREATE_INVOICE)"
+            >
+              <BaseIcon
+                name="DocumentTextIcon"
+                class="w-5 h-5 mr-3 text-subtle group-hover:text-muted"
+                aria-hidden="true"
+              />
+              {{ $t('invoices.new_invoice') }}
+            </BaseDropdownItem>
+          </router-link>
+
+          <!-- New Lorry Receipt -->
+          <router-link to="/admin/lorry-receipts/create">
+            <BaseDropdownItem
+              v-if="userStore.hasAbilities(ABILITIES.CREATE_INVOICE)"
+            >
+              <BaseIcon
+                name="TruckIcon"
+                class="w-5 h-5 mr-3 text-subtle group-hover:text-muted"
+                aria-hidden="true"
+              />
+              New Lorry Receipt
+            </BaseDropdownItem>
+          </router-link>
+
+          <!-- New Payment -->
+          <router-link to="/admin/payments/create">
+            <BaseDropdownItem
+              v-if="userStore.hasAbilities('create-payment')"
+            >
+              <BaseIcon
+                name="CreditCardIcon"
+                class="w-5 h-5 mr-3 text-subtle group-hover:text-muted"
+                aria-hidden="true"
+              />
+              {{ $t('invoices.record_payment') }}
             </BaseDropdownItem>
           </router-link>
         </BaseDropdown>
@@ -245,7 +290,25 @@ const hasCreateAbilities = computed<boolean>(() => {
     ABILITIES.CREATE_INVOICE,
     ABILITIES.CREATE_ESTIMATE,
     ABILITIES.CREATE_CUSTOMER,
+    'create-payment',
   ])
+})
+
+// Dynamically determine the invoice create path based on which document
+// types are enabled. If Invoice Receipts are enabled, prefer that.
+// Otherwise use Standard Invoices.
+const invoiceCreatePath = computed<string>(() => {
+  const settings = companyStore.selectedCompanySettings
+  const invoiceReceiptsEnabled = settings?.enable_invoice_receipts !== 'NO'
+  const standardInvoicesEnabled = settings?.enable_standard_invoices !== 'NO'
+
+  if (invoiceReceiptsEnabled) {
+    return '/admin/invoices/create'
+  }
+  if (standardInvoicesEnabled) {
+    return '/admin/standard-invoices/create'
+  }
+  return '/admin/invoices/create'
 })
 
 function getDefaultAvatar(): string {

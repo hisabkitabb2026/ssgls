@@ -426,8 +426,10 @@ export const useInvoiceStore = defineStore('invoice', {
       return response
     },
 
-    async fetchInvoiceTemplates(): Promise<{ data: { invoiceTemplates: InvoiceTemplate[] } }> {
-      const response = await invoiceService.getTemplates()
+    async fetchInvoiceTemplates(
+      documentType?: string,
+    ): Promise<{ data: { invoiceTemplates: InvoiceTemplate[] } }> {
+      const response = await invoiceService.getTemplates(documentType)
       this.templates = response.invoiceTemplates
       return { data: response }
     },
@@ -521,12 +523,16 @@ export const useInvoiceStore = defineStore('invoice', {
         editActions.push(this.fetchInvoice(Number(routeParams.id)))
       }
 
+      // For transport receipt templates, fetch only templates matching the
+      // document type so the template selector shows relevant templates.
+      const transportDocumentType = this.newInvoice.template_name ?? undefined
+
       try {
         const [, , templatesRes, nextNumRes] = await Promise.all([
           Promise.resolve(), // placeholder for items fetch
           this.resetSelectedNote(),
-          this.fetchInvoiceTemplates(),
-          this.getNextNumber(),
+          this.fetchInvoiceTemplates(transportDocumentType),
+          this.getNextNumber(transportDocumentType ? { template_name: transportDocumentType } : undefined),
           Promise.resolve(), // placeholder for tax types fetch
           ...editActions,
         ])
@@ -537,11 +543,15 @@ export const useInvoiceStore = defineStore('invoice', {
           }
 
           if (templatesRes?.data?.invoiceTemplates?.length) {
-            this.setTemplate(this.templates[0].name)
-            const { currentUserSettings } = useUserStore()
-            if (currentUserSettings.default_invoice_template) {
-              this.newInvoice.template_name =
-                currentUserSettings.default_invoice_template
+            // For transport receipts, the template_name is already set from
+            // the route — don't override it with the first template.
+            if (!transportDocumentType) {
+              this.setTemplate(this.templates[0].name)
+              const { currentUserSettings } = useUserStore()
+              if (currentUserSettings.default_invoice_template) {
+                this.newInvoice.template_name =
+                  currentUserSettings.default_invoice_template
+              }
             }
           }
         }

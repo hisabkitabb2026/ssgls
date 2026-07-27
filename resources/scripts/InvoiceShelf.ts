@@ -90,10 +90,14 @@ export default class InvoiceShelf {
       }
     }
 
-    // Install plugins
+    // Install plugins — Pinia must be installed before the router because
+    // route redirects and navigation guards call useXxxStore() at install
+    // time. If Pinia isn't active yet, getActivePinia() returns undefined
+    // and the app crashes with "Cannot read properties of undefined
+    // (reading '_s')".
+    this.app.use(createAppPinia())
     this.app.use(router)
     this.app.use(this.i18n)
-    this.app.use(createAppPinia())
 
     // Directives
     installTooltipDirective(this.app)

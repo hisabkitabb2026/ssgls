@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { useDocumentTypeGuard } from '@/scripts/composables/useDocumentTypeGuard'
 
 const InvoiceIndexView = () => import('./views/InvoiceIndexView.vue')
 const InvoiceCreateView = () => import('./views/InvoiceCreateView.vue')
@@ -9,6 +10,7 @@ export const invoiceRoutes: RouteRecordRaw[] = [
     path: 'invoices',
     name: 'invoices.index',
     component: InvoiceIndexView,
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'view-invoice',
@@ -19,6 +21,7 @@ export const invoiceRoutes: RouteRecordRaw[] = [
     path: 'invoices/create',
     name: 'invoices.create',
     component: InvoiceCreateView,
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'create-invoice',
@@ -29,6 +32,7 @@ export const invoiceRoutes: RouteRecordRaw[] = [
     path: 'invoices/:id/edit',
     name: 'invoices.edit',
     component: InvoiceCreateView,
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'edit-invoice',
@@ -39,6 +43,7 @@ export const invoiceRoutes: RouteRecordRaw[] = [
     path: 'invoices/:id/view',
     name: 'invoices.view',
     component: InvoiceDetailView,
+    beforeEnter: useDocumentTypeGuard,
     meta: {
       requiresAuth: true,
       ability: 'view-invoice',

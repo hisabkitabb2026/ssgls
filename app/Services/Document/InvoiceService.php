@@ -85,6 +85,7 @@ class InvoiceService
                 ->setModel($invoice)
                 ->setCompany($invoice->company_id)
                 ->setCustomer($invoice->customer_id)
+                ->setTemplateName($invoice->template_name)
                 ->setNextNumbers();
 
             $invoice->sequence_number = $serial->nextSequenceNumber;
@@ -150,6 +151,7 @@ class InvoiceService
             ->setModel($invoice)
             ->setCompany($invoice->company_id)
             ->setCustomer($request->customer_id)
+            ->setTemplateName($invoice->template_name)
             ->setModelObject($invoice->id)
             ->setNextNumbers();
 
@@ -371,6 +373,7 @@ class InvoiceService
             ->setModel($invoice)
             ->setCompany($invoice->company_id)
             ->setCustomer($invoice->customer_id)
+            ->setTemplateName($invoice->template_name)
             ->setNextNumbers();
 
         $dueDate = null;

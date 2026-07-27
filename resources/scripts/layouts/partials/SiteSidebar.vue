@@ -59,7 +59,7 @@
             <div class="flex items-center shrink-0 px-4 mb-10">
               <MainLogo
                 class="block h-auto max-w-full w-36 text-primary-400"
-                alt="InvoiceShelf Logo"
+                alt="HisabKitabb Logo"
               />
             </div>
 

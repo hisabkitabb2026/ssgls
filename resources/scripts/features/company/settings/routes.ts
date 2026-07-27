@@ -61,6 +61,15 @@ const settingsRoutes: RouteRecordRaw[] = [
         redirect: { name: 'settings.modules' },
       },
       {
+        path: 'company-info',
+        name: 'settings.company-info',
+        meta: {
+          requiresAuth: true,
+          isOwner: true,
+        },
+        component: () => import('./views/CompanyInfoView.vue'),
+      },
+      {
         path: 'mail-configuration',
         name: 'settings.mail-config',
         meta: {

@@ -190,9 +190,9 @@
         <div class="flex gap-2">
           <BaseInput
             v-model="invoiceStore.newInvoice.invoice_number"
+            class="flex-1"
             :content-loading="isLoading"
             @input="v.invoice_number.$touch()"
-            class="flex-1"
           />
           <BaseButton
             v-if="!isEdit && !invoiceStore.newInvoice.invoice_number"
@@ -604,23 +604,24 @@ async function initializeConsigneeFromCustomFields(): Promise<void> {
   }
 }
 
-// Generate invoice number using the format from company settings
+// Generate invoice number using the format from company settings.
+// Uses the invoice store's getNextNumber method (which goes through the axios
+// client) so the company header is included — this is critical for the backend
+// to look up the correct per-template format setting (e.g.
+// lr_receipt_number_format, lorry_receipt_number_format,
+// office_invoice_number_format) instead of the default invoice_number_format.
 async function generateInvoiceNumber(): Promise<void> {
   isGeneratingNumber.value = true
   try {
-    const response = await fetch('/api/v1/invoices/next-number', {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-    })
-    
-    if (response.ok) {
-      const data = await response.json()
-      if (data.data?.next_number) {
-        invoiceStore.newInvoice.invoice_number = data.data.next_number
-      }
+    const templateName = invoiceStore.newInvoice.template_name
+    const params: { key?: string; template_name?: string } = { key: 'invoice' }
+    if (templateName) {
+      params.template_name = templateName
+    }
+
+    const response = await invoiceStore.getNextNumber(params)
+    if (response?.data?.nextNumber) {
+      invoiceStore.newInvoice.invoice_number = response.data.nextNumber
     }
   } catch (error) {
     console.error('Failed to generate invoice number:', error)
@@ -628,4 +629,19 @@ async function generateInvoiceNumber(): Promise<void> {
     isGeneratingNumber.value = false
   }
 }
+
+// Auto-populate the invoice number when the form loads for a new (non-edit) invoice.
+// The store's fetchInvoiceInitialSettings already passes template_name to
+// getNextNumber, so the correct per-template number is generated on the first
+// call. This watcher is a fallback for cases where the store didn't set a number.
+watch(
+  () => props.isLoading,
+  async (loading) => {
+    if (!loading && !props.isEdit && !invoiceStore.newInvoice.invoice_number) {
+      await generateInvoiceNumber()
+    }
+  },
+  { immediate: true },
+)
+
 </script>

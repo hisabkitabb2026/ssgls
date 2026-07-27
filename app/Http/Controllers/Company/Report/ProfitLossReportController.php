@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Currency;
 use App\Models\Customer;
+use App\Models\Expense;
 use App\Models\Invoice;
 use App\Services\Report\ProfitLossCalculationService;
 use Carbon\Carbon;
@@ -24,6 +25,13 @@ class ProfitLossReportController extends Controller
     /**
      * Handle the incoming request.
      *
+     * Dual-mode P&L:
+     * - If the company uses transport receipt templates (lr_receipt, lorry_receipt,
+     *   office_invoice), compute P&L from amount_credit/amount_debit on LR Receipts.
+     * - If the company uses standard invoices only, compute P&L from invoice
+     *   base_total (revenue) minus expenses (from the expenses table).
+     * - If both exist, show combined P&L from both sources.
+     *
      * @param  string  $hash
      * @return JsonResponse
      */
@@ -39,108 +47,149 @@ class ProfitLossReportController extends Controller
 
         $dateFormat = CompanySetting::getSetting('carbon_date_format', $company->id);
 
-        // Fetch all LR Receipts in date range, optionally filtered by customer name/id
-        $lrReceipts = Invoice::with(['customer', 'consigneeCustomer', 'ownerCustomer', 'driverCustomer', 'brokerCustomer'])
-            ->where('company_id', $company->id)
-            ->where('template_name', 'lr_receipt')
-            ->when($request->from_date, fn ($query, $date) => $query->where('invoice_date', '>=', $date))
-            ->when($request->to_date, fn ($query, $date) => $query->where('invoice_date', '<=', $date))
-            ->when($request->customer_id, function ($query) use ($request, $company) {
-                $customer = Customer::find($request->customer_id);
-                if ($customer) {
-                    $normalizedName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $customer->name));
-                    $allIds = Customer::where('customers.company_id', $company->id)
-                        ->get(['id', 'name'])
-                        ->filter(function ($c) use ($normalizedName) {
-                            return strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $c->name)) === $normalizedName;
-                        })
-                        ->pluck('id')
-                        ->toArray();
+        $fromDate = $request->from_date;
+        $toDate = $request->to_date;
 
-                    $query->where(function ($q) use ($allIds) {
-                        $q->whereIn('customer_id', $allIds)
-                          ->orWhereIn('consignee_customer_id', $allIds);
+        // Detect which invoice types the company uses
+        $transportTemplates = ['lr_receipt', 'lorry_receipt', 'office_invoice'];
+        $hasTransportReceipts = Invoice::where('company_id', $company->id)
+            ->whereIn('template_name', $transportTemplates)
+            ->exists();
+        $hasStandardInvoices = Invoice::where('company_id', $company->id)
+            ->whereNotIn('template_name', $transportTemplates)
+            ->exists();
+
+        // Initialize shared variables
+        $customersData = collect();
+        $grandTotalNetProfit = 0;
+        $totalIncome = 0;
+        $totalExpense = 0;
+        $standardRevenue = 0;
+        $standardExpenses = 0;
+        $lrReceipts = collect();
+
+        // ── Transport Receipt P&L (LR Receipts) ──
+        if ($hasTransportReceipts) {
+            $lrReceipts = Invoice::with(['customer', 'consigneeCustomer', 'ownerCustomer', 'driverCustomer', 'brokerCustomer'])
+                ->where('company_id', $company->id)
+                ->where('template_name', 'lr_receipt')
+                ->when($fromDate, fn ($query, $date) => $query->where('invoice_date', '>=', $date))
+                ->when($toDate, fn ($query, $date) => $query->where('invoice_date', '<=', $date))
+                ->when($request->customer_id, function ($query) use ($request, $company) {
+                    $customer = Customer::find($request->customer_id);
+                    if ($customer) {
+                        $normalizedName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $customer->name));
+                        $allIds = Customer::where('customers.company_id', $company->id)
+                            ->get(['id', 'name'])
+                            ->filter(function ($c) use ($normalizedName) {
+                                return strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $c->name)) === $normalizedName;
+                            })
+                            ->pluck('id')
+                            ->toArray();
+
+                        $query->where(function ($q) use ($allIds) {
+                            $q->whereIn('customer_id', $allIds)
+                                ->orWhereIn('consignee_customer_id', $allIds);
+                        });
+                    }
+                })
+                ->when($request->customer_name, function ($query) use ($request) {
+                    $query->where(function ($q) use ($request) {
+                        $q->whereHas('customer', function ($sub) use ($request) {
+                            $sub->where('name', 'LIKE', '%'.$request->customer_name.'%');
+                        })->orWhereHas('consigneeCustomer', function ($sub) use ($request) {
+                            $sub->where('name', 'LIKE', '%'.$request->customer_name.'%');
+                        });
                     });
+                })
+                ->get();
+
+            // Group LR receipts by customer based on GST Tax Payable By field
+            $customerProfitLoss = [];
+
+            foreach ($lrReceipts as $lrReceipt) {
+                $gstTaxPayableBy = $lrReceipt->getCustomFieldValueBySlug('gst-tax-payable-by');
+
+                $payingCustomerType = strtoupper($gstTaxPayableBy ?? '') === 'CONSIGNEE' ? 'CONSIGNEE' : 'CONSIGNOR';
+
+                $customerId = null;
+                if ($payingCustomerType === 'CONSIGNEE' && $lrReceipt->consignee_customer_id) {
+                    $customerId = $lrReceipt->consignee_customer_id;
+                } else {
+                    $customerId = $lrReceipt->customer_id;
                 }
-            })
-            ->when($request->customer_name, function ($query) use ($request) {
-                $query->where(function ($q) use ($request) {
-                    $q->whereHas('customer', function ($sub) use ($request) {
-                        $sub->where('name', 'LIKE', '%'.$request->customer_name.'%');
-                    })->orWhereHas('consigneeCustomer', function ($sub) use ($request) {
+
+                if (! $customerId) {
+                    continue;
+                }
+
+                $amountCredit = (float) $lrReceipt->amount_credit;
+                $amountDebit = (float) $lrReceipt->amount_debit;
+                $netProfit = $amountCredit - $amountDebit;
+
+                $customerName = Customer::where('id', $customerId)->value('name') ?? 'Unknown';
+
+                if (! isset($customerProfitLoss[$customerId])) {
+                    $customerProfitLoss[$customerId] = [
+                        'id' => $customerId,
+                        'name' => $customerName,
+                        'lrReceipts' => [],
+                        'totalIncome' => 0,
+                        'totalNetProfit' => 0,
+                    ];
+                }
+
+                $customerProfitLoss[$customerId]['lrReceipts'][] = [
+                    'lr_no' => $lrReceipt->invoice_number,
+                    'lr_date' => $lrReceipt->invoice_date ? Carbon::parse($lrReceipt->invoice_date)->format('Y-m-d') : '',
+                    'amount_credit' => $amountCredit,
+                    'amount_credit_date' => $lrReceipt->amount_credit_date,
+                    'amount_debit' => $amountDebit,
+                    'amount_debit_date' => $lrReceipt->amount_debit_date,
+                    'income' => $amountCredit,
+                    'net_profit' => $netProfit,
+                    'office_invoice_no' => $lrReceipt->office_invoice_number,
+                    'challan_no' => $lrReceipt->challan_number,
+                ];
+
+                $customerProfitLoss[$customerId]['totalIncome'] += $amountCredit;
+                $customerProfitLoss[$customerId]['totalNetProfit'] += $netProfit;
+
+                $grandTotalNetProfit += $netProfit;
+                $totalIncome += $amountCredit;
+                $totalExpense += $amountDebit;
+            }
+
+            $customersData = collect($customerProfitLoss)->values();
+        }
+
+        // ── Standard Invoice P&L ──
+        if ($hasStandardInvoices) {
+            // Revenue from standard invoices (base_total)
+            $standardRevenueQuery = Invoice::where('company_id', $company->id)
+                ->whereNotIn('template_name', $transportTemplates)
+                ->when($fromDate, fn ($query, $date) => $query->where('invoice_date', '>=', $date))
+                ->when($toDate, fn ($query, $date) => $query->where('invoice_date', '<=', $date))
+                ->when($request->customer_id, fn ($query, $id) => $query->where('customer_id', $id))
+                ->when($request->customer_name, function ($query) use ($request) {
+                    $query->whereHas('customer', function ($sub) use ($request) {
                         $sub->where('name', 'LIKE', '%'.$request->customer_name.'%');
                     });
                 });
-            })
-            ->get();
 
-        // Group LR receipts by customer based on GST Tax Payable By field
-        $customerProfitLoss = [];
-        $grandTotalNetProfit = 0;
+            $standardRevenue = (float) $standardRevenueQuery->sum('base_total');
 
-        foreach ($lrReceipts as $lrReceipt) {
-            // Get GST Tax Payable By custom field value
-            $gstTaxPayableBy = $lrReceipt->getCustomFieldValueBySlug('gst-tax-payable-by');
-            
-            // Determine which customer to attribute this LR to
-            $payingCustomerType = strtoupper($gstTaxPayableBy ?? '') === 'CONSIGNEE' ? 'CONSIGNEE' : 'CONSIGNOR';
-            
-            // Get the appropriate customer ID
-            $customerId = null;
-            if ($payingCustomerType === 'CONSIGNEE' && $lrReceipt->consignee_customer_id) {
-                $customerId = $lrReceipt->consignee_customer_id;
-            } else {
-                $customerId = $lrReceipt->customer_id;
-            }
+            // Expenses from the expenses table
+            $standardExpensesQuery = Expense::where('company_id', $company->id)
+                ->when($fromDate, fn ($query, $date) => $query->where('expense_date', '>=', $date))
+                ->when($toDate, fn ($query, $date) => $query->where('expense_date', '<=', $date));
 
-            // Skip if no customer
-            if (!$customerId) {
-                continue;
-            }
+            $standardExpenses = (float) $standardExpensesQuery->sum('base_amount');
 
-            // Calculate income and expense for this LR (both amount_credit and amount_debit are in cents)
-            $amountCredit = (float) $lrReceipt->amount_credit;
-            $amountDebit = (float) $lrReceipt->amount_debit;
-            $netProfit = $amountCredit - $amountDebit;
-
-            // Get customer name
-            $customerName = Customer::where('id', $customerId)->value('name') ?? 'Unknown';
-
-            // Initialize customer entry if not exists
-            if (!isset($customerProfitLoss[$customerId])) {
-                $customerProfitLoss[$customerId] = [
-                    'id' => $customerId,
-                    'name' => $customerName,
-                    'lrReceipts' => [],
-                    'totalIncome' => 0,
-                    'totalNetProfit' => 0,
-                ];
-            }
-
-            // Add LR receipt to customer's list
-            $customerProfitLoss[$customerId]['lrReceipts'][] = [
-                'lr_no' => $lrReceipt->invoice_number,
-                'lr_date' => $lrReceipt->invoice_date ? Carbon::parse($lrReceipt->invoice_date)->format('Y-m-d') : '',
-                'amount_credit' => $amountCredit,
-                'amount_credit_date' => $lrReceipt->amount_credit_date,
-                'amount_debit' => $amountDebit,
-                'amount_debit_date' => $lrReceipt->amount_debit_date,
-                'income' => $amountCredit,
-                'net_profit' => $netProfit,
-                'office_invoice_no' => $lrReceipt->office_invoice_number,
-                'challan_no' => $lrReceipt->challan_number,
-            ];
-
-            // Update customer totals
-            $customerProfitLoss[$customerId]['totalIncome'] += $amountCredit;
-            $customerProfitLoss[$customerId]['totalNetProfit'] += $netProfit;
-
-            // Update grand total (Net Profit = Income - Expenses)
-            $grandTotalNetProfit += $netProfit;
+            $totalIncome += $standardRevenue;
+            $totalExpense += $standardExpenses;
+            $grandTotalNetProfit += ($standardRevenue - $standardExpenses);
         }
-
-        // Convert to collection for the view
-        $customersData = collect($customerProfitLoss)->values();
 
         $from_date = Carbon::createFromFormat('Y-m-d', $request->from_date)->translatedFormat($dateFormat);
         $to_date = Carbon::createFromFormat('Y-m-d', $request->to_date)->translatedFormat($dateFormat);
@@ -160,9 +209,13 @@ class ProfitLossReportController extends Controller
             'to_date' => $to_date,
             'currency' => $currency,
             'income' => $totalIncome,
-            'totalExpense' => $totalIncome - $grandTotalNetProfit,
+            'totalExpense' => $totalExpense,
             'netProfit' => $grandTotalNetProfit,
             'lrReceipts' => $lrReceipts,
+            'hasTransportReceipts' => $hasTransportReceipts,
+            'hasStandardInvoices' => $hasStandardInvoices,
+            'standardRevenue' => $standardRevenue,
+            'standardExpenses' => $standardExpenses,
         ]);
 
         $pdf = Pdf::loadView('app.pdf.reports.profit-loss');
