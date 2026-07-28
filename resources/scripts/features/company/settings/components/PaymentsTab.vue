@@ -4,6 +4,8 @@ import { useCompanyStore } from '@/scripts/stores/company.store'
 import { usePaymentStore } from '@/scripts/features/company/payments/store'
 import NumberCustomizer from './NumberCustomizer.vue'
 import PaymentsTabDefaultFormats from './PaymentsTabDefaultFormats.vue'
+import CustomTemplateUploader from './CustomTemplateUploader.vue'
+
 
 interface Utils {
   mergeSettings: (target: Record<string, unknown>, source: Record<string, unknown>) => void
@@ -49,8 +51,11 @@ const sendAsAttachmentField = computed<boolean>({
   <BaseDivider class="mt-6 mb-2" />
   <PaymentsTabDefaultFormats />
   <BaseDivider class="mt-6 mb-2" />
+  <CustomTemplateUploader document-type="payment" />
+  <BaseDivider class="mt-6 mb-2" />
 
   <ul class="divide-y divide-line-default">
+
     <BaseSwitchSection
       v-model="sendAsAttachmentField"
       :title="$t('settings.customization.payments.payment_email_attachment')"

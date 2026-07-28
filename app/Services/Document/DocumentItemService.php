@@ -26,6 +26,12 @@ class DocumentItemService
                 unset($item['recurring_invoice_id']);
             }
 
+            // Office Invoice item-level transport fields (consignment_number,
+            // rate, other_charge, lr_charge, dd_charge, amount, etc.) are now
+            // sent as native item properties and are saved directly via
+            // $document->items()->create($item) since InvoiceItem uses
+            // $guarded = ['id']. No custom field mapping is needed.
+
             $createdItem = $document->items()->create($item);
 
             if (array_key_exists('taxes', $item) && $item['taxes']) {

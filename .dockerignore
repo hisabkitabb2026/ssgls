@@ -46,3 +46,5 @@ invoiceshelf.code-workspace
 package-lock.json
 phpunit.xml
 readme.md
+CLAUDE.md
+GEMINI.md

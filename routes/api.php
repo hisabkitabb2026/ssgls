@@ -561,6 +561,7 @@ Route::prefix('/v1')->group(function () {
         // Company-context Active Modules index (read-only, lists every
         // instance-activated module with a has_settings flag)
         Route::get('/company-modules', [CompanyModulesController::class, 'index']);
+
     });
 
     Route::prefix('/{company:slug}/customer')->group(function () {

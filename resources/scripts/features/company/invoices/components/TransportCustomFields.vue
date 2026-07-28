@@ -1,172 +1,190 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import lodash from 'lodash'
-import { parse, format } from 'date-fns'
-import { customFieldService } from '@/scripts/api/services/custom-field.service'
-import SingleField from '@/scripts/features/company/customers/components/CreateCustomFieldsSingle.vue'
 
-interface CustomFieldItem {
-  id: number
-  value: string | boolean | number | null
-  default_answer: string | boolean | number | null
+/**
+ * TransportCustomFields — renders transport receipt fields (LR Receipt,
+ * Lorry Receipt) as native form inputs bound directly to the invoice store's
+ * transport properties (from_code, to_code, truck_no, etc.).
+ *
+ * Phase 3 cleanup: This component no longer fetches custom field definitions
+ * from the API. All transport fields are native columns on the invoices table
+ * and are bound directly via v-model to the store.
+ */
+
+interface TransportField {
+  key: string
   label: string
-  options: string[] | null
-  is_required: boolean
-  placeholder: string | null
-  order: number | null
-  type: string
-  custom_field_id?: number
-  custom_field?: {
-    label: string
-    options: string[] | null
-    is_required: boolean
-    placeholder: string | null
-    order: number | null
-    type: string
-  }
-}
-
-interface StoreWithProp {
-  [key: string]: {
-    customFields: CustomFieldItem[]
-    fields: CustomFieldItem[]
-  }
+  type?: 'text' | 'number' | 'date' | 'textarea' | 'dropdown'
+  options?: string[]
+  readonly?: boolean
+  fullWidth?: boolean
 }
 
 interface FieldSection {
   title: string
   icon?: string
-  fieldLabels: string[]
-  gridLayout?: string
+  fields: TransportField[]
 }
 
-const props = withDefaults(
-  defineProps<{
-    store: StoreWithProp
-    storeProp: string
-    isEdit?: boolean
-    type?: string | null
-    isLoading?: boolean | null
-    customFieldScope: string
-    templateName?: string | null
-  }>(),
-  {
-    isEdit: false,
-    type: null,
-    isLoading: null,
-    templateName: null,
-  }
-)
+const props = defineProps<{
+  store: Record<string, any>
+  storeProp: string
+  templateName?: string | null
+  isLoading?: boolean | null
+}>()
 
-const storeData = computed(() => {
-  const data = props.store[props.storeProp]
+const invoiceData = computed(() => props.store[props.storeProp])
 
-  if (!data) {
-    return null
-  }
-
-  if (!Array.isArray(data.customFields)) {
-    data.customFields = []
-  }
-
-  if (!Array.isArray(data.fields)) {
-    data.fields = []
-  }
-
-  return data
-})
-
-// --- Section definitions per template ---
+// --- LR Receipt field sections ---
 const lrReceiptSections: FieldSection[] = [
   {
     title: 'Trip Details',
     icon: 'TruckIcon',
-    fieldLabels: [
-      'From', 'To', 'Truck No',
-      'Mode of Payment', 'GST Tax Payable By',
+    fields: [
+      { key: 'from_code', label: 'From' },
+      { key: 'to_code', label: 'To' },
+      { key: 'truck_no', label: 'Truck No' },
+      {
+        key: 'mode_of_payment',
+        label: 'Mode of Payment',
+        type: 'dropdown',
+        options: ['To Pay', 'To Be Billed', 'Paid', 'TBB'],
+      },
+      {
+        key: 'gst_tax_payable_by',
+        label: 'GST Tax Payable By',
+        type: 'dropdown',
+        options: ['Consignor', 'Consignee'],
+      },
     ],
   },
   {
     title: 'Consignment Details',
     icon: 'ClipboardDocumentListIcon',
-    fieldLabels: [
-      'Description of Goods', 'HSN Code', 'E-way Bill No',
-      'Actual Weight', 'Charged Weight', 'No of Articles',
-      'Packing', 'Invoice No',
+    fields: [
+      { key: 'description_of_goods', label: 'Description of Goods', type: 'textarea', fullWidth: true },
+      { key: 'hsn_code', label: 'HSN Code' },
+      { key: 'eway_bill_no', label: 'E-way Bill No' },
+      { key: 'actual_weight', label: 'Actual Weight' },
+      { key: 'charged_weight', label: 'Charged Weight' },
+      { key: 'no_of_articles', label: 'No of Articles' },
+      { key: 'packing', label: 'Packing' },
     ],
   },
   {
     title: 'Freight Details',
     icon: 'CurrencyRupeeIcon',
-    fieldLabels: [
-      'Basic Freight', 'Hamali', 'FOV',
-      'Local Collection', 'Door Delivery', 'Other Charge',
-      'Net Amount',
+    fields: [
+      { key: 'basic_freight', label: 'Basic Freight', type: 'number' },
+      { key: 'hamali', label: 'Hamali', type: 'number' },
+      { key: 'fov', label: 'FOV', type: 'number' },
+      { key: 'local_collection', label: 'Local Collection', type: 'number' },
+      { key: 'door_delivery', label: 'Door Delivery', type: 'number' },
+      { key: 'docket_charge', label: 'Docket Charge', type: 'number' },
+      { key: 'other_charge', label: 'Other Charge', type: 'number' },
+      { key: 'net_amount', label: 'Net Amount', type: 'number', readonly: true },
     ],
   },
 ]
 
-
+// --- Lorry Receipt field sections ---
 const lorryReceiptSections: FieldSection[] = [
   {
     title: 'Trip Details',
     icon: 'MapPinIcon',
-    fieldLabels: [
-      'From', 'To', 'No Of Pages', 'No Of Packages',
-      'Actual Weight', 'Charge Weight',
+    fields: [
+      { key: 'from_code', label: 'From' },
+      { key: 'to_code', label: 'To' },
+      { key: 'no_of_pages', label: 'No Of Pages' },
+      { key: 'no_of_packages', label: 'No Of Packages' },
+      { key: 'actual_weight', label: 'Actual Weight' },
+      { key: 'charged_weight', label: 'Charge Weight' },
     ],
   },
   {
     title: 'Vehicle Details',
     icon: 'TruckIcon',
-    fieldLabels: [
-      'Lorry No', 'Regd at', 'Body Type', 'Make', 'Model',
-      'Colour', 'Chasis No', 'Engine No',
+    fields: [
+      { key: 'truck_no', label: 'Lorry No' },
+      { key: 'regd_at', label: 'Regd at' },
+      { key: 'body_type', label: 'Body Type' },
+      { key: 'make', label: 'Make' },
+      { key: 'vehicle_model', label: 'Model' },
+      { key: 'colour', label: 'Colour' },
+      { key: 'chasis_no', label: 'Chasis No' },
+      { key: 'engine_no', label: 'Engine No' },
     ],
   },
   {
     title: 'Hire Particulars',
     icon: 'CurrencyRupeeIcon',
-    fieldLabels: [
-      'Paid To', 'Lorry Hire', 'Add Other Charges',
-      'Advance Paid by Cash/Cheque No', 'Advance On', 'Bank',
-      'Advance Paid Rs', 'Balance Payable at', 'Loaded By',
+    fields: [
+      { key: 'paid_to', label: 'Paid To' },
+      { key: 'lorry_hire_amount', label: 'Lorry Hire', type: 'number' },
+      { key: 'other_charges_amount', label: 'Add Other Charges', type: 'number' },
+      { key: 'advance_cash_cheque_no', label: 'Advance Paid by Cash/Cheque No' },
+      { key: 'advance_on', label: 'Advance On', type: 'date' },
+      { key: 'advance_bank', label: 'Bank' },
+      { key: 'advance_amount', label: 'Advance Paid Rs', type: 'number' },
+      { key: 'balance_payable_at', label: 'Balance Payable at' },
+      { key: 'loaded_by', label: 'Loaded By' },
     ],
   },
   {
     title: 'Final Payment Details',
     icon: 'BanknotesIcon',
-    fieldLabels: [
-      'Final Paid To', 'Add Detention Rs.', 'Extra Hire Rs', 'Other Rs',
-      'Less Adv. at other branch', 'Less Deduction for Claims',
-      'Final Balance Amount Paid at', 'Final Balance Date',
-      'Cash/Cheque No.', 'Final Bank',
+    fields: [
+      { key: 'final_paid_to', label: 'Final Paid To' },
+      { key: 'detention_amount', label: 'Add Detention Rs.', type: 'number' },
+      { key: 'extra_hire_amount', label: 'Extra Hire Rs', type: 'number' },
+      { key: 'final_other_amount', label: 'Other Rs', type: 'number' },
+      { key: 'less_advance_other_branch_amount', label: 'Less Adv. at other branch', type: 'number' },
+      { key: 'less_deduction_claims_amount', label: 'Less Deduction for Claims', type: 'number' },
+      { key: 'final_balance_paid_at', label: 'Final Balance Amount Paid at' },
+      { key: 'final_balance_on', label: 'Final Balance Date', type: 'date' },
+      { key: 'final_cash_cheque_no', label: 'Cash/Cheque No.' },
+      { key: 'final_bank', label: 'Final Bank' },
     ],
   },
   {
     title: 'Owner Details',
     icon: 'UserIcon',
-    fieldLabels: [
-      'Owner Name', 'Owner Address', 'Owner Phone No',
-      'Owner Bank Account No', 'Owner PAN No', 'Financer Address',
+    fields: [
+      { key: 'owner_name', label: 'Owner Name' },
+      { key: 'owner_address', label: 'Owner Address', type: 'textarea', fullWidth: true },
+      { key: 'owner_phone', label: 'Owner Phone No' },
+      { key: 'owner_bank_account_no', label: 'Owner Bank Account No' },
+      { key: 'owner_pan_no', label: 'Owner PAN No' },
+      { key: 'financer_address', label: 'Financer Address', type: 'textarea', fullWidth: true },
     ],
   },
   {
     title: 'Driver Details',
     icon: 'IdentificationIcon',
-    fieldLabels: [
-      'Driver Name', 'Driver Address', 'Driver Place',
-      'Driver Licence No', 'Driver Licence Date', 'Driver Licence Issued By',
-      'Driver RTO', 'Driver Valid Up To', 'Driver Bank Account No',
+    fields: [
+      { key: 'driver_name', label: 'Driver Name' },
+      { key: 'driver_address', label: 'Driver Address', type: 'textarea', fullWidth: true },
+      { key: 'driver_place', label: 'Driver Place' },
+      { key: 'driver_licence_no', label: 'Driver Licence No' },
+      { key: 'driver_licence_date', label: 'Driver Licence Date', type: 'date' },
+      { key: 'driver_licence_issued_by', label: 'Driver Licence Issued By' },
+      { key: 'driver_rto_address', label: 'Driver RTO' },
+      { key: 'driver_valid_up_to', label: 'Driver Valid Up To', type: 'date' },
+      { key: 'driver_bank_account_no', label: 'Driver Bank Account No' },
     ],
   },
   {
     title: 'Broker Details',
     icon: 'BriefcaseIcon',
-    fieldLabels: [
-      'Broker Name', 'Broker Address', 'Broker Pan No',
-      'Advice Date', 'Destination Broker Name', 'Destination Broker Address',
-      'Broker Phone No', 'Broker Bank Account No',
+    fields: [
+      { key: 'broker_name', label: 'Broker Name' },
+      { key: 'broker_address', label: 'Broker Address', type: 'textarea', fullWidth: true },
+      { key: 'broker_pan_no', label: 'Broker Pan No' },
+      { key: 'advice_date', label: 'Advice Date', type: 'date' },
+      { key: 'destination_broker_name', label: 'Destination Broker Name' },
+      { key: 'destination_broker_address', label: 'Destination Broker Address', type: 'textarea', fullWidth: true },
+      { key: 'broker_phone_no', label: 'Broker Phone No' },
+      { key: 'broker_bank_account_no', label: 'Broker Bank Account No' },
     ],
   },
 ]
@@ -174,189 +192,58 @@ const lorryReceiptSections: FieldSection[] = [
 const sections = computed<FieldSection[]>(() => {
   if (props.templateName === 'lr_receipt') return lrReceiptSections
   if (props.templateName === 'lorry_receipt') return lorryReceiptSections
-  // office_invoice fields are at Item level — rendered by OfficeInvoiceItemsTable
   return []
 })
-
-// --- Field fetching & merging (same logic as CreateCustomFields.vue) ---
-getInitialCustomFields()
-
-function mergeExistingValues(): void {
-  if (props.isEdit && storeData.value) {
-    storeData.value.fields.forEach((field) => {
-      const existingIndex = storeData.value?.customFields.findIndex(
-        (f) => f.id === field.custom_field_id
-      ) ?? -1
-
-      if (existingIndex > -1) {
-        let value: string | boolean | number | null = field.default_answer
-
-        if (value && field.custom_field?.type === 'DateTime') {
-          value = format(
-            parse(String(field.default_answer), 'yyyy-MM-dd HH:mm:ss', new Date()),
-            'yyyy-MM-dd HH:mm'
-          )
-        }
-
-        storeData.value.customFields[existingIndex] = {
-          ...field,
-          id: field.custom_field_id ?? field.id,
-          value,
-          label: field.custom_field?.label ?? '',
-          options: field.custom_field?.options ?? null,
-          is_required: field.custom_field?.is_required ?? false,
-          placeholder: field.custom_field?.placeholder ?? null,
-          order: field.custom_field?.order ?? null,
-          type: field.custom_field?.type ?? field.type,
-        }
-      }
-    })
-  }
-}
-
-async function getInitialCustomFields(): Promise<void> {
-  if (!storeData.value) {
-    return
-  }
-
-  const res = await customFieldService.list({
-    type: props.type ?? undefined,
-    limit: 'all',
-    template_name: props.templateName ?? undefined,
-  })
-
-  const data = (res as Record<string, unknown>).data as CustomFieldItem[]
-  data.forEach((d) => {
-    d.value = d.default_answer
-  })
-
-  storeData.value.customFields = lodash.sortBy(
-    data,
-    (_cf: CustomFieldItem) => _cf.order
-  )
-
-  mergeExistingValues()
-}
-
-watch(
-  () => storeData.value?.fields,
-  () => {
-    mergeExistingValues()
-  }
-)
-
-watch(
-  () => props.templateName,
-  () => {
-    getInitialCustomFields()
-  }
-)
-
-// --- Section field lookup ---
-function getFieldsForSection(section: FieldSection): CustomFieldItem[] {
-  if (!storeData.value) return []
-  return section.fieldLabels
-    .map((label) =>
-      storeData.value!.customFields.find(
-        (f) => (f.custom_field?.label ?? f.label) === label
-      )
-    )
-    .filter((f): f is CustomFieldItem => !!f)
-}
-
-function getFieldIndex(field: CustomFieldItem): number {
-  return storeData.value?.customFields.indexOf(field) ?? -1
-}
-
-// TextArea fields should span full width; everything else is compact
-function isTextAreaField(field: CustomFieldItem): boolean {
-  return (field.custom_field?.type ?? field.type) === 'TextArea'
-}
-
-// Dropdown and Date fields get a bit more room
-function isWideField(field: CustomFieldItem): boolean {
-  const type = field.custom_field?.type ?? field.type
-  return type === 'Dropdown' || type === 'Date'
-}
-
-// Net Amount is auto-calculated — render as read-only
-function isNetAmountField(field: CustomFieldItem): boolean {
-  return (field.custom_field?.label ?? field.label) === 'Net Amount'
-}
 
 // --- LR Receipt: Net Amount auto-calculation ---
 // Net Amount = Basic Freight + Local Collection + Door Delivery + Hamali
 //              + Docket Charge + Other Charge + FOV
-const lrReceiptChargeFields = [
-  'Basic Freight',
-  'Local Collection',
-  'Door Delivery',
-  'Hamali',
-  'Docket Charge',
-  'Other Charge',
-  'FOV',
+const lrReceiptChargeKeys = [
+  'basic_freight',
+  'local_collection',
+  'door_delivery',
+  'hamali',
+  'docket_charge',
+  'other_charge',
+  'fov',
 ]
 
-function getCustomFieldValue(label: string): number {
-  if (!storeData.value) return 0
-  const lowerLabel = label.toLowerCase()
-  const field = storeData.value.customFields.find(
-    (f) => (f.custom_field?.label ?? f.label).toLowerCase() === lowerLabel
-  )
-  if (!field) return 0
-  const num = Number(field.value)
+function getFieldValue(key: string): number {
+  const val = invoiceData.value?.[key]
+  if (!val) return 0
+  const num = Number(val)
   return isNaN(num) ? 0 : num
-}
-
-function setCustomFieldValue(label: string, value: number): void {
-  if (!storeData.value) return
-  const field = storeData.value.customFields.find(
-    (f) => (f.custom_field?.label ?? f.label) === label
-  )
-  if (field) {
-    field.value = value
-    field.number_answer = value
-  }
 }
 
 function recalcNetAmount(): void {
   if (props.templateName !== 'lr_receipt') return
-  if (!storeData.value) return
+  if (!invoiceData.value) return
 
-  // Don't auto-calc if the Net Amount field doesn't exist yet
-  const netAmountField = storeData.value.customFields.find(
-    (f) => (f.custom_field?.label ?? f.label) === 'Net Amount'
+  const sum = lrReceiptChargeKeys.reduce(
+    (acc, key) => acc + getFieldValue(key),
+    0,
   )
-  if (!netAmountField) return
-
-  const sum = lrReceiptChargeFields.reduce(
-    (acc, label) => acc + getCustomFieldValue(label),
-    0
-  )
-  setCustomFieldValue('Net Amount', sum)
+  invoiceData.value.net_amount = String(sum)
 }
 
-// Watch all charge fields for changes
+// Watch charge fields for changes
 watch(
-  () => storeData.value?.customFields.map((f) => ({
-    label: f.custom_field?.label ?? f.label,
-    value: f.value,
-  })),
+  () => lrReceiptChargeKeys.map((key) => invoiceData.value?.[key]),
   () => {
     recalcNetAmount()
   },
-  { deep: true }
 )
 </script>
 
 <template>
   <div
-    v-if="storeData && storeData.customFields.length > 0 && !isLoading"
+    v-if="invoiceData && !isLoading"
     class="space-y-6"
   >
     <BaseCard
       v-for="section in sections"
       :key="section.title"
+      class="mb-6"
     >
       <template #header>
         <div class="flex items-center gap-2">
@@ -365,40 +252,59 @@ watch(
             :name="section.icon"
             class="h-5 w-5 text-primary-500"
           />
-          <h3 class="text-base font-semibold text-heading">
-            {{ section.title }}
-          </h3>
+          <h3 class="text-base font-semibold text-heading">{{ section.title }}</h3>
         </div>
       </template>
 
       <div class="grid gap-x-4 gap-y-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <div
-          v-for="field in getFieldsForSection(section)"
-          :key="field.id"
+          v-for="field in section.fields"
+          :key="field.key"
           :class="[
-            isTextAreaField(field) ? 'md:col-span-2 xl:col-span-3' : '',
-            isWideField(field) ? 'xl:col-span-1' : '',
+            field.fullWidth ? 'md:col-span-2 xl:col-span-3' : '',
           ]"
         >
-          <!-- Net Amount is auto-calculated, render as read-only -->
-          <BaseInputGroup
-            v-if="isNetAmountField(field)"
-            :label="field.label"
-          >
+          <BaseInputGroup :label="field.label">
+            <!-- Textarea -->
+            <BaseTextarea
+              v-if="field.type === 'textarea'"
+              v-model="invoiceData[field.key]"
+              rows="2"
+            />
+            <!-- Dropdown -->
+            <BaseSelect
+              v-else-if="field.type === 'dropdown'"
+              v-model="invoiceData[field.key]"
+            >
+              <option value="">Select...</option>
+              <option
+                v-for="opt in field.options"
+                :key="opt"
+                :value="opt"
+              >
+                {{ opt }}
+              </option>
+            </BaseSelect>
+            <!-- Date -->
             <BaseInput
-              :model-value="field.value"
-              disabled
-              class="bg-surface-muted font-semibold"
+              v-else-if="field.type === 'date'"
+              v-model="invoiceData[field.key]"
+              type="date"
+            />
+            <!-- Number -->
+            <BaseInput
+              v-else-if="field.type === 'number'"
+              v-model="invoiceData[field.key]"
+              type="number"
+              :disabled="field.readonly"
+              :class="field.readonly ? 'bg-surface-muted font-semibold' : ''"
+            />
+            <!-- Text (default) -->
+            <BaseInput
+              v-else
+              v-model="invoiceData[field.key]"
             />
           </BaseInputGroup>
-          <SingleField
-            v-else
-            :custom-field-scope="customFieldScope"
-            :store="store"
-            :store-prop="storeProp"
-            :index="getFieldIndex(field)"
-            :field="field"
-          />
         </div>
       </div>
     </BaseCard>

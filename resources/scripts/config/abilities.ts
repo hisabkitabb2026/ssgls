@@ -34,7 +34,29 @@ export const ABILITIES = {
   VIEW_INVOICE: 'view-invoice',
   SEND_INVOICE: 'send-invoice',
 
+  // LR Receipt
+  CREATE_LR_RECEIPT: 'create-lr-receipt',
+  DELETE_LR_RECEIPT: 'delete-lr-receipt',
+  EDIT_LR_RECEIPT: 'edit-lr-receipt',
+  VIEW_LR_RECEIPT: 'view-lr-receipt',
+  SEND_LR_RECEIPT: 'send-lr-receipt',
+
+  // Invoice Receipt (Office Invoice)
+  CREATE_INVOICE_RECEIPT: 'create-invoice-receipt',
+  DELETE_INVOICE_RECEIPT: 'delete-invoice-receipt',
+  EDIT_INVOICE_RECEIPT: 'edit-invoice-receipt',
+  VIEW_INVOICE_RECEIPT: 'view-invoice-receipt',
+  SEND_INVOICE_RECEIPT: 'send-invoice-receipt',
+
+  // Lorry Receipt
+  CREATE_LORRY_RECEIPT: 'create-lorry-receipt',
+  DELETE_LORRY_RECEIPT: 'delete-lorry-receipt',
+  EDIT_LORRY_RECEIPT: 'edit-lorry-receipt',
+  VIEW_LORRY_RECEIPT: 'view-lorry-receipt',
+  SEND_LORRY_RECEIPT: 'send-lorry-receipt',
+
   // Recurring Invoices
+
   CREATE_RECURRING_INVOICE: 'create-recurring-invoice',
   DELETE_RECURRING_INVOICE: 'delete-recurring-invoice',
   EDIT_RECURRING_INVOICE: 'edit-recurring-invoice',
@@ -77,6 +99,26 @@ export const ABILITIES = {
   // Notes
   MANAGE_NOTE: 'manage-all-notes',
   VIEW_NOTE: 'view-all-notes',
+
+  // Settings Pages
+  VIEW_SETTINGS_COMPANY_INFO: 'view-settings-company-info',
+  VIEW_SETTINGS_PREFERENCES: 'view-settings-preferences',
+  VIEW_SETTINGS_CUSTOMIZATION: 'view-settings-customization',
+  VIEW_SETTINGS_NOTIFICATIONS: 'view-settings-notifications',
+  VIEW_SETTINGS_ROLES: 'view-settings-roles',
+  VIEW_SETTINGS_MAIL_CONFIG: 'view-settings-mail-config',
+  VIEW_SETTINGS_AI_CONFIG: 'view-settings-ai-config',
+  VIEW_SETTINGS_MODULES: 'view-settings-modules',
+
+  // Settings1 â€” remaining settings pages
+  VIEW_SETTINGS_EXCHANGE_RATE: 'view-settings-exchange-rate',
+  VIEW_SETTINGS_TAX_TYPES: 'view-settings-tax-types',
+  VIEW_SETTINGS_PAYMENT_MODES: 'view-settings-payment-modes',
+  VIEW_SETTINGS_CUSTOM_FIELDS: 'view-settings-custom-fields',
+  VIEW_SETTINGS_NOTES: 'view-settings-notes',
+  VIEW_SETTINGS_EXPENSE_CATEGORIES: 'view-settings-expense-categories',
 } as const
+
+
 
 export type Ability = typeof ABILITIES[keyof typeof ABILITIES]

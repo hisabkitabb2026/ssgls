@@ -72,14 +72,16 @@ async function setInitialData(): Promise<void> {
   if (abilitiesRes.abilities) {
     const grouped: AbilitiesList = {}
     abilitiesRes.abilities.forEach((a: Record<string, unknown>) => {
-      // Extract model name from PHP class path (e.g., "App\Models\Customer" → "Customer")
+      // Use 'group' field if present (e.g., 'LR Receipt', 'Invoice Receipt'),
+      // otherwise extract model name from PHP class path (e.g., "App\Models\Customer" → "Customer")
       const modelPath = (a.model as string) ?? ''
       const modelName = modelPath
         ? modelPath.substring(modelPath.lastIndexOf('\\') + 1)
         : 'Common'
+      const groupName = (a.group as string) ?? modelName
 
-      if (!grouped[modelName]) grouped[modelName] = []
-      grouped[modelName].push({
+      if (!grouped[groupName]) grouped[groupName] = []
+      grouped[groupName].push({
         name: a.name as string,
         ability: a.ability as string,
         disabled: false,
@@ -169,6 +171,27 @@ async function submitRoleData(): Promise<void> {
     closeRolesModal()
   } catch {
     isSaving.value = false
+  }
+}
+
+function isAbilityChecked(ability: AbilityItem): boolean {
+  return currentRole.value.abilities.some(
+    (_a) => _a.ability === ability.ability
+  )
+}
+
+function toggleAbility(ability: AbilityItem): void {
+  const index = currentRole.value.abilities.findIndex(
+    (_a) => _a.ability === ability.ability
+  )
+
+  if (index > -1) {
+    // Unchecking: remove this ability
+    currentRole.value.abilities.splice(index, 1)
+  } else {
+    // Checking: add this ability + handle dependencies
+    currentRole.value.abilities.push(ability)
+    onUpdateAbility(ability)
   }
 }
 
@@ -337,13 +360,12 @@ function closeRolesModal(): void {
               class="flex"
             >
               <BaseCheckbox
-                v-model="currentRole.abilities"
-                :set-initial-value="true"
+                :model-value="isAbilityChecked(ability)"
+                :set-initial-value="false"
                 variant="primary"
                 :disabled="ability.disabled"
                 :label="ability.name"
-                :value="ability"
-                @update:model-value="onUpdateAbility(ability)"
+                @change="toggleAbility(ability)"
               />
             </div>
           </div>

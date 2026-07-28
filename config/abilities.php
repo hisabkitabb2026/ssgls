@@ -217,7 +217,164 @@ return [
             'model' => Invoice::class,
         ],
 
+        // LR Receipt
+        [
+            'name' => 'view lr receipt',
+            'ability' => 'view-lr-receipt',
+            'model' => Invoice::class,
+            'group' => 'LR Receipt',
+        ],
+        [
+            'name' => 'create lr receipt',
+            'ability' => 'create-lr-receipt',
+            'model' => Invoice::class,
+            'group' => 'LR Receipt',
+            'owner_only' => false,
+            'depends_on' => [
+                'view-item',
+                'view-lr-receipt',
+                'view-tax-type',
+                'view-customer',
+                'view-custom-field',
+                'view-all-notes',
+            ],
+        ],
+        [
+            'name' => 'edit lr receipt',
+            'ability' => 'edit-lr-receipt',
+            'model' => Invoice::class,
+            'group' => 'LR Receipt',
+            'depends_on' => [
+                'view-item',
+                'view-lr-receipt',
+                'view-tax-type',
+                'view-customer',
+                'view-custom-field',
+                'view-all-notes',
+            ],
+        ],
+        [
+            'name' => 'delete lr receipt',
+            'ability' => 'delete-lr-receipt',
+            'model' => Invoice::class,
+            'group' => 'LR Receipt',
+            'depends_on' => [
+                'view-lr-receipt',
+            ],
+        ],
+        [
+            'name' => 'send lr receipt',
+            'ability' => 'send-lr-receipt',
+            'model' => Invoice::class,
+            'group' => 'LR Receipt',
+        ],
+
+        // Invoice Receipt (Office Invoice)
+        [
+            'name' => 'view invoice receipt',
+            'ability' => 'view-invoice-receipt',
+            'model' => Invoice::class,
+            'group' => 'Invoice Receipt',
+        ],
+        [
+            'name' => 'create invoice receipt',
+            'ability' => 'create-invoice-receipt',
+            'model' => Invoice::class,
+            'group' => 'Invoice Receipt',
+            'owner_only' => false,
+            'depends_on' => [
+                'view-item',
+                'view-invoice-receipt',
+                'view-tax-type',
+                'view-customer',
+                'view-custom-field',
+                'view-all-notes',
+            ],
+        ],
+        [
+            'name' => 'edit invoice receipt',
+            'ability' => 'edit-invoice-receipt',
+            'model' => Invoice::class,
+            'group' => 'Invoice Receipt',
+            'depends_on' => [
+                'view-item',
+                'view-invoice-receipt',
+                'view-tax-type',
+                'view-customer',
+                'view-custom-field',
+                'view-all-notes',
+            ],
+        ],
+        [
+            'name' => 'delete invoice receipt',
+            'ability' => 'delete-invoice-receipt',
+            'model' => Invoice::class,
+            'group' => 'Invoice Receipt',
+            'depends_on' => [
+                'view-invoice-receipt',
+            ],
+        ],
+        [
+            'name' => 'send invoice receipt',
+            'ability' => 'send-invoice-receipt',
+            'model' => Invoice::class,
+            'group' => 'Invoice Receipt',
+        ],
+
+        // Lorry Receipt
+        [
+            'name' => 'view lorry receipt',
+            'ability' => 'view-lorry-receipt',
+            'model' => Invoice::class,
+            'group' => 'Lorry Receipt',
+        ],
+        [
+            'name' => 'create lorry receipt',
+            'ability' => 'create-lorry-receipt',
+            'model' => Invoice::class,
+            'group' => 'Lorry Receipt',
+            'owner_only' => false,
+            'depends_on' => [
+                'view-item',
+                'view-lorry-receipt',
+                'view-tax-type',
+                'view-customer',
+                'view-custom-field',
+                'view-all-notes',
+            ],
+        ],
+        [
+            'name' => 'edit lorry receipt',
+            'ability' => 'edit-lorry-receipt',
+            'model' => Invoice::class,
+            'group' => 'Lorry Receipt',
+            'depends_on' => [
+                'view-item',
+                'view-lorry-receipt',
+                'view-tax-type',
+                'view-customer',
+                'view-custom-field',
+                'view-all-notes',
+            ],
+        ],
+        [
+            'name' => 'delete lorry receipt',
+            'ability' => 'delete-lorry-receipt',
+            'model' => Invoice::class,
+            'group' => 'Lorry Receipt',
+            'depends_on' => [
+                'view-lorry-receipt',
+            ],
+        ],
+        [
+            'name' => 'send lorry receipt',
+            'ability' => 'send-lorry-receipt',
+            'model' => Invoice::class,
+            'group' => 'Lorry Receipt',
+        ],
+
         // Recurring Invoice
+
         [
             'name' => 'view recurring invoice',
             'ability' => 'view-recurring-invoice',
@@ -410,12 +567,102 @@ return [
             ],
         ],
 
+        // Settings Pages
+        [
+            'name' => 'view company information',
+            'ability' => 'view-settings-company-info',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+        [
+            'name' => 'view preferences',
+            'ability' => 'view-settings-preferences',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+        [
+            'name' => 'view customization',
+            'ability' => 'view-settings-customization',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+        [
+            'name' => 'view notifications',
+            'ability' => 'view-settings-notifications',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+        [
+            'name' => 'view roles',
+            'ability' => 'view-settings-roles',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+        [
+            'name' => 'view mail configuration',
+            'ability' => 'view-settings-mail-config',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+        [
+            'name' => 'view ai configuration',
+            'ability' => 'view-settings-ai-config',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+        [
+            'name' => 'view modules',
+            'ability' => 'view-settings-modules',
+            'model' => null,
+            'group' => 'Settings',
+        ],
+
+        // Settings1 â€” remaining settings pages
+        [
+            'name' => 'view exchange rate provider',
+            'ability' => 'view-settings-exchange-rate',
+            'model' => null,
+            'group' => 'Settings1',
+        ],
+        [
+            'name' => 'view tax types',
+            'ability' => 'view-settings-tax-types',
+            'model' => null,
+            'group' => 'Settings1',
+        ],
+        [
+            'name' => 'view payment modes',
+            'ability' => 'view-settings-payment-modes',
+            'model' => null,
+            'group' => 'Settings1',
+        ],
+        [
+            'name' => 'view custom fields',
+            'ability' => 'view-settings-custom-fields',
+            'model' => null,
+            'group' => 'Settings1',
+        ],
+        [
+            'name' => 'view notes',
+            'ability' => 'view-settings-notes',
+            'model' => null,
+            'group' => 'Settings1',
+        ],
+        [
+            'name' => 'view expense categories',
+            'ability' => 'view-settings-expense-categories',
+            'model' => null,
+            'group' => 'Settings1',
+        ],
+
         // Settings
+
         [
             'name' => 'view company dashboard',
             'ability' => 'dashboard',
             'model' => null,
         ],
+
         [
             'name' => 'view all notes',
             'ability' => 'view-all-notes',

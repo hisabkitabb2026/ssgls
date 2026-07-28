@@ -39,7 +39,7 @@ class InvoicesController extends Controller
         $baseQuery = Invoice::whereCompany();
 
         // Exclude all transport receipt templates (lr_receipt, lorry_receipt,
-        // office_invoice) when no template_name is specified â€” this makes the
+        // office_invoice) when no template_name is specified — this makes the
         // standard Invoices list show only standard invoice templates (invoice1,
         // invoice2, etc.). When a specific template_name IS provided (e.g.
         // office_invoice for Invoice Receipts, lorry_receipt, lr_receipt), only

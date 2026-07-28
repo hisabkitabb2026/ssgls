@@ -33,33 +33,109 @@
         </div>
 
         <div class="grid gap-x-4 gap-y-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          <div
-            v-for="field in getItemFields(index)"
-            :key="field.id"
-            :class="[
-              isAmountField(field) ? 'xl:col-span-1' : '',
-            ]"
-          >
-            <!-- Amount is auto-calculated, render as read-only -->
-            <BaseInputGroup
-              v-if="isAmountField(field)"
-              :label="field.custom_field?.label ?? field.label"
-            >
-              <BaseInput
-                :model-value="field.value"
-                disabled
-                class="bg-surface-muted font-semibold"
-              />
-            </BaseInputGroup>
-            <SingleField
-              v-else
-              :custom-field-scope="`${itemValidationScope}.items.${index}.customFields`"
-              :store="store"
-              :store-prop="storeProp"
-              :index="getItemFieldIndex(index, field)"
-              :field="field"
+          <!-- Consignment No -->
+          <BaseInputGroup label="Consignment No">
+            <BaseInput
+              v-model="item.consignment_number"
+              :class="getConsignmentValidationClass(index)"
+              @update:model-value="onConsignmentNoChange(index)"
             />
-          </div>
+            <p
+              v-if="getConsignmentValidationState(index) === 'invalid'"
+              class="mt-1 text-sm text-danger"
+            >
+              LR Receipt not found
+            </p>
+            <p
+              v-else-if="getConsignmentValidationState(index) === 'valid'"
+              class="mt-1 text-sm text-success"
+            >
+              ✓ LR Receipt found
+            </p>
+          </BaseInputGroup>
+
+          <!-- Consignment Date -->
+          <BaseInputGroup label="Consignment Date">
+            <BaseInput
+              v-model="item.consignment_date"
+              type="date"
+            />
+          </BaseInputGroup>
+
+          <!-- Party Inv No -->
+          <BaseInputGroup label="Party Inv No">
+            <BaseInput v-model="item.party_inv_no" />
+          </BaseInputGroup>
+
+          <!-- From -->
+          <BaseInputGroup label="From">
+            <BaseInput v-model="item.from_code" />
+          </BaseInputGroup>
+
+          <!-- Destination -->
+          <BaseInputGroup label="Destination">
+            <BaseInput v-model="item.to_code" />
+          </BaseInputGroup>
+
+          <!-- Vehicle No -->
+          <BaseInputGroup label="Vehicle No">
+            <BaseInput v-model="item.truck_no" />
+          </BaseInputGroup>
+
+          <!-- Pkg -->
+          <BaseInputGroup label="Pkg">
+            <BaseInput v-model="item.pkg" />
+          </BaseInputGroup>
+
+          <!-- Weight -->
+          <BaseInputGroup label="Weight">
+            <BaseInput v-model="item.weight" />
+          </BaseInputGroup>
+
+          <!-- Rate -->
+          <BaseInputGroup label="Rate">
+            <BaseInput
+              v-model="item.rate"
+              type="number"
+              @update:model-value="recalcAmount(index)"
+            />
+          </BaseInputGroup>
+
+          <!-- Other Charge -->
+          <BaseInputGroup label="Other Charge">
+            <BaseInput
+              v-model="item.other_charge"
+              type="number"
+              @update:model-value="recalcAmount(index)"
+            />
+          </BaseInputGroup>
+
+          <!-- LR Charge -->
+          <BaseInputGroup label="LR Charge">
+            <BaseInput
+              v-model="item.lr_charge"
+              type="number"
+              @update:model-value="recalcAmount(index)"
+            />
+          </BaseInputGroup>
+
+          <!-- DD Charge -->
+          <BaseInputGroup label="DD Charge">
+            <BaseInput
+              v-model="item.dd_charge"
+              type="number"
+              @update:model-value="recalcAmount(index)"
+            />
+          </BaseInputGroup>
+
+          <!-- Amount (auto-calculated, read-only) -->
+          <BaseInputGroup label="Amount">
+            <BaseInput
+              :model-value="item.amount"
+              disabled
+              class="bg-surface-muted font-semibold"
+            />
+          </BaseInputGroup>
         </div>
       </div>
 
@@ -78,42 +154,51 @@
 
 <script setup lang="ts">
 import { computed, watch, ref } from 'vue'
-import { customFieldService } from '@/scripts/api/services/custom-field.service'
 import { invoiceService } from '@/scripts/api/services/invoice.service'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
-import SingleField from '@/scripts/features/company/customers/components/CreateCustomFieldsSingle.vue'
 import { generateClientId } from '@/scripts/utils'
 import { useDebounceFn } from '@vueuse/core'
 
-interface CustomFieldItem {
-  id: number
-  value: string | boolean | number | null
-  default_answer: string | boolean | number | null
-  label: string
-  options: string[] | null
-  is_required: boolean
-  placeholder: string | null
-  order: number | null
-  type: string
-  number_answer?: number | null
-  string_answer?: string | null
-  custom_field_id?: number
-  custom_field?: {
-    label: string
-    options: string[] | null
-    is_required: boolean
-    placeholder: string | null
-    order: number | null
-    type: string
-  }
+/**
+ * OfficeInvoiceItemsTable — renders consignment item rows for the
+ * office_invoice template. Each item has native transport fields
+ * (consignment_number, from_code, to_code, truck_no, rate, etc.)
+ * bound directly via v-model to the item object in the store.
+ *
+ * Phase 3 cleanup: This component no longer fetches Item-level custom
+ * field definitions from the API. All transport fields are native columns
+ * on the invoice_items table.
+ */
+
+interface TransportItem {
+  id?: string | number
+  name?: string
+  quantity?: number
+  price?: number
+  total?: number
+  discount?: number
+  discount_type?: string
+  taxes?: unknown[]
+  consignment_number?: string | null
+  consignment_date?: string | null
+  party_inv_no?: string | null
+  from_code?: string | null
+  to_code?: string | null
+  truck_no?: string | null
+  pkg?: string | null
+  weight?: string | null
+  rate?: string | number | null
+  other_charge?: string | number | null
+  lr_charge?: string | number | null
+  dd_charge?: string | number | null
+  amount?: string | number | null
 }
 
 interface StoreWithProp {
   [key: string]: {
-    items: Array<Record<string, unknown> & {
-      id?: string | number
-      customFields?: CustomFieldItem[]
-    }>
+    items: TransportItem[]
+    customer?: unknown
+    customer_id?: number | null
     [key: string]: unknown
   }
 }
@@ -129,92 +214,35 @@ const props = withDefaults(
   {
     isEdit: false,
     isLoading: null,
-  }
+  },
 )
 
 const formData = computed(() => props.store[props.storeProp])
 const items = computed(() => formData.value?.items ?? [])
 
-// The charge fields that sum into Amount
-const chargeFieldLabels = ['Rate', 'Other Charge', 'LR Charge', 'DD Charge']
+// --- Amount auto-calculation ---
+// Amount = Rate + Other Charge + LR Charge + DD Charge
+const chargeKeys = ['rate', 'other_charge', 'lr_charge', 'dd_charge']
 
-function isAmountField(field: CustomFieldItem): boolean {
-  return (field.custom_field?.label ?? field.label) === 'Amount'
-}
-
-function getItemFields(index: number): CustomFieldItem[] {
-  return items.value[index]?.customFields ?? []
-}
-
-function getItemFieldIndex(itemIndex: number, field: CustomFieldItem): number {
-  const fields = items.value[itemIndex]?.customFields ?? []
-  return fields.indexOf(field)
-}
-
-function getFieldValue(itemIndex: number, label: string): number {
-  const fields = items.value[itemIndex]?.customFields ?? []
-  const field = fields.find(
-    (f) => (f.custom_field?.label ?? f.label) === label
-  )
-  if (!field) return 0
-  const num = Number(field.value ?? field.number_answer ?? 0)
+function getNum(value: string | number | null | undefined): number {
+  if (!value) return 0
+  const num = Number(value)
   return isNaN(num) ? 0 : num
 }
 
-function setFieldValue(itemIndex: number, label: string, value: number): void {
-  const fields = items.value[itemIndex]?.customFields ?? []
-  const field = fields.find(
-    (f) => (f.custom_field?.label ?? f.label) === label
+function recalcAmount(index: number): void {
+  const item = items.value[index]
+  if (!item) return
+
+  const sum = chargeKeys.reduce(
+    (acc, key) => acc + getNum(item[key as keyof TransportItem] as string | number | null),
+    0,
   )
-  if (field) {
-    field.value = value
-    field.number_answer = value
-  }
+  item.amount = String(sum)
 }
-
-function recalcAmount(itemIndex: number): void {
-  const fields = items.value[itemIndex]?.customFields ?? []
-  const amountField = fields.find(
-    (f) => (f.custom_field?.label ?? f.label) === 'Amount'
-  )
-  if (!amountField) return
-
-  const sum = chargeFieldLabels.reduce(
-    (acc, label) => acc + getFieldValue(itemIndex, label),
-    0
-  )
-  setFieldValue(itemIndex, 'Amount', sum)
-}
-
-// Watch all items' custom fields for changes to auto-calc Amount
-watch(
-  () => items.value.map((item) =>
-    (item.customFields ?? []).map((f) => ({
-      label: f.custom_field?.label ?? f.label,
-      value: f.value,
-    }))
-  ),
-  () => {
-    items.value.forEach((_, index) => recalcAmount(index))
-  },
-  { deep: true }
-)
 
 function addItem(): void {
   if (!formData.value) return
-
-  // Clone the custom fields from the first item (or fetch fresh if none)
-  const firstItem = items.value[0]
-  const newFields: CustomFieldItem[] = firstItem?.customFields
-    ? firstItem.customFields.map((f) => ({
-        ...f,
-        id: 0,
-        value: f.default_answer,
-        number_answer: typeof f.default_answer === 'number' ? f.default_answer : null,
-        string_answer: typeof f.default_answer === 'string' ? f.default_answer : null,
-        custom_field_id: f.custom_field_id ?? f.id,
-      }))
-    : []
 
   formData.value.items.push({
     id: generateClientId(),
@@ -225,8 +253,20 @@ function addItem(): void {
     discount: 0,
     discount_type: 'fixed',
     taxes: [],
-    customFields: newFields,
-  } as Record<string, unknown>)
+    consignment_number: null,
+    consignment_date: null,
+    party_inv_no: null,
+    from_code: null,
+    to_code: null,
+    truck_no: null,
+    pkg: null,
+    weight: null,
+    rate: null,
+    other_charge: null,
+    lr_charge: null,
+    dd_charge: null,
+    amount: null,
+  })
 }
 
 function removeItem(index: number): void {
@@ -234,138 +274,98 @@ function removeItem(index: number): void {
   formData.value?.items.splice(index, 1)
 }
 
-// Fetch Item-level custom fields for office_invoice and populate first item
-async function fetchItemCustomFields(): Promise<void> {
-  if (!formData.value) return
-
-  // Ensure at least one item exists
-  if (!items.value.length) {
-    formData.value.items = [{
-      id: generateClientId(),
-      name: '',
-      quantity: 1,
-      price: 0,
-      total: 0,
-      discount: 0,
-      discount_type: 'fixed',
-      taxes: [],
-      customFields: [],
-    } as Record<string, unknown>]
-  }
-
-  // If first item already has custom fields (edit mode), don't re-fetch
-  if (items.value[0]?.customFields?.length) return
-
-  const res = await customFieldService.list({
-    type: 'Item',
-    limit: 'all',
-    template_name: 'office_invoice',
-  })
-
-    const data = (res as Record<string, unknown>).data as CustomFieldItem[]
-    data.forEach((d) => {
-      d.value = d.default_answer
-    })
-
-    // Sort by order so fields appear in the defined sequence
-    // (Consignment No, Consignment Date, ..., Rate, Other Charge, LR Charge,
-    //  DD Charge, Amount)
-    data.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-
-    if (items.value[0]) {
-      items.value[0].customFields = data
-    }
-}
-
-fetchItemCustomFields()
-
 // --- Auto-fill from LR Receipt when Consignment No matches ---
-// When the user types a Consignment No in the first item that matches an
-// existing LR Receipt's Docket No (invoice_number), fetch that LR Receipt
-// and copy its custom field values into the matching Office Invoice item fields.
 const notificationStore = useNotificationStore()
 const isAutoFillingFromLr = ref(false)
 
-function getItemFieldValue(itemIndex: number, label: string): CustomFieldItem | undefined {
-  const fields = items.value[itemIndex]?.customFields ?? []
-  return fields.find((f) => (f.custom_field?.label ?? f.label) === label)
+// --- Consignment number validation state ---
+// Tracks per-item validation: 'idle' | 'checking' | 'valid' | 'invalid'
+const consignmentValidationStates = ref<Record<number, 'idle' | 'checking' | 'valid' | 'invalid'>>({})
+
+function getConsignmentValidationState(index: number): string {
+  return consignmentValidationStates.value[index] ?? 'idle'
 }
 
-// Get the Consignment No value from the first item
-function getConsignmentNo(): string {
-  const field = getItemFieldValue(0, 'Consignment No')
-  return String(field?.value ?? field?.string_answer ?? '').trim()
+function getConsignmentValidationClass(index: number): string {
+  const state = getConsignmentValidationState(index)
+  if (state === 'invalid') return 'border-danger'
+  if (state === 'valid') return 'border-success'
+  return ''
 }
 
-// Map LR Receipt Invoice-level custom fields to Office Invoice Item-level custom fields.
-// Both templates share the same field labels (From, To, Truck No, etc.) so we
-// match by label.
-function autofillFromLrReceipt(lrFields: Array<Record<string, unknown>>): void {
+// Emits to parent so the form can block submission if any consignment is invalid
+const emit = defineEmits<{
+  (e: 'consignment-valid', allValid: boolean): void
+}>()
+
+function checkAllConsignmentsValid(): void {
+  const allValid = items.value.every((_, index) =>
+    getConsignmentValidationState(index) === 'valid',
+  )
+  emit('consignment-valid', allValid)
+}
+
+function onConsignmentNoChange(index: number): void {
+  // Reset validation state for this item
+  consignmentValidationStates.value[index] = 'checking'
+
+  // Trigger auto-fill for the first item
+  if (index === 0 && !props.isEdit) {
+    debouncedAutoFill()
+  }
+
+  // Validate the consignment number
+  debouncedValidateConsignment(index)
+}
+
+
+// Map LR Receipt native fields to Office Invoice item native fields
+function autofillFromLrReceipt(lrInvoice: Record<string, unknown>): void {
   if (!items.value[0]) return
 
-  // Build a lookup of LR Receipt field values by label
-  const lrFieldMap = new Map<string, string>()
-  lrFields.forEach((f) => {
-    const label = (f.custom_field as { label?: string })?.label ?? (f.label as string) ?? ''
-    const value = (f.string_answer as string) ?? (f.value as string) ?? ''
-    if (label && value) {
-      lrFieldMap.set(label, value)
-    }
-  })
+  const item = items.value[0]
+  // Don't overwrite consignment_number itself
+  // Don't overwrite amount (auto-calculated)
 
-  // Copy matching fields into the first item
-  const itemFields = items.value[0]?.customFields ?? []
-  itemFields.forEach((field) => {
-    const label = field.custom_field?.label ?? field.label
-    if (!label) return
-    // Don't overwrite Consignment No itself
-    if (label === 'Consignment No') return
-    // Don't overwrite Amount (auto-calculated)
-    if (label === 'Amount') return
+  // Copy matching native fields from the LR Receipt to the first item
+  const fieldMap: Record<string, string> = {
+    from_code: 'from_code',
+    to_code: 'to_code',
+    truck_no: 'truck_no',
+  }
 
-    const lrValue = lrFieldMap.get(label)
-    if (lrValue !== undefined) {
-      field.value = lrValue
-      field.string_answer = lrValue
-      // If it's a number field, also set number_answer
-      if (field.type === 'Number' || field.custom_field?.type === 'Number') {
-        const num = Number(lrValue)
-        if (!isNaN(num)) {
-          field.number_answer = num
-        }
-      }
+  for (const [lrKey, itemKey] of Object.entries(fieldMap)) {
+    const lrValue = lrInvoice[lrKey]
+    if (lrValue !== undefined && lrValue !== null) {
+      ;(item as Record<string, unknown>)[itemKey] = lrValue
     }
-  })
+  }
+
+  // Also copy the customer (consignor) from the LR Receipt
+  const lrCustomer = lrInvoice.customer as Record<string, unknown> | undefined
+  if (lrCustomer && formData.value) {
+    formData.value.customer = lrCustomer
+    formData.value.customer_id = lrCustomer.id as number
+  }
 
   // Recalculate Amount after auto-fill
   recalcAmount(0)
+
+  notificationStore.showNotification({
+    type: 'success',
+    message: `Auto-filled from LR Receipt: ${item.consignment_number ?? ''}`,
+  })
 }
 
 const debouncedAutoFill = useDebounceFn(async () => {
-  const consignmentNo = getConsignmentNo()
+  const consignmentNo = String(items.value[0]?.consignment_number ?? '').trim()
   if (!consignmentNo || consignmentNo.length < 2) return
 
   isAutoFillingFromLr.value = true
   try {
     const response = await invoiceService.findByInvoiceNumber(consignmentNo, 'lr_receipt')
     if (response?.data) {
-      const lrInvoice = response.data as Record<string, unknown>
-      const lrFields = (lrInvoice.fields as Array<Record<string, unknown>>) ?? []
-      if (lrFields.length > 0) {
-        autofillFromLrReceipt(lrFields)
-
-        // Also copy the customer (consignor) from the LR Receipt to the Office Invoice
-        const lrCustomer = lrInvoice.customer as Record<string, unknown> | undefined
-        if (lrCustomer && formData.value) {
-          formData.value.customer = lrCustomer
-          formData.value.customer_id = lrCustomer.id as number
-        }
-
-        notificationStore.showNotification({
-          type: 'success',
-          message: `Auto-filled from LR Receipt: ${consignmentNo}`,
-        })
-      }
+      autofillFromLrReceipt(response.data as Record<string, unknown>)
     }
   } catch {
     // Silently fail — the user might be typing a new consignment number
@@ -374,16 +374,39 @@ const debouncedAutoFill = useDebounceFn(async () => {
   }
 }, 600)
 
-// Watch the Consignment No field on the first item for changes
-watch(
-  () => {
-    const field = getItemFieldValue(0, 'Consignment No')
-    return field?.value ?? field?.string_answer ?? ''
-  },
-  (newVal) => {
-    if (newVal && String(newVal).trim().length >= 2 && !props.isEdit) {
-      debouncedAutoFill()
+// --- Consignment number existence validation ---
+// Checks if the consignment number matches an existing LR Receipt.
+// Updates the validation state and emits to the parent form.
+const debouncedValidateConsignment = useDebounceFn(async (index: number) => {
+  const consignmentNo = String(items.value[index]?.consignment_number ?? '').trim()
+
+  if (!consignmentNo || consignmentNo.length < 2) {
+    consignmentValidationStates.value[index] = 'idle'
+    checkAllConsignmentsValid()
+    return
+  }
+
+  try {
+    const response = await invoiceService.findByInvoiceNumber(consignmentNo, 'lr_receipt')
+    if (response?.data) {
+      consignmentValidationStates.value[index] = 'valid'
+    } else {
+      consignmentValidationStates.value[index] = 'invalid'
     }
-  },
-)
+  } catch {
+    consignmentValidationStates.value[index] = 'invalid'
+  }
+
+  checkAllConsignmentsValid()
+}, 600)
+
+// In edit mode, pre-validate all existing consignment numbers
+if (props.isEdit) {
+  items.value.forEach((_, index) => {
+    const consignmentNo = String(items.value[index]?.consignment_number ?? '').trim()
+    if (consignmentNo) {
+      debouncedValidateConsignment(index)
+    }
+  })
+}
 </script>

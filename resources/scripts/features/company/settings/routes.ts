@@ -2,36 +2,6 @@ import type { RouteRecordRaw } from 'vue-router'
 import { ABILITIES } from '@/scripts/config/abilities'
 
 const settingsRoutes: RouteRecordRaw[] = [
-  // User account settings — standalone page with sidebar tabs (General, Profile Photo, Security)
-  {
-    path: 'account-settings',
-    component: () => import('./views/UserSettingsLayoutView.vue'),
-    meta: {
-      requiresAuth: true,
-    },
-    children: [
-      {
-        path: '',
-        name: 'settings.account',
-        redirect: { name: 'settings.account.general' },
-      },
-      {
-        path: 'general',
-        name: 'settings.account.general',
-        component: () => import('./views/UserGeneralView.vue'),
-      },
-      {
-        path: 'profile-photo',
-        name: 'settings.account.profile-photo',
-        component: () => import('./views/UserProfilePhotoView.vue'),
-      },
-      {
-        path: 'security',
-        name: 'settings.account.security',
-        component: () => import('./views/UserSecurityView.vue'),
-      },
-    ],
-  },
   {
     path: 'settings',
     component: () => import('./views/SettingsLayoutView.vue'),
@@ -61,15 +31,6 @@ const settingsRoutes: RouteRecordRaw[] = [
         redirect: { name: 'settings.modules' },
       },
       {
-        path: 'company-info',
-        name: 'settings.company-info',
-        meta: {
-          requiresAuth: true,
-          isOwner: true,
-        },
-        component: () => import('./views/CompanyInfoView.vue'),
-      },
-      {
         path: 'mail-configuration',
         name: 'settings.mail-config',
         meta: {
@@ -77,15 +38,6 @@ const settingsRoutes: RouteRecordRaw[] = [
           isOwner: true,
         },
         component: () => import('./views/MailConfigView.vue'),
-      },
-      {
-        path: 'whatsapp-configuration',
-        name: 'settings.whatsapp-config',
-        meta: {
-          requiresAuth: true,
-          isOwner: true,
-        },
-        component: () => import('./components/WhatsAppConfiguration.vue'),
       },
       {
         path: 'ai-config',
@@ -204,6 +156,24 @@ const settingsRoutes: RouteRecordRaw[] = [
         component: () => import('@/scripts/features/company/modules/views/CompanyModulesIndexView.vue'),
       },
       {
+        path: 'company-info',
+        name: 'settings.company-info',
+        meta: {
+          requiresAuth: true,
+          isOwner: true,
+        },
+        component: () => import('./views/CompanyInfoView.vue'),
+      },
+      {
+        path: 'preferences',
+        name: 'settings.preferences',
+        meta: {
+          requiresAuth: true,
+          isOwner: true,
+        },
+        component: () => import('./views/PreferencesView.vue'),
+      },
+      {
         path: 'danger-zone',
         name: 'settings.danger-zone',
         meta: {
@@ -211,6 +181,14 @@ const settingsRoutes: RouteRecordRaw[] = [
           isOwner: true,
         },
         component: () => import('./views/DangerZoneView.vue'),
+      },
+      {
+        path: 'account-settings',
+        name: 'settings.account',
+        meta: {
+          requiresAuth: true,
+        },
+        component: () => import('./views/UserAccountView.vue'),
       },
     ],
   },
@@ -221,14 +199,6 @@ const settingsRoutes: RouteRecordRaw[] = [
   {
     path: 'settings/account-settings',
     redirect: { name: 'settings.account' },
-  },
-  {
-    path: 'company-info',
-    redirect: { name: 'settings.company-info' },
-  },
-  {
-    path: 'preferences',
-    redirect: { name: 'settings.preferences' },
   },
   {
     path: 'customization',
@@ -270,9 +240,6 @@ const settingsRoutes: RouteRecordRaw[] = [
     path: 'mail-configuration',
     redirect: { name: 'settings.mail-config' },
   },
-  // Legacy module routes — preserved so existing bookmarks (and the old in-app
-  // sidebar slot at /admin/modules) still resolve to the Module Configuration
-  // page, which now lives under Company Settings.
   {
     path: 'modules',
     redirect: { name: 'settings.modules' },

@@ -16,7 +16,32 @@ class CustomTemplateController extends Controller
     /**
      * Document types that support custom templates.
      */
-    private const DOCUMENT_TYPES = ['invoice1', 'invoice2', 'invoice3', 'lr_receipt', 'lorry_receipt', 'office_invoice'];
+    private const DOCUMENT_TYPES = [
+        'invoice1', 'invoice2', 'invoice3',
+        'lr_receipt', 'lorry_receipt', 'office_invoice',
+        'estimate1', 'estimate2', 'estimate3',
+        'payment',
+    ];
+
+    /**
+     * Map a document type to its template directory name.
+     *
+     * Invoice templates (invoice1-3, lr_receipt, lorry_receipt, office_invoice)
+     * live in the 'invoice' directory. Estimates live in 'estimate', and
+     * payments in 'payment'.
+     */
+    private function getTemplateDirectory(string $documentType): string
+    {
+        if (in_array($documentType, ['estimate1', 'estimate2', 'estimate3'])) {
+            return 'estimate';
+        }
+
+        if ($documentType === 'payment') {
+            return 'payment';
+        }
+
+        return 'invoice';
+    }
 
     /**
      * List all custom templates for a document type.
@@ -34,8 +59,10 @@ class CustomTemplateController extends Controller
             ]);
         }
 
+        $dir = $this->getTemplateDirectory($documentType);
+
         // Get all formatted templates (built-in + custom) for this type
-        $allTemplates = PdfTemplateUtils::getFormattedTemplates('invoice');
+        $allTemplates = PdfTemplateUtils::getFormattedTemplates($dir);
 
         // Filter to only templates matching this document type
         $customTemplates = [];
@@ -53,7 +80,8 @@ class CustomTemplateController extends Controller
 
         // Also list any custom templates that don't match built-in names
         // (user-uploaded templates with custom names)
-        $customFiles = Storage::disk('pdf_templates')->files('/invoice');
+        $customFiles = Storage::disk('pdf_templates')->files("/{$dir}");
+
         foreach ($customFiles as $file) {
             if (! Str::endsWith($file, '.blade.php')) {
                 continue;
@@ -77,7 +105,8 @@ class CustomTemplateController extends Controller
 
                 if (! $isBuiltinName) {
                     // User-uploaded custom template — include it
-                    $imagePath = PdfTemplateUtils::getCustomTemplateFilePath('invoice', "{$templateName}.png");
+                    $imagePath = PdfTemplateUtils::getCustomTemplateFilePath($dir, "{$templateName}.png");
+
                     $imageValue = file_exists($imagePath)
                         ? ImageUtils::toBase64Src($imagePath)
                         : '';
@@ -105,18 +134,23 @@ class CustomTemplateController extends Controller
      */
     public function download($templateName)
     {
-        // First check custom template
-        $customPath = Storage::disk('pdf_templates')->path("/invoice/{$templateName}.blade.php");
+        // Search across all template directories (invoice, estimate, payment)
+        $dirs = ['invoice', 'estimate', 'payment'];
 
-        if (file_exists($customPath)) {
-            return response()->download($customPath, "{$templateName}.blade.php");
-        }
+        foreach ($dirs as $dir) {
+            // First check custom template
+            $customPath = Storage::disk('pdf_templates')->path("/{$dir}/{$templateName}.blade.php");
 
-        // Then check built-in template
-        $builtinPath = resource_path("views/app/pdf/invoice/{$templateName}.blade.php");
+            if (file_exists($customPath)) {
+                return response()->download($customPath, "{$templateName}.blade.php");
+            }
 
-        if (file_exists($builtinPath)) {
-            return response()->download($builtinPath, "{$templateName}.blade.php");
+            // Then check built-in template
+            $builtinPath = resource_path("views/app/pdf/{$dir}/{$templateName}.blade.php");
+
+            if (file_exists($builtinPath)) {
+                return response()->download($builtinPath, "{$templateName}.blade.php");
+            }
         }
 
         return response()->json([
@@ -132,7 +166,8 @@ class CustomTemplateController extends Controller
      */
     public function downloadBuiltin($documentType)
     {
-        $builtinPath = resource_path("views/app/pdf/invoice/{$documentType}.blade.php");
+        $dir = $this->getTemplateDirectory($documentType);
+        $builtinPath = resource_path("views/app/pdf/{$dir}/{$documentType}.blade.php");
 
         if (file_exists($builtinPath)) {
             return response()->download($builtinPath, "{$documentType}.blade.php");
@@ -166,8 +201,11 @@ class CustomTemplateController extends Controller
             ], 422);
         }
 
+        $documentType = $request->input('document_type');
+        $dir = $this->getTemplateDirectory($documentType);
+
         // Check if a custom template with this name already exists
-        if (Storage::disk('pdf_templates')->exists("/invoice/{$slug}.blade.php")) {
+        if (Storage::disk('pdf_templates')->exists("/{$dir}/{$slug}.blade.php")) {
             return response()->json([
                 'error' => 'A template with this name already exists. Please choose a different name.',
             ], 422);
@@ -177,7 +215,7 @@ class CustomTemplateController extends Controller
         $contents = file_get_contents($file->getRealPath());
 
         // Save the template file
-        PdfTemplateUtils::toCustomTemplateMarkupFile($contents, 'invoice', $slug);
+        PdfTemplateUtils::toCustomTemplateMarkupFile($contents, $dir, $slug);
 
         return response()->json([
             'message' => 'Template uploaded successfully.',
@@ -203,24 +241,29 @@ class CustomTemplateController extends Controller
             ], 422);
         }
 
-        $templatePath = "/invoice/{$templateName}.blade.php";
+        // Search across all template directories (invoice, estimate, payment)
+        $dirs = ['invoice', 'estimate', 'payment'];
 
-        if (! Storage::disk('pdf_templates')->exists($templatePath)) {
-            return response()->json([
-                'error' => 'Custom template not found.',
-            ], 404);
-        }
+        foreach ($dirs as $dir) {
+            $templatePath = "/{$dir}/{$templateName}.blade.php";
 
-        Storage::disk('pdf_templates')->delete($templatePath);
+            if (Storage::disk('pdf_templates')->exists($templatePath)) {
+                Storage::disk('pdf_templates')->delete($templatePath);
 
-        // Also delete the thumbnail if it exists
-        $thumbnailPath = "/invoice/{$templateName}.png";
-        if (Storage::disk('pdf_templates')->exists($thumbnailPath)) {
-            Storage::disk('pdf_templates')->delete($thumbnailPath);
+                // Also delete the thumbnail if it exists
+                $thumbnailPath = "/{$dir}/{$templateName}.png";
+                if (Storage::disk('pdf_templates')->exists($thumbnailPath)) {
+                    Storage::disk('pdf_templates')->delete($thumbnailPath);
+                }
+
+                return response()->json([
+                    'message' => 'Template deleted successfully.',
+                ]);
+            }
         }
 
         return response()->json([
-            'message' => 'Template deleted successfully.',
-        ]);
+            'error' => 'Custom template not found.',
+        ], 404);
     }
 }

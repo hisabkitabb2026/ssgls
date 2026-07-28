@@ -1,11 +1,16 @@
 <?php
 
+use App\Models\CompanySetting;
+use App\Models\Customer;
 use App\Models\CustomField;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
 
 beforeEach(function () {
     Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
@@ -21,136 +26,249 @@ beforeEach(function () {
     Sanctum::actingAs($user, ['*']);
 });
 
-test('lr receipt custom fields are auto-created on first fetch', function () {
+function createCustomer($companyId): Customer
+{
+    $companyCurrency = CompanySetting::getSetting('currency', $companyId);
+
+    return Customer::factory()->create([
+        'company_id' => $companyId,
+        'currency_id' => $companyCurrency,
+    ]);
+}
+
+test('custom fields index no longer auto-creates transport fields', function () {
+    // After Phase 3 cleanup, the custom fields index endpoint no longer
+    // auto-creates transport fields. Transport data is stored as native columns.
     $response = getJson('api/v1/custom-fields?template_name=lr_receipt&limit=all');
 
     $response->assertOk();
 
-    // Verify Invoice-level fields were created
-    $invoiceFields = CustomField::where('company_id', $this->companyId)
-        ->where('model_type', 'Invoice')
+    // No transport custom fields should be auto-created
+    $transportFields = CustomField::where('company_id', $this->companyId)
         ->where('slug', 'LIKE', 'CUSTOM_Invoice_%')
         ->get();
 
-    $invoiceFieldNames = $invoiceFields->pluck('name')->toArray();
-
-    expect($invoiceFieldNames)->toContain('Time')
-        ->and($invoiceFieldNames)->toContain('From')
-        ->and($invoiceFieldNames)->toContain('To')
-        ->and($invoiceFieldNames)->toContain('Truck No')
-        ->and($invoiceFieldNames)->toContain('Consignor')
-        ->and($invoiceFieldNames)->toContain('Consignee')
-        ->and($invoiceFieldNames)->toContain('Mode of Payment')
-        ->and($invoiceFieldNames)->toContain('GST Tax Payable By');
-
-    // Verify Item-level fields were created
-    $itemFields = CustomField::where('company_id', $this->companyId)
-        ->where('model_type', 'Item')
-        ->where('slug', 'LIKE', 'CUSTOM_Item_%')
-        ->get();
-
-    $itemFieldNames = $itemFields->pluck('name')->toArray();
-
-    expect($itemFieldNames)->toContain('Description of Goods')
-        ->and($itemFieldNames)->toContain('HSN Code')
-        ->and($itemFieldNames)->toContain('Basic Freight')
-        ->and($itemFieldNames)->toContain('Docket Charge')
-        ->and($itemFieldNames)->toContain('FOV');
+    expect($transportFields)->toBeEmpty();
 });
 
-test('lorry receipt custom fields are auto-created on first fetch', function () {
-    $response = getJson('api/v1/custom-fields?template_name=lorry_receipt&limit=all');
+test('lr receipt can be created with native transport columns', function () {
+    $customer = createCustomer($this->companyId);
+
+    $response = postJson('api/v1/invoices', [
+        'invoice_date' => '2026-07-28',
+        'due_date' => '2026-08-28',
+        'invoice_number' => 'LR-TEST-001',
+        'template_name' => 'lr_receipt',
+        'customer_id' => $customer->id,
+        'discount' => 0,
+        'discount_val' => 0,
+        'sub_total' => 0,
+        'total' => 0,
+        'tax' => 0,
+        'from_code' => 'Vapi',
+        'to_code' => 'Mumbai',
+        'truck_no' => 'GJ05BC1234',
+        'basic_freight' => 5000,
+        'hamali' => 500,
+        'net_amount' => 5500,
+    ]);
 
     $response->assertOk();
 
-    // Verify Invoice-level fields were created
-    $invoiceFields = CustomField::where('company_id', $this->companyId)
-        ->where('model_type', 'Invoice')
-        ->where('slug', 'LIKE', 'CUSTOM_Invoice_%')
-        ->get();
-
-    $invoiceFieldNames = $invoiceFields->pluck('name')->toArray();
-
-    expect($invoiceFieldNames)->toContain('From')
-        ->and($invoiceFieldNames)->toContain('To')
-        ->and($invoiceFieldNames)->toContain('Lorry No')
-        ->and($invoiceFieldNames)->toContain('Owner Name')
-        ->and($invoiceFieldNames)->toContain('Driver Name')
-        ->and($invoiceFieldNames)->toContain('Broker Name')
-        ->and($invoiceFieldNames)->toContain('Lorry Hire')
-        ->and($invoiceFieldNames)->toContain('Advance Paid Rs')
-        ->and($invoiceFieldNames)->toContain('Final Balance Amount Paid at');
+    $invoice = Invoice::where('invoice_number', 'LR-TEST-001')->first();
+    expect($invoice)->not->toBeNull()
+        ->and($invoice->from_code)->toBe('Vapi')
+        ->and($invoice->to_code)->toBe('Mumbai')
+        ->and($invoice->truck_no)->toBe('GJ05BC1234')
+        ->and($invoice->basic_freight)->toBe(5000)
+        ->and($invoice->hamali)->toBe(500)
+        ->and($invoice->net_amount)->toBe(5500);
 });
 
-test('office invoice custom fields are auto-created on first fetch', function () {
-    $response = getJson('api/v1/custom-fields?template_name=office_invoice&limit=all');
+test('office invoice can be created with native item-level transport columns', function () {
+    $customer = createCustomer($this->companyId);
+
+    // First create an LR Receipt so the consignment number exists
+    postJson('api/v1/invoices', [
+        'invoice_date' => '2026-07-28',
+        'due_date' => '2026-08-28',
+        'invoice_number' => 'CON-001',
+        'template_name' => 'lr_receipt',
+        'customer_id' => $customer->id,
+        'discount' => 0,
+        'discount_val' => 0,
+        'sub_total' => 0,
+        'total' => 0,
+        'tax' => 0,
+        'from_code' => 'Vapi',
+        'to_code' => 'Mumbai',
+        'truck_no' => 'GJ05BC1234',
+    ])->assertOk();
+
+    // Now create the Office Invoice referencing that LR Receipt
+    $response = postJson('api/v1/invoices', [
+        'invoice_date' => '2026-07-28',
+        'due_date' => '2026-08-28',
+        'invoice_number' => 'OI-TEST-001',
+        'template_name' => 'office_invoice',
+        'customer_id' => $customer->id,
+        'discount' => 0,
+        'discount_val' => 0,
+        'sub_total' => 0,
+        'total' => 0,
+        'tax' => 0,
+        'items' => [
+            [
+                'name' => 'Consignment 1',
+                'description' => '',
+                'quantity' => 1,
+                'price' => 0,
+                'discount' => 0,
+                'discount_val' => 0,
+                'discount_type' => 'fixed',
+                'tax' => 0,
+                'total' => 0,
+                'consignment_number' => 'CON-001',
+                'from_code' => 'Vapi',
+                'to_code' => 'Mumbai',
+                'truck_no' => 'GJ05BC1234',
+                'rate' => 1000,
+                'other_charge' => 200,
+                'lr_charge' => 50,
+                'dd_charge' => 30,
+                'amount' => 1280,
+            ],
+        ],
+    ]);
 
     $response->assertOk();
 
-    // Verify Invoice-level fields were created
-    $invoiceFields = CustomField::where('company_id', $this->companyId)
-        ->where('model_type', 'Invoice')
-        ->where('slug', 'LIKE', 'CUSTOM_Invoice_%')
-        ->get();
+    $invoice = Invoice::where('invoice_number', 'INV OI-TEST-001')->first();
 
-    $invoiceFieldNames = $invoiceFields->pluck('name')->toArray();
+    expect($invoice)->not->toBeNull();
 
-    expect($invoiceFieldNames)->toContain('GST Tax Through');
-
-    // Verify Item-level fields were created
-    $itemFields = CustomField::where('company_id', $this->companyId)
-        ->where('model_type', 'Item')
-        ->where('slug', 'LIKE', 'CUSTOM_Item_%')
-        ->get();
-
-    $itemFieldNames = $itemFields->pluck('name')->toArray();
-
-    expect($itemFieldNames)->toContain('Consignment Number')
-        ->and($itemFieldNames)->toContain('Consignment Date')
-        ->and($itemFieldNames)->toContain('Rate')
-        ->and($itemFieldNames)->toContain('LR Charge')
-        ->and($itemFieldNames)->toContain('DD Charge');
+    $item = InvoiceItem::where('invoice_id', $invoice->id)->first();
+    expect($item)->not->toBeNull()
+        ->and($item->consignment_number)->toBe('CON-001')
+        ->and($item->from_code)->toBe('Vapi')
+        ->and($item->to_code)->toBe('Mumbai')
+        ->and($item->truck_no)->toBe('GJ05BC1234')
+        ->and($item->rate)->toBe(1000)
+        ->and($item->other_charge)->toBe(200)
+        ->and($item->lr_charge)->toBe(50)
+        ->and($item->dd_charge)->toBe(30)
+        ->and($item->amount)->toBe(1280);
 });
 
-test('lorry receipt fields have no default answers', function () {
-    getJson('api/v1/custom-fields?template_name=lorry_receipt&limit=all');
+test('lorry receipt can be created with native transport columns', function () {
+    $customer = createCustomer($this->companyId);
 
-    $lorryFields = CustomField::where('company_id', $this->companyId)
-        ->where('slug', 'LIKE', 'CUSTOM_Invoice_%')
-        ->get();
+    $response = postJson('api/v1/invoices', [
+        'invoice_date' => '2026-07-28',
+        'due_date' => '2026-08-28',
+        'invoice_number' => 'LR-RECEIPT-001',
+        'template_name' => 'lorry_receipt',
+        'customer_id' => $customer->id,
+        'discount' => 0,
+        'discount_val' => 0,
+        'sub_total' => 0,
+        'total' => 0,
+        'tax' => 0,
+        'from_code' => 'Vapi',
+        'to_code' => 'Bengaluru',
+        'truck_no' => 'GJ05BC1234',
+        'owner_name' => 'Test Owner',
+        'driver_name' => 'Test Driver',
+        'advance_amount' => '5000',
+        'net_amount_payable' => '15000',
+        'received_no_bilties' => 'LR NO 1234',
+        'contract_no' => 'CT-001',
+    ]);
 
-    // Lorry receipt fields should have null default answers
-    $lorryFields->each(function ($field) {
-        expect($field->default_answer)->toBeNull();
-    });
+    $response->assertOk();
+
+    $invoice = Invoice::where('invoice_number', 'LR-RECEIPT-001')->first();
+    expect($invoice)->not->toBeNull()
+        ->and($invoice->from_code)->toBe('Vapi')
+        ->and($invoice->to_code)->toBe('Bengaluru')
+        ->and($invoice->truck_no)->toBe('GJ05BC1234')
+        ->and($invoice->owner_name)->toBe('Test Owner')
+        ->and($invoice->driver_name)->toBe('Test Driver')
+        ->and($invoice->advance_amount)->toBe('5000')
+        ->and($invoice->net_amount_payable)->toBe('15000')
+        ->and($invoice->received_no_bilties)->toBe('LR NO 1234')
+        ->and($invoice->contract_no)->toBe('CT-001');
 });
 
-test('lr receipt docket charge has default answer of 100', function () {
-    getJson('api/v1/custom-fields?template_name=lr_receipt&limit=all');
+test('office invoice requires consignment number on each item', function () {
+    $customer = createCustomer($this->companyId);
 
-    $docketCharge = CustomField::where('company_id', $this->companyId)
-        ->where('model_type', 'Item')
-        ->where('name', 'Docket Charge')
-        ->first();
+    $response = postJson('api/v1/invoices', [
+        'invoice_date' => '2026-07-28',
+        'due_date' => '2026-08-28',
+        'invoice_number' => 'OI-NOCONS-001',
+        'template_name' => 'office_invoice',
+        'customer_id' => $customer->id,
+        'discount' => 0,
+        'discount_val' => 0,
+        'sub_total' => 0,
+        'total' => 0,
+        'tax' => 0,
+        'items' => [
+            [
+                'name' => 'Consignment 1',
+                'description' => '',
+                'quantity' => 1,
+                'price' => 0,
+                'discount' => 0,
+                'discount_val' => 0,
+                'discount_type' => 'fixed',
+                'tax' => 0,
+                'total' => 0,
+                // consignment_number intentionally omitted
+                'from_code' => 'Vapi',
+                'to_code' => 'Mumbai',
+            ],
+        ],
+    ]);
 
-    expect($docketCharge)->not->toBeNull()
-        ->and($docketCharge->default_answer)->toBe(100);
-
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors(['items.0.consignment_number']);
 });
 
-test('mode of payment field has dropdown options', function () {
-    getJson('api/v1/custom-fields?template_name=lr_receipt&limit=all');
+test('office invoice rejects consignment number that does not match any lr receipt', function () {
+    $customer = createCustomer($this->companyId);
 
-    $modeOfPayment = CustomField::where('company_id', $this->companyId)
-        ->where('name', 'Mode of Payment')
-        ->first();
+    // No LR Receipt with 'NONEXISTENT-LR' exists â€” should be rejected
+    $response = postJson('api/v1/invoices', [
+        'invoice_date' => '2026-07-28',
+        'due_date' => '2026-08-28',
+        'invoice_number' => 'OI-BADLR-001',
+        'template_name' => 'office_invoice',
+        'customer_id' => $customer->id,
+        'discount' => 0,
+        'discount_val' => 0,
+        'sub_total' => 0,
+        'total' => 0,
+        'tax' => 0,
+        'items' => [
+            [
+                'name' => 'Consignment 1',
+                'description' => '',
+                'quantity' => 1,
+                'price' => 0,
+                'discount' => 0,
+                'discount_val' => 0,
+                'discount_type' => 'fixed',
+                'tax' => 0,
+                'total' => 0,
+                'consignment_number' => 'NONEXISTENT-LR',
+                'from_code' => 'Vapi',
+                'to_code' => 'Mumbai',
+            ],
+        ],
+    ]);
 
-    expect($modeOfPayment)->not->toBeNull()
-        ->and($modeOfPayment->type)->toBe('Dropdown')
-        ->and($modeOfPayment->options)->not->toBeNull();
-
-    $optionNames = collect($modeOfPayment->options)->pluck('name')->toArray();
-    expect($optionNames)->toContain('TO PAY')
-        ->and($optionNames)->toContain('PAID')
-        ->and($optionNames)->toContain('TO BE BILLED AT');
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors(['items.0.consignment_number']);
 });

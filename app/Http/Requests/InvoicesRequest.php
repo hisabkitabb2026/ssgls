@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\CompanySetting;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Rules\ConsignmentNumberExists;
 use App\Support\DocumentTotals;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,8 +26,8 @@ class InvoicesRequest extends FormRequest
     public function rules(): array
     {
         // Transport receipt templates (lr_receipt, lorry_receipt, office_invoice)
-        // use custom fields instead of line items, and LR receipts don't require
-        // a customer — mirroring ssgls behavior.
+        // use native transport columns instead of line items, and LR receipts
+        // don't require a customer.
         $isTransportTemplate = in_array(
             $this->template_name,
             ['lr_receipt', 'lorry_receipt', 'office_invoice'],
@@ -82,6 +83,12 @@ class InvoicesRequest extends FormRequest
             $rules['items.*.price'] = ['numeric', 'required'];
         }
 
+        // Office Invoice: each consignment item must have a consignment number
+        if ($this->template_name === 'office_invoice') {
+            $rules['items'] = ['required', 'array'];
+            $rules['items.*.consignment_number'] = ['required', 'string', 'max:255', new ConsignmentNumberExists];
+        }
+
         $companyCurrency = CompanySetting::getSetting('currency', $this->header('company'));
 
         $customer = Customer::find($this->customer_id);
@@ -134,7 +141,7 @@ class InvoicesRequest extends FormRequest
             $discount_per_item
         );
 
-        return collect($this->except('items', 'taxes'))
+        $payload = collect($this->except('items', 'taxes'))
             ->merge([
                 'creator_id' => $this->user()->id ?? null,
                 'status' => $this->has('invoiceSend') ? Invoice::STATUS_SENT : Invoice::STATUS_DRAFT,
@@ -155,7 +162,13 @@ class InvoicesRequest extends FormRequest
                 'base_tax' => $totals['tax'] * $exchange_rate,
                 'base_due_amount' => $totals['total'] * $exchange_rate,
                 'currency_id' => $currency,
-            ])
-            ->toArray();
+            ]);
+
+        // Transport fields (from_code, to_code, truck_no, advance_amount, etc.)
+        // are now sent as top-level fields and are included via $this->except()
+        // above. No custom field mapping is needed — the Invoice model uses
+        // $guarded = ['id'] so all transport columns are mass-assignable.
+
+        return $payload->toArray();
     }
 }

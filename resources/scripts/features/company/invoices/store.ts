@@ -56,8 +56,23 @@ function createInvoiceItemStub(): DocumentItem {
     tax: 0,
     taxes: [createTaxStub()],
     unit_name: null,
+    // Office Invoice item-level transport fields (native columns)
+    consignment_number: null,
+    consignment_date: null,
+    party_inv_no: null,
+    from_code: null,
+    to_code: null,
+    truck_no: null,
+    pkg: null,
+    weight: null,
+    rate: null,
+    other_charge: null,
+    lr_charge: null,
+    dd_charge: null,
+    amount: null,
   }
 }
+
 
 export interface InvoiceFormData {
   id: number | null
@@ -91,7 +106,85 @@ export interface InvoiceFormData {
   unique_hash?: string
   exchange_rate?: number | null
   currency_id?: number
+  // Transport fields (native columns â€” lr_receipt, lorry_receipt, office_invoice)
+  from_code?: string | null
+  to_code?: string | null
+  truck_no?: string | null
+  mode_of_payment?: string | null
+  gst_tax_payable_by?: string | null
+  description_of_goods?: string | null
+  hsn_code?: string | null
+  eway_bill_no?: string | null
+  actual_weight?: string | null
+  charged_weight?: string | null
+  no_of_articles?: string | null
+  packing?: string | null
+  basic_freight?: string | null
+  hamali?: string | null
+  fov?: string | null
+  local_collection?: string | null
+  door_delivery?: string | null
+  docket_charge?: string | null
+  other_charge?: string | null
+  net_amount?: string | null
+  no_of_pages?: string | null
+  no_of_packages?: string | null
+  regd_at?: string | null
+  body_type?: string | null
+  make?: string | null
+  vehicle_model?: string | null
+  colour?: string | null
+  chasis_no?: string | null
+  engine_no?: string | null
+  paid_to?: string | null
+  lorry_hire_amount?: string | null
+  other_charges_amount?: string | null
+  advance_cash_cheque_no?: string | null
+  advance_on?: string | null
+  advance_bank?: string | null
+  advance_amount?: string | null
+  balance_payable_at?: string | null
+  loaded_by?: string | null
+  final_paid_to?: string | null
+  detention_amount?: string | null
+  extra_hire_amount?: string | null
+  final_other_amount?: string | null
+  less_advance_other_branch_amount?: string | null
+  less_deduction_claims_amount?: string | null
+  final_balance_paid_at?: string | null
+  final_balance_on?: string | null
+  final_cash_cheque_no?: string | null
+  final_bank?: string | null
+  owner_name?: string | null
+  owner_address?: string | null
+  owner_phone?: string | null
+  owner_bank_account_no?: string | null
+  owner_pan_no?: string | null
+  financer_address?: string | null
+  driver_name?: string | null
+  driver_address?: string | null
+  driver_place?: string | null
+  driver_licence_no?: string | null
+  driver_licence_date?: string | null
+  driver_licence_issued_by?: string | null
+  driver_rto_address?: string | null
+  driver_valid_up_to?: string | null
+  driver_bank_account_no?: string | null
+  broker_name?: string | null
+  broker_address?: string | null
+  broker_pan_no?: string | null
+  broker_phone_no?: string | null
+  broker_bank_account_no?: string | null
+  advice_date?: string | null
+  destination_broker_name?: string | null
+  destination_broker_address?: string | null
+  // Lorry Receipt computed totals
+  gross_hire_rupees?: string | null
+  net_amount_payable?: string | null
+  received_no_bilties?: string | null
+  contract_no?: string | null
 }
+
 
 function createInvoiceStub(): InvoiceFormData {
   return {

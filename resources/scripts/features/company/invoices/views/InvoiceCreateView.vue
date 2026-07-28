@@ -158,17 +158,16 @@
           :store="invoiceStore"
           store-prop="newInvoice"
           :item-validation-scope="invoiceValidationScope"
+          @consignment-valid="onConsignmentValidChange"
         />
 
-        <!-- Transport custom fields — sectioned card layout (lr_receipt, lorry_receipt only) -->
+
+        <!-- Transport fields — sectioned card layout (lr_receipt, lorry_receipt only) -->
         <TransportCustomFields
           v-if="!isOfficeInvoice"
-          type="Invoice"
-          :is-edit="isEdit"
           :is-loading="isLoadingContent"
           :store="invoiceStore"
           store-prop="newInvoice"
-          :custom-field-scope="invoiceValidationScope"
           :template-name="transportTemplateName"
           :class="isLorryReceipt ? 'mt-6' : ''"
         />
@@ -311,6 +310,15 @@ const invoiceValidationScope = 'newInvoice'
 const isSaving = ref<boolean>(false)
 const isMarkAsDefault = ref<boolean>(false)
 const isRecurring = ref<boolean>(false)
+
+// Tracks whether all consignment numbers in the Office Invoice are valid
+// (i.e., each matches an existing LR Receipt). Updated via emit from
+// OfficeInvoiceItemsTable.
+const allConsignmentsValid = ref<boolean>(false)
+
+function onConsignmentValidChange(allValid: boolean): void {
+  allConsignmentsValid.value = allValid
+}
 
 // --- Auto Fill LR ---
 const isAutoFilling = ref<boolean>(false)
@@ -621,6 +629,18 @@ const rules = computed(() => {
     },
   }
 
+  // Office Invoice: each item must have a consignment number
+  if (isOfficeInvoice.value) {
+    baseRules.items = {
+      required: helpers.withMessage('At least one consignment item is required', required),
+      $each: helpers.forEach({
+        consignment_number: {
+          required: helpers.withMessage('Consignment No is required', required),
+        },
+      }),
+    }
+  }
+
   return baseRules
 })
 
@@ -784,6 +804,16 @@ async function submitForm(): Promise<void> {
     console.log('Invoice form invalid. Errors:', JSON.stringify(
       v$.value.$errors.map((e: { $property: string; $message: string }) => `${e.$property}: ${e.$message}`)
     ))
+    return
+  }
+
+  // Office Invoice: block submission if any consignment number doesn't
+  // match an existing LR Receipt
+  if (isOfficeInvoice.value && !allConsignmentsValid.value) {
+    notificationStore.showNotification({
+      type: 'error',
+      message: 'One or more consignment numbers do not match existing LR Receipts. Please fix them before saving.',
+    })
     return
   }
 

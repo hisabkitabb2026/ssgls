@@ -3,7 +3,6 @@
 namespace App\Services\Report;
 
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
 use Illuminate\Support\Collection;
 
 class ProfitLossCalculationService
@@ -52,10 +51,11 @@ class ProfitLossCalculationService
         $lorryReceipt = Invoice::where('template_name', 'lorry_receipt')
             ->where('company_id', $lrReceipt->company_id)
             ->where(function ($query) use ($lrReceipt) {
-                // Check if received_no_bilties contains this LR Receipt's invoice_number
-                $query->whereRaw('FIND_IN_SET(?, received_no_bilties)', [$lrReceipt->invoice_number])
-                    ->orWhere('received_no_bilties', $lrReceipt->invoice_number)
-                    ->orWhereRaw('received_no_bilties LIKE ?', ['%' . $lrReceipt->invoice_number . '%']);
+                // Check if received_no_bilties contains this LR Receipt's invoice_number.
+                // Use LIKE for database-agnostic compatibility (SQLite doesn't
+                // support FIND_IN_SET).
+                $query->where('received_no_bilties', $lrReceipt->invoice_number)
+                    ->orWhereRaw('received_no_bilties LIKE ?', ['%'.$lrReceipt->invoice_number.'%']);
             })
             ->first();
 

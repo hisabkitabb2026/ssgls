@@ -1,15 +1,11 @@
 <?php
 
 use App\Models\Customer;
-use App\Models\CustomField;
 use App\Models\Estimate;
-use App\Models\ExchangeRateProvider;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Item;
-use App\Models\Note;
 use App\Models\Payment;
-use App\Models\TaxType;
 
 return [
     /*
@@ -172,8 +168,8 @@ return [
             'name' => 'Company information',
             'link' => '/admin/settings/company-info',
             'icon' => 'BuildingOfficeIcon',
-            'owner_only' => true,
-            'ability' => '',
+            'owner_only' => false,
+            'ability' => 'view-settings-company-info',
             'model' => '',
         ],
         [
@@ -182,8 +178,8 @@ return [
             'name' => 'Preferences',
             'link' => '/admin/settings/preferences',
             'icon' => 'CogIcon',
-            'owner_only' => true,
-            'ability' => '',
+            'owner_only' => false,
+            'ability' => 'view-settings-preferences',
             'model' => '',
         ],
         [
@@ -192,8 +188,8 @@ return [
             'name' => 'Customization',
             'link' => '/admin/settings/customization',
             'icon' => 'PencilSquareIcon',
-            'owner_only' => true,
-            'ability' => '',
+            'owner_only' => false,
+            'ability' => 'view-settings-customization',
             'model' => '',
         ],
         [
@@ -202,10 +198,11 @@ return [
             'name' => 'Company Roles',
             'link' => '/admin/settings/roles',
             'icon' => 'UserGroupIcon',
-            'owner_only' => true,
-            'ability' => '',
+            'owner_only' => false,
+            'ability' => 'view-settings-roles',
             'model' => '',
         ],
+
         [
             'title' => 'settings.menu_title.exchange_rate',
             'group' => '',
@@ -213,8 +210,9 @@ return [
             'link' => '/admin/settings/exchange-rate',
             'icon' => 'BanknotesIcon',
             'owner_only' => false,
-            'ability' => 'view-exchange-rate-provider',
-            'model' => ExchangeRateProvider::class,
+            'ability' => 'view-settings-exchange-rate',
+            'model' => '',
+
         ],
         [
             'title' => 'settings.menu_title.notifications',
@@ -222,10 +220,11 @@ return [
             'name' => 'Notifications',
             'link' => '/admin/settings/notifications',
             'icon' => 'BellIcon',
-            'owner_only' => true,
-            'ability' => '',
+            'owner_only' => false,
+            'ability' => 'view-settings-notifications',
             'model' => '',
         ],
+
         [
             'title' => 'settings.menu_title.tax_types',
             'group' => '',
@@ -233,8 +232,9 @@ return [
             'link' => '/admin/settings/tax-types',
             'icon' => 'CheckCircleIcon',
             'owner_only' => false,
-            'ability' => 'view-tax-type',
-            'model' => TaxType::class,
+            'ability' => 'view-settings-tax-types',
+            'model' => '',
+
         ],
         [
             'title' => 'settings.menu_title.payment_modes',
@@ -243,8 +243,9 @@ return [
             'link' => '/admin/settings/payment-modes',
             'icon' => 'CreditCardIcon',
             'owner_only' => false,
-            'ability' => 'view-payment',
-            'model' => Payment::class,
+            'ability' => 'view-settings-payment-modes',
+            'model' => '',
+
         ],
         [
             'title' => 'settings.menu_title.custom_fields',
@@ -253,8 +254,9 @@ return [
             'link' => '/admin/settings/custom-fields',
             'icon' => 'CubeIcon',
             'owner_only' => false,
-            'ability' => 'view-custom-field',
-            'model' => CustomField::class,
+            'ability' => 'view-settings-custom-fields',
+            'model' => '',
+
         ],
         [
             'title' => 'settings.menu_title.notes',
@@ -263,8 +265,9 @@ return [
             'link' => '/admin/settings/notes',
             'icon' => 'ClipboardDocumentCheckIcon',
             'owner_only' => false,
-            'ability' => 'view-all-notes',
-            'model' => Note::class,
+            'ability' => 'view-settings-notes',
+            'model' => '',
+
         ],
         [
             'title' => 'settings.menu_title.expense_category',
@@ -273,8 +276,9 @@ return [
             'link' => '/admin/settings/expense-categories',
             'icon' => 'ClipboardDocumentListIcon',
             'owner_only' => false,
-            'ability' => 'view-expense',
-            'model' => Expense::class,
+            'ability' => 'view-settings-expense-categories',
+            'model' => '',
+
         ],
         [
             'title' => 'settings.mail.company_mail_config',
@@ -282,18 +286,8 @@ return [
             'name' => 'Mail Configuration',
             'link' => '/admin/settings/mail-config',
             'icon' => 'EnvelopeIcon',
-            'owner_only' => true,
-            'ability' => '',
-            'model' => '',
-        ],
-        [
-            'title' => 'settings.whatsapp.title',
-            'group' => '',
-            'name' => 'WhatsApp Integration',
-            'link' => '/admin/settings/whatsapp-configuration',
-            'icon' => 'ChatBubbleLeftRightIcon',
-            'owner_only' => true,
-            'ability' => '',
+            'owner_only' => false,
+            'ability' => 'view-settings-mail-config',
             'model' => '',
         ],
         [
@@ -302,8 +296,8 @@ return [
             'name' => 'AI Configuration',
             'link' => '/admin/settings/ai-config',
             'icon' => 'SparklesIcon',
-            'owner_only' => true,
-            'ability' => '',
+            'owner_only' => false,
+            'ability' => 'view-settings-ai-config',
             'model' => '',
         ],
         [
@@ -313,9 +307,10 @@ return [
             'link' => '/admin/settings/modules',
             'icon' => 'PuzzlePieceIcon',
             'owner_only' => false,
-            'ability' => 'manage modules',
+            'ability' => 'view-settings-modules',
             'model' => '',
         ],
+
     ],
 
     /*

@@ -35,7 +35,28 @@ class InvoiceItemResource extends JsonResource
             'base_tax' => $this->base_tax,
             'base_total' => $this->base_total,
             'recurring_invoice_id' => $this->recurring_invoice_id,
+
+            // Office Invoice item-level transport fields (native columns)
+            'consignment_number' => $this->consignment_number,
+            'consignment_date' => $this->consignment_date,
+            'party_inv_no' => $this->party_inv_no,
+            'from_code' => $this->from_code,
+
+            'from_name' => $this->from_name,
+            'to_code' => $this->to_code,
+            'to_name' => $this->to_name,
+            'truck_no' => $this->truck_no,
+            'pkg' => $this->pkg,
+            'weight' => $this->weight,
+            'rate' => $this->rate,
+
+            'other_charge' => $this->other_charge,
+            'lr_charge' => $this->lr_charge,
+            'dd_charge' => $this->dd_charge,
+            'amount' => $this->amount,
+
             'taxes' => $this->when($this->taxes()->exists(), function () {
+
                 return TaxResource::collection($this->taxes);
             }),
             'fields' => $this->when($this->fields()->exists(), function () {
