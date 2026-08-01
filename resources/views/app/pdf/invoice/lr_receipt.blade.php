@@ -428,6 +428,53 @@
     };
 
     $invoiceField = function ($keys) use ($invoice, $fieldValue) {
+        foreach ((array) $keys as $key) {
+            $normalizedKey = strtolower(trim($key));
+            
+            // Map common aliases to native columns
+            if ($normalizedKey === 'e_way_bill_no') {
+                $normalizedKey = 'eway_bill_no';
+            }
+            if ($normalizedKey === 'gst_no' || $normalizedKey === 'gstin') {
+                if (isset($invoice->gstin) && trim((string)$invoice->gstin) !== '') {
+                    return $invoice->gstin;
+                }
+                if (isset($invoice->gst_no) && trim((string)$invoice->gst_no) !== '') {
+                    return $invoice->gst_no;
+                }
+            }
+
+            // Direct mapping for From / To location
+            if ($normalizedKey === 'from') {
+                if (isset($invoice->from_name) && trim((string)$invoice->from_name) !== '') {
+                    return $invoice->from_name;
+                }
+                if (isset($invoice->from_code) && trim((string)$invoice->from_code) !== '') {
+                    return $invoice->from_code;
+                }
+            }
+            if ($normalizedKey === 'to') {
+                if (isset($invoice->to_name) && trim((string)$invoice->to_name) !== '') {
+                    return $invoice->to_name;
+                }
+                if (isset($invoice->to_code) && trim((string)$invoice->to_code) !== '') {
+                    return $invoice->to_code;
+                }
+            }
+
+            // Check if column exists directly on the invoice model
+            if (isset($invoice->$normalizedKey) && trim((string)$invoice->$normalizedKey) !== '') {
+                return $invoice->$normalizedKey;
+            }
+            
+            // Check camelCase versions
+            $camelKey = \Illuminate\Support\Str::camel($normalizedKey);
+            if (isset($invoice->$camelKey) && trim((string)$invoice->$camelKey) !== '') {
+                return $invoice->$camelKey;
+            }
+        }
+
+        // Fallback to custom fields relationship
         return $fieldValue($invoice->fields, $keys);
     };
 
@@ -538,6 +585,9 @@
 
     $modeOfPayment = $invoiceField(['mode_of_payment']) ?: 'TO PAY';
     $selectedMode = $normalize($modeOfPayment);
+    if ($selectedMode === 'TO_BE_BILLED') {
+        $selectedMode = 'TO_BE_BILLED_AT';
+    }
     $modeLabel = function (string $label) use ($normalize, $selectedMode) {
         if ($normalize($label) === $selectedMode) {
             return '<span class="mode-selected">'.e($label).'</span>';

@@ -28,7 +28,64 @@
         return $matchedValue ?? '';
     };
     $fv = function ($keys, $fallback = '') use ($fieldValue, $invoice) {
-        $value = $fieldValue($invoice->fields, $keys);
+        $value = '';
+        foreach ((array) $keys as $key) {
+            $normalizedKey = strtolower(trim($key));
+            
+            // Map common aliases to native columns
+            if ($normalizedKey === 'e_way_bill_no') {
+                $normalizedKey = 'eway_bill_no';
+            }
+            if ($normalizedKey === 'gst_no' || $normalizedKey === 'gstin') {
+                if (isset($invoice->gstin) && trim((string)$invoice->gstin) !== '') {
+                    $value = $invoice->gstin;
+                    break;
+                }
+                if (isset($invoice->gst_no) && trim((string)$invoice->gst_no) !== '') {
+                    $value = $invoice->gst_no;
+                    break;
+                }
+            }
+
+            // Direct mapping for From / To location
+            if ($normalizedKey === 'from') {
+                if (isset($invoice->from_name) && trim((string)$invoice->from_name) !== '') {
+                    $value = $invoice->from_name;
+                    break;
+                }
+                if (isset($invoice->from_code) && trim((string)$invoice->from_code) !== '') {
+                    $value = $invoice->from_code;
+                    break;
+                }
+            }
+            if ($normalizedKey === 'to') {
+                if (isset($invoice->to_name) && trim((string)$invoice->to_name) !== '') {
+                    $value = $invoice->to_name;
+                    break;
+                }
+                if (isset($invoice->to_code) && trim((string)$invoice->to_code) !== '') {
+                    $value = $invoice->to_code;
+                    break;
+                }
+            }
+
+            // Check if column exists directly on the invoice model
+            if (isset($invoice->$normalizedKey) && trim((string)$invoice->$normalizedKey) !== '') {
+                $value = $invoice->$normalizedKey;
+                break;
+            }
+            
+            // Check camelCase versions
+            $camelKey = \Illuminate\Support\Str::camel($normalizedKey);
+            if (isset($invoice->$camelKey) && trim((string)$invoice->$camelKey) !== '') {
+                $value = ($camelKey === 'invoicePdfUrl' ? $invoice->invoicePdfUrl : $invoice->$camelKey);
+                break;
+            }
+        }
+
+        if (trim((string)$value) === '') {
+            $value = $fieldValue($invoice->fields, $keys);
+        }
 
         return trim((string) $value) === '' ? $fallback : $value;
     };
