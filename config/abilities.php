@@ -11,6 +11,7 @@ use App\Models\Note;
 use App\Models\Payment;
 use App\Models\RecurringInvoice;
 use App\Models\TaxType;
+use App\Models\WarehouseItem;
 
 return [
 
@@ -491,6 +492,38 @@ return [
             'model' => Expense::class,
             'depends_on' => [
                 'view-expense',
+            ],
+        ],
+
+        // Warehouse Item
+        [
+            'name' => 'view warehouse item',
+            'ability' => 'view-warehouse-item',
+            'model' => WarehouseItem::class,
+        ],
+        [
+            'name' => 'create warehouse item',
+            'ability' => 'create-warehouse-item',
+            'model' => WarehouseItem::class,
+            'depends_on' => [
+                'view-warehouse-item',
+                'view-invoice',
+            ],
+        ],
+        [
+            'name' => 'edit warehouse item',
+            'ability' => 'edit-warehouse-item',
+            'model' => WarehouseItem::class,
+            'depends_on' => [
+                'view-warehouse-item',
+            ],
+        ],
+        [
+            'name' => 'delete warehouse item',
+            'ability' => 'delete-warehouse-item',
+            'model' => WarehouseItem::class,
+            'depends_on' => [
+                'view-warehouse-item',
             ],
         ],
 

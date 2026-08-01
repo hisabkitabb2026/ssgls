@@ -34,7 +34,7 @@
       <!-- Create dropdown -->
       <li
         v-if="hasCreateAbilities && !companyStore.isAdminMode"
-        class="relative hidden float-left m-0 md:block"
+        class="relative float-left m-0"
       >
         <BaseDropdown width-class="w-56">
           <template #activator>
@@ -135,7 +135,7 @@
       </li>
 
       <!-- Global search -->
-      <li v-if="!companyStore.isAdminMode" class="ml-2">
+      <li v-if="!companyStore.isAdminMode" class="ml-2 hidden sm:block">
         <GlobalSearchBar
           v-if="
             userStore.currentUser?.is_owner ||
@@ -151,7 +151,7 @@
           globalStore.ai?.enabled &&
           globalStore.ai?.chat_enabled
         "
-        class="ml-2"
+        class="ml-1 sm:ml-2"
       >
         <button
           type="button"

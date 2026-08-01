@@ -64,6 +64,7 @@ use App\Http\Controllers\Company\Settings\CustomTemplateController;
 use App\Http\Controllers\Company\Settings\InvitationController;
 use App\Http\Controllers\Company\Settings\TaxTypesController;
 use App\Http\Controllers\Company\Settings\UserProfileController;
+use App\Http\Controllers\Company\WarehouseItem\WarehouseItemController;
 use App\Http\Controllers\CustomerPortal\Auth\ForgotPasswordController as AuthForgotPasswordController;
 use App\Http\Controllers\CustomerPortal\Auth\ResetPasswordController as AuthResetPasswordController;
 use App\Http\Controllers\CustomerPortal\Estimate\AcceptEstimateController as CustomerAcceptEstimateController;
@@ -192,7 +193,7 @@ Route::prefix('/v1')->group(function () {
         Route::post('stop-impersonating', [UsersController::class, 'stopImpersonating']);
     });
 
-    Route::middleware(['auth:sanctum', 'company'])->group(function () {
+    Route::middleware(['auth:sanctum', 'company', 'throttle:300,1'])->group(function () {
         Route::middleware(['bouncer'])->group(function () {
 
             // Bootstrap
@@ -275,27 +276,27 @@ Route::prefix('/v1')->group(function () {
 
             Route::resource('units', UnitsController::class);
 
-            // Invoices
+            // Invoices (with stricter throttling for mutations)
             // -------------------------------------------------
-
-            Route::get('/invoices/{invoice}/send/preview', [InvoicesController::class, 'sendPreview']);
-
-            Route::post('/invoices/{invoice}/send', [InvoicesController::class, 'send']);
-
-            Route::post('/invoices/{invoice}/clone', [InvoicesController::class, 'clone']);
-
-            Route::post('/invoices/{invoice}/convert-to-estimate', [InvoicesController::class, 'convertToEstimate']);
-
-            Route::post('/invoices/{invoice}/status', [InvoicesController::class, 'changeStatus']);
-
-            Route::post('/invoices/delete', [InvoicesController::class, 'delete']);
-
             Route::get('/invoices/templates', InvoiceTemplatesController::class);
-
             Route::get('/invoices/next-number', [InvoicesController::class, 'getNextNumber']);
             Route::get('/invoices/find-by-number', [InvoicesController::class, 'findByInvoiceNumber']);
 
-            Route::apiResource('invoices', InvoicesController::class);
+            Route::get('invoices', [InvoicesController::class, 'index']);
+            Route::get('invoices/{invoice}', [InvoicesController::class, 'show']);
+
+            Route::middleware('throttle:100,1')->group(function () {
+                Route::post('/invoices/{invoice}/send/preview', [InvoicesController::class, 'sendPreview']);
+                Route::post('/invoices/{invoice}/send', [InvoicesController::class, 'send']);
+                Route::post('/invoices/{invoice}/clone', [InvoicesController::class, 'clone']);
+                Route::post('/invoices/{invoice}/convert-to-estimate', [InvoicesController::class, 'convertToEstimate']);
+                Route::post('/invoices/{invoice}/status', [InvoicesController::class, 'changeStatus']);
+                Route::post('/invoices/delete', [InvoicesController::class, 'delete']);
+
+                Route::post('invoices', [InvoicesController::class, 'store']);
+                Route::put('invoices/{invoice}', [InvoicesController::class, 'update']);
+                Route::delete('invoices/{invoice}', [InvoicesController::class, 'destroy']);
+            });
 
             // Transport module - LR Receipt Auto Fill (AI-powered)
             Route::post('/invoices/auto-fill', LrReceiptAutoFillController::class);
@@ -311,6 +312,18 @@ Route::prefix('/v1')->group(function () {
 
             // Transport module - Lorry Party Profiles (Owner/Driver/Broker)
             Route::apiResource('lorry-party-profiles', LorryPartyProfileController::class);
+
+            // Transport module - Warehouse Items (Goods Storage & Consolidation)
+            Route::post('/warehouse-items/lookup/lr', [WarehouseItemController::class, 'lookupLr']);
+            Route::get('/warehouse-items/lr-options', [WarehouseItemController::class, 'lrOptions']);
+            Route::get('/warehouse-items/destinations', [WarehouseItemController::class, 'destinations']);
+            Route::get('/warehouse-items/warehouses', [WarehouseItemController::class, 'warehouses']);
+            Route::get('/warehouse-items/dashboard', [WarehouseItemController::class, 'dashboard']);
+            Route::get('/warehouse-items/destination/{destination}/summary', [WarehouseItemController::class, 'destinationSummary']);
+            Route::get('/warehouse-items/destination/{destination}', [WarehouseItemController::class, 'byDestination']);
+            Route::get('/warehouse-items/location/{location}', [WarehouseItemController::class, 'byLocation']);
+            Route::patch('/warehouse-items/{id}/status', [WarehouseItemController::class, 'updateStatus']);
+            Route::apiResource('warehouse-items', WarehouseItemController::class);
 
             // Recurring Invoice
             // -------------------------------------------------

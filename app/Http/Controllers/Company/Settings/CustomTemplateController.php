@@ -19,7 +19,7 @@ class CustomTemplateController extends Controller
     private const DOCUMENT_TYPES = [
         'invoice1', 'invoice2', 'invoice3',
         'lr_receipt', 'lorry_receipt', 'office_invoice',
-        'estimate1', 'estimate2', 'estimate3',
+        'estimate1', 'estimate2', 'estimate3', 'quotation',
         'payment',
     ];
 
@@ -27,12 +27,12 @@ class CustomTemplateController extends Controller
      * Map a document type to its template directory name.
      *
      * Invoice templates (invoice1-3, lr_receipt, lorry_receipt, office_invoice)
-     * live in the 'invoice' directory. Estimates live in 'estimate', and
+     * live in the 'invoice' directory. Estimates (estimate1-3, quotation) live in 'estimate', and
      * payments in 'payment'.
      */
     private function getTemplateDirectory(string $documentType): string
     {
-        if (in_array($documentType, ['estimate1', 'estimate2', 'estimate3'])) {
+        if (in_array($documentType, ['estimate1', 'estimate2', 'estimate3', 'quotation'])) {
             return 'estimate';
         }
 
@@ -64,12 +64,33 @@ class CustomTemplateController extends Controller
         // Get all formatted templates (built-in + custom) for this type
         $allTemplates = PdfTemplateUtils::getFormattedTemplates($dir);
 
-        // Filter to only templates matching this document type
+        // Filter templates
         $customTemplates = [];
         $builtinTemplates = [];
 
         foreach ($allTemplates as $template) {
-            if ($template['name'] === $documentType || str_starts_with($template['name'], $documentType)) {
+            $matched = false;
+
+            if ($documentType === 'invoice1') {
+                // For standard invoices, exclude transport templates
+                $transportTypes = ['lr_receipt', 'lorry_receipt', 'office_invoice'];
+                $isTransport = false;
+                foreach ($transportTypes as $type) {
+                    if ($template['name'] === $type || str_starts_with($template['name'], $type)) {
+                        $isTransport = true;
+                        break;
+                    }
+                }
+                $matched = !$isTransport;
+            } elseif ($documentType === 'estimate1') {
+                // For estimates, return all estimate templates
+                $matched = true;
+            } else {
+                // For transport templates, match by document type prefix
+                $matched = ($template['name'] === $documentType || str_starts_with($template['name'], $documentType));
+            }
+
+            if ($matched) {
                 if ($template['custom']) {
                     $customTemplates[] = $template;
                 } else {
@@ -104,18 +125,36 @@ class CustomTemplateController extends Controller
                 $isBuiltinName = in_array($templateName, self::DOCUMENT_TYPES);
 
                 if (! $isBuiltinName) {
-                    // User-uploaded custom template — include it
-                    $imagePath = PdfTemplateUtils::getCustomTemplateFilePath($dir, "{$templateName}.png");
+                    $matchedCustom = false;
+                    if ($documentType === 'invoice1') {
+                        $transportTypes = ['lr_receipt', 'lorry_receipt', 'office_invoice'];
+                        $isTransport = false;
+                        foreach ($transportTypes as $type) {
+                            if (str_starts_with($templateName, $type)) {
+                                $isTransport = true;
+                                break;
+                            }
+                        }
+                        $matchedCustom = !$isTransport;
+                    } elseif ($documentType === 'estimate1') {
+                        $matchedCustom = true;
+                    } else {
+                        $matchedCustom = str_starts_with($templateName, $documentType);
+                    }
 
-                    $imageValue = file_exists($imagePath)
-                        ? ImageUtils::toBase64Src($imagePath)
-                        : '';
+                    if ($matchedCustom) {
+                        $imagePath = PdfTemplateUtils::getCustomTemplateFilePath($dir, "{$templateName}.png");
 
-                    $customTemplates[] = [
-                        'name' => $templateName,
-                        'path' => $imageValue,
-                        'custom' => true,
-                    ];
+                        $imageValue = file_exists($imagePath)
+                            ? ImageUtils::toBase64Src($imagePath)
+                            : '';
+
+                        $customTemplates[] = [
+                            'name' => $templateName,
+                            'path' => $imageValue,
+                            'custom' => true,
+                        ];
+                    }
                 }
             }
         }

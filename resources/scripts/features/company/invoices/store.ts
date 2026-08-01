@@ -640,10 +640,16 @@ export const useInvoiceStore = defineStore('invoice', {
             // the route — don't override it with the first template.
             if (!transportDocumentType) {
               this.setTemplate(this.templates[0].name)
-              const { currentUserSettings } = useUserStore()
-              if (currentUserSettings.default_invoice_template) {
+              const companyStore = useCompanyStore()
+              if (companyStore.selectedCompanySettings.default_invoice_template) {
                 this.newInvoice.template_name =
-                  currentUserSettings.default_invoice_template
+                  companyStore.selectedCompanySettings.default_invoice_template
+              } else {
+                const { currentUserSettings } = useUserStore()
+                if (currentUserSettings.default_invoice_template) {
+                  this.newInvoice.template_name =
+                    currentUserSettings.default_invoice_template
+                }
               }
             }
           }

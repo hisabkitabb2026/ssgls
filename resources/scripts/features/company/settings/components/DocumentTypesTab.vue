@@ -14,11 +14,13 @@ const settings = reactive<{
   enable_invoice_receipts: string | null
   enable_lr_receipts: string | null
   enable_lorry_receipts: string | null
+  enable_warehouse_items: string | null
 }>({
   enable_standard_invoices: null,
   enable_invoice_receipts: null,
   enable_lr_receipts: null,
   enable_lorry_receipts: null,
+  enable_warehouse_items: null,
 })
 
 utils.mergeSettings(
@@ -53,6 +55,11 @@ const documentTypes: DocumentTypeToggle[] = [
     title: 'settings.customization.document_types.lorry_receipts',
     description: 'settings.customization.document_types.lorry_receipts_desc',
   },
+  {
+    key: 'enable_warehouse_items',
+    title: 'settings.customization.document_types.warehouse_items',
+    description: 'settings.customization.document_types.warehouse_items_desc',
+  },
 ]
 
 function getToggle(key: string) {
@@ -74,12 +81,14 @@ const enableStandardInvoices = getToggle('enable_standard_invoices')
 const enableInvoiceReceipts = getToggle('enable_invoice_receipts')
 const enableLrReceipts = getToggle('enable_lr_receipts')
 const enableLorryReceipts = getToggle('enable_lorry_receipts')
+const enableWarehouseItems = getToggle('enable_warehouse_items')
 
 const toggleMap: Record<string, ReturnType<typeof getToggle>> = {
   enable_standard_invoices: enableStandardInvoices,
   enable_invoice_receipts: enableInvoiceReceipts,
   enable_lr_receipts: enableLrReceipts,
   enable_lorry_receipts: enableLorryReceipts,
+  enable_warehouse_items: enableWarehouseItems,
 }
 </script>
 

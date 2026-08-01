@@ -7,6 +7,7 @@ export { default as TaxSelectPopup } from './TaxSelectPopup.vue'
 export { default as NoteSelectPopup } from './NoteSelectPopup.vue'
 export { default as TemplateSelectButton } from './TemplateSelectButton.vue'
 export { default as SelectTemplateModal } from './SelectTemplateModal.vue'
+export { default as QuotationRateSection } from './QuotationRateSection.vue'
 export { default as ExchangeRateConverter } from './ExchangeRateConverter.vue'
 
 export {

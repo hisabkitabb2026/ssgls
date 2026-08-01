@@ -243,13 +243,7 @@
               class="mb-6"
             />
 
-            <!-- Invoice Template Button -->
-            <TemplateSelectButton
-              :store="invoiceStore"
-              store-prop="newInvoice"
-              :is-mark-as-default="isMarkAsDefault"
-            />
-            <SelectTemplateModal />
+
           </div>
 
           <DocumentTotals
@@ -294,8 +288,6 @@ import {
   DocumentItemsTable,
   DocumentTotals,
   DocumentNotes,
-  TemplateSelectButton,
-  SelectTemplateModal,
 } from '../../../shared/document-form'
 
 const invoiceStore = useInvoiceStore()
@@ -525,9 +517,13 @@ const isStandardInvoice = computed<boolean>(() => route.path.includes('/admin/st
 // are transport receipts with their own custom field layouts.
 const isTransportReceipt = computed<boolean>(() => !isStandardInvoice.value)
 const transportTemplateName = computed<string>(() => {
-  if (isLorryReceipt.value) return 'lorry_receipt'
-  if (isLrReceipt.value) return 'lr_receipt'
-  return 'office_invoice'
+  if (isLorryReceipt.value) {
+    return companyStore.selectedCompanySettings.default_lorry_receipt_template || 'lorry_receipt'
+  }
+  if (isLrReceipt.value) {
+    return companyStore.selectedCompanySettings.default_lr_receipt_template || 'lr_receipt'
+  }
+  return companyStore.selectedCompanySettings.default_office_invoice_template || 'office_invoice'
 })
 
 const isOfficeInvoice = computed<boolean>(() =>

@@ -91,6 +91,7 @@ export interface EstimateFormData {
   unique_hash?: string
   exchange_rate?: number | null
   currency_id?: number
+  quotation_rates?: Array<Record<string, string | number>>
 }
 
 function createEstimateStub(): EstimateFormData {
@@ -546,10 +547,16 @@ export const useEstimateStore = defineStore('estimate', {
 
           if (this.templates.length) {
             this.setTemplate(this.templates[0].name)
-            const { currentUserSettings } = useUserStore()
-            if (currentUserSettings.default_estimate_template) {
+            const companyStore = useCompanyStore()
+            if (companyStore.selectedCompanySettings.default_estimate_template) {
               this.newEstimate.template_name =
-                currentUserSettings.default_estimate_template
+                companyStore.selectedCompanySettings.default_estimate_template
+            } else {
+              const { currentUserSettings } = useUserStore()
+              if (currentUserSettings.default_estimate_template) {
+                this.newEstimate.template_name =
+                  currentUserSettings.default_estimate_template
+              }
             }
           }
         }

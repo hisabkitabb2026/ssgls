@@ -66,26 +66,63 @@ class EstimatesRequest extends FormRequest
                 'required',
             ],
             'items' => [
-                'required',
+                $this->template_name === 'quotation' ? 'nullable' : 'required',
                 'array',
             ],
             'items.*.description' => [
                 'nullable',
             ],
             'items.*' => [
-                'required',
+                'nullable',
                 'max:255',
             ],
             'items.*.name' => [
-                'required',
+                $this->template_name === 'quotation' ? 'nullable' : 'required',
             ],
             'items.*.quantity' => [
                 'numeric',
-                'required',
+                $this->template_name === 'quotation' ? 'nullable' : 'required',
             ],
             'items.*.price' => [
                 'integer',
-                'required',
+                $this->template_name === 'quotation' ? 'nullable' : 'required',
+            ],
+            'quotation_rates' => [
+                'nullable',
+                'array',
+            ],
+            'quotation_rates.*.station' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'quotation_rates.*.9mt' => [
+                'nullable',
+                'numeric',
+            ],
+            'quotation_rates.*.10mt' => [
+                'nullable',
+                'numeric',
+            ],
+            'quotation_rates.*.12mt' => [
+                'nullable',
+                'numeric',
+            ],
+            'quotation_rates.*.15mt' => [
+                'nullable',
+                'numeric',
+            ],
+            'quotation_rates.*.18mt' => [
+                'nullable',
+                'numeric',
+            ],
+            'quotation_rates.*.24mt' => [
+                'nullable',
+                'numeric',
+            ],
+            'quotation_rates.*.30mt' => [
+                'nullable',
+                'numeric',
             ],
         ];
 

@@ -107,6 +107,7 @@ class BootstrapController extends Controller
             '/admin/invoices' => 'enable_invoice_receipts',
             '/admin/lr-receipts' => 'enable_lr_receipts',
             '/admin/lorry-receipts' => 'enable_lorry_receipts',
+            '/admin/warehouse-items' => 'enable_warehouse_items',
         ];
 
         $main_menu = array_values(array_filter($main_menu, function ($item) use ($documentTypeSettings, $current_company) {

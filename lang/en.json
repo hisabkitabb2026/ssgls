@@ -5,6 +5,9 @@
     "items": "Items",
     "invoices": "Invoices",
     "invoice_receipts": "Invoice Receipts",
+    "lr_receipts": "LR Receipts",
+    "lorry_receipts": "Lorry Receipts",
+    "warehouse_items": "Warehouse Items",
     "recurring-invoices": "Recurring Invoices",
     "expenses": "Expenses",
     "estimates": "Estimates",
@@ -1152,6 +1155,8 @@
         "lr_receipts_desc": "Lorry Receipt for transport operations",
         "lorry_receipts": "Lorry Receipts",
         "lorry_receipts_desc": "Hire/vehicle payment receipts",
+        "warehouse_items": "Warehouse Items",
+        "warehouse_items_desc": "Warehouse item tracking and consolidation",
         "reload_notice": "Changes take effect after page reload."
       },
       "invoice_receipts": {

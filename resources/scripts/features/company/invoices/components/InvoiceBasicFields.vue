@@ -26,25 +26,52 @@
         <!-- Selected consignee card -->
         <div
           v-if="selectedConsignee"
-          class="flex flex-col p-4 bg-surface border border-line-default border-solid min-h-[170px] rounded-md"
+          class="
+            flex flex-col
+            p-4
+            bg-surface
+            border border-line-light border-solid
+            min-h-[170px]
+            rounded-xl
+            shadow
+          "
+          @click.stop
         >
-          <div class="flex relative justify-between gap-3 mb-2">
-            <div class="flex-1 flex items-center gap-2">
-              <BaseText
-                :text="selectedConsignee.name || selectedConsignee.display_name"
-                class="text-base font-medium text-left text-heading"
-              />
-            </div>
-            <div class="flex flex-wrap justify-end gap-x-4 gap-y-2">
+          <div class="flex relative justify-between mb-2">
+            <BaseText
+              :text="selectedConsignee.name || selectedConsignee.display_name"
+              class="flex-1 text-base font-medium text-left text-heading"
+            />
+            <div class="flex">
               <a
-                class="relative my-0 text-sm flex items-center font-medium cursor-pointer text-primary-500"
+                class="
+                  relative
+                  my-0
+                  ml-6
+                  text-sm
+                  font-medium
+                  cursor-pointer
+                  text-primary-500
+                  items-center
+                  flex
+                "
                 @click.stop="editConsignee"
               >
                 <BaseIcon name="PencilIcon" class="text-muted h-4 w-4 mr-1" />
                 {{ $t('general.edit') }}
               </a>
               <a
-                class="relative my-0 text-sm flex items-center font-medium cursor-pointer text-primary-500"
+                class="
+                  relative
+                  my-0
+                  ml-6
+                  text-sm
+                  flex
+                  items-center
+                  font-medium
+                  cursor-pointer
+                  text-primary-500
+                "
                 @click="resetConsignee"
               >
                 <BaseIcon name="XCircleIcon" class="text-muted h-4 w-4 mr-1" />
@@ -52,30 +79,119 @@
               </a>
             </div>
           </div>
-          <div v-if="selectedConsignee.billing" class="flex flex-col mt-2">
-            <label class="mb-1 text-sm font-medium text-left text-muted uppercase whitespace-nowrap">Bill To</label>
-            <div class="flex flex-col flex-1 p-0 text-left">
+          <div class="grid grid-cols-2 gap-8 mt-2">
+            <div v-if="selectedConsignee.billing" class="flex flex-col">
               <label
-                v-for="(line, index) in formatAddressLines(selectedConsignee.billing)"
-                :key="`billing-${index}-${line}`"
-                class="relative w-11/12 text-sm truncate"
+                class="
+                  mb-1
+                  text-sm
+                  font-medium
+                  text-left text-subtle
+                  uppercase
+                  whitespace-nowrap
+                "
               >
-                {{ line }}
+                {{ $t('general.bill_to') }}
               </label>
+
+              <div
+                v-if="selectedConsignee.billing"
+                class="flex flex-col flex-1 p-0 text-left"
+              >
+                <label
+                  v-if="selectedConsignee.billing.name"
+                  class="relative w-11/12 text-sm truncate"
+                >
+                  {{ selectedConsignee.billing.name }}
+                </label>
+
+                <label class="relative w-11/12 text-sm truncate">
+                  <span v-if="selectedConsignee.billing.city">
+                    {{ selectedConsignee.billing.city }}
+                  </span>
+                  <span
+                    v-if="
+                      selectedConsignee.billing.city &&
+                      selectedConsignee.billing.state
+                    "
+                  >
+                    ,
+                  </span>
+                  <span v-if="selectedConsignee.billing.state">
+                    {{ selectedConsignee.billing.state }}
+                  </span>
+                </label>
+                <label
+                  v-if="selectedConsignee.billing.zip"
+                  class="relative w-11/12 text-sm truncate"
+                >
+                  {{ selectedConsignee.billing.zip }}
+                </label>
+              </div>
+            </div>
+
+            <div v-if="selectedConsignee.shipping" class="flex flex-col">
+              <label
+                class="
+                  mb-1
+                  text-sm
+                  font-medium
+                  text-left text-subtle
+                  uppercase
+                  whitespace-nowrap
+                "
+              >
+                {{ $t('general.ship_to') }}
+              </label>
+
+              <div
+                v-if="selectedConsignee.shipping"
+                class="flex flex-col flex-1 p-0 text-left"
+              >
+                <label
+                  v-if="selectedConsignee.shipping.name"
+                  class="relative w-11/12 text-sm truncate"
+                >
+                  {{ selectedConsignee.shipping.name }}
+                </label>
+
+                <label class="relative w-11/12 text-sm truncate">
+                  <span v-if="selectedConsignee.shipping.city">
+                    {{ selectedConsignee.shipping.city }}
+                  </span>
+                  <span
+                    v-if="
+                      selectedConsignee.shipping.city &&
+                      selectedConsignee.shipping.state
+                    "
+                  >
+                    ,
+                  </span>
+                  <span v-if="selectedConsignee.shipping.state">
+                    {{ selectedConsignee.shipping.state }}
+                  </span>
+                </label>
+                <label
+                  v-if="selectedConsignee.shipping.zip"
+                  class="relative w-11/12 text-sm truncate"
+                >
+                  {{ selectedConsignee.shipping.zip }}
+                </label>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Unselected: Popover search selector -->
-        <Popover v-else v-slot="{ open }" class="relative flex flex-col rounded-md">
+        <Popover v-else v-slot="{ open }" class="relative flex flex-col rounded-xl">
           <PopoverButton
             :class="{
               'focus:ring-2 focus:ring-primary-400': !open,
             }"
-            class="w-full outline-hidden rounded-md"
+            class="w-full outline-hidden rounded-xl"
             @click="ensureConsigneesLoaded"
           >
-            <div class="relative flex justify-center px-0 p-0 py-16 bg-surface border border-line-default border-solid rounded-md min-h-[170px]">
+            <div class="relative flex justify-center px-0 p-0 py-16 bg-surface border border-line-light border-solid rounded-xl shadow min-h-[170px]">
               <BaseIcon name="UserIcon" class="flex justify-center !w-10 !h-10 p-2 mr-5 text-sm text-white bg-surface-muted rounded-full font-base" />
               <div class="mt-1">
                 <label class="text-lg font-medium text-heading">Consignee</label>
@@ -95,7 +211,7 @@
               <PopoverPanel
                 v-slot="{ close }"
                 static
-                class="overflow-hidden rounded-md shadow-lg ring-1 ring-black/5 bg-surface"
+                class="overflow-hidden rounded-xl shadow ring-1 ring-black/5 bg-surface"
               >
                 <div class="relative">
                   <BaseInput
@@ -111,25 +227,27 @@
                     <li
                       v-for="customer in consigneeResults"
                       :key="customer.id"
-                      class="flex px-6 py-2 border-b border-line-light border-solid cursor-pointer hover:cursor-pointer hover:bg-hover focus:outline-hidden focus:bg-hover"
+                      class="flex px-6 py-2 border-b border-line-light border-solid cursor-pointer hover:cursor-pointer hover:bg-hover-strong focus:outline-hidden focus:bg-surface-tertiary last:border-b-0"
                       @click="selectConsignee(customer, close)"
                     >
-                      <div class="flex items-center justify-center h-10 w-10 mr-4 rounded-full bg-surface-muted uppercase text-primary-500">
-                        {{ (customer.name || customer.display_name || 'C').charAt(0) }}
-                      </div>
-                      <div class="flex-1 flex flex-col text-left">
-                        <span class="text-sm font-medium text-heading">{{ customer.name || customer.display_name }}</span>
-                        <span class="text-xs text-muted">{{ customer.phone || customer.tax_id }}</span>
+                      <span class="flex items-center content-center justify-center w-10 h-10 mr-4 text-xl font-semibold leading-9 text-white bg-surface-muted rounded-full avatar">
+                        {{ initGenerator(customer.name || customer.display_name) }}
+                      </span>
+                      <div class="flex-grow flex flex-col justify-center text-left">
+                        <BaseText v-if="customer.name" :text="customer.name" class="m-0 text-base font-normal leading-tight cursor-pointer" />
+                        <BaseText v-if="customer.contact_name" :text="customer.contact_name" class="m-0 text-sm font-medium text-subtle cursor-pointer" />
+                        <BaseText v-if="customer.phone" :text="customer.phone" class="m-0 text-xs text-muted cursor-pointer" />
                       </div>
                     </li>
                   </ul>
 
                   <button
+                    v-if="userStore.hasAbilities(ABILITIES.CREATE_CUSTOMER)"
                     type="button"
-                    class="flex items-center justify-center w-full px-6 py-3 bg-hover cursor-pointer"
+                    class="h-10 flex items-center justify-center w-full px-2 py-3 bg-surface-muted border-none outline-hidden focus:bg-surface-muted"
                     @click="openCustomerModal(close)"
                   >
-                    <BaseIcon name="PlusIcon" class="h-5 text-primary-400" />
+                    <BaseIcon name="UserPlusIcon" class="text-primary-400" />
                     <label class="m-0 ml-3 text-sm leading-none cursor-pointer font-base text-primary-400">
                       {{ $t('customers.add_new_customer') }}
                     </label>
@@ -212,12 +330,12 @@
 
       <!-- Received No Of Bilties (lorry_receipt only — right after Challan No) -->
       <BaseInputGroup
-        v-if="isLorryReceipt && receivedBiltiesField"
-        :label="receivedBiltiesField.custom_field?.label ?? receivedBiltiesField.label ?? 'Received No Of Bilties'"
+        v-if="isLorryReceipt"
+        label="Received No Of Bilties"
         :content-loading="isLoading"
       >
         <BaseInput
-          v-model="receivedBiltiesField.value"
+          v-model="invoiceStore.newInvoice.received_no_bilties"
           :content-loading="isLoading"
           placeholder="e.g. 1937, 471"
           @input="onBiltiesInput"
@@ -263,6 +381,8 @@ import { useModalStore } from '@/scripts/stores/modal.store'
 import { useCustomerStore } from '@/scripts/features/company/customers/store'
 import { useGlobalStore } from '@/scripts/stores/global.store'
 import { customerService } from '../../../../api/services/customer.service'
+import { useUserStore } from '@/scripts/stores/user.store'
+import { ABILITIES } from '@/scripts/config/abilities'
 import RecurringFields from './RecurringFields.vue'
 
 interface ValidationField {
@@ -326,12 +446,23 @@ const invoiceStore = useInvoiceStore()
 const modalStore = useModalStore()
 const customerStore = useCustomerStore()
 const globalStore = useGlobalStore()
+const userStore = useUserStore()
 
 const consigneeSearch = ref('')
 const consigneeResults = ref<Customer[]>([])
 const selectedConsignee = ref<Customer | null>(null)
 const isInitialized = ref(false)
 const isGeneratingNumber = ref(false)
+
+fetchConsignees()
+
+function initGenerator(name?: string): string {
+  if (name) {
+    const nameSplit = name.split(' ')
+    return nameSplit[0].charAt(0).toUpperCase()
+  }
+  return ''
+}
 
 const enableTime = computed<boolean>(() => {
   return props.companySettings?.invoice_use_time === 'YES'
@@ -356,10 +487,8 @@ const receivedBiltiesField = computed<CustomFieldItem | undefined>(() => {
 
 // Only allow numbers and commas in the bilties field
 function onBiltiesInput(): void {
-  const field = receivedBiltiesField.value
-  if (!field) return
-  const raw = String(field.value ?? '')
-  field.value = raw.replace(/[^0-9,]/g, '')
+  const raw = String(invoiceStore.newInvoice.received_no_bilties ?? '')
+  invoiceStore.newInvoice.received_no_bilties = raw.replace(/[^0-9,]/g, '')
 }
 
 const customerLabel = computed<string>(() => {

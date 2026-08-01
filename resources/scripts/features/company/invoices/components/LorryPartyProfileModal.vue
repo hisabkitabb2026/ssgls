@@ -38,8 +38,6 @@ const emptyForm: LorryPartyProfile = {
   valid_up_to: '',
   advice_no: '',
   advice_date: '',
-  destination_broker_name: '',
-  destination_broker_address: '',
   rc_front_path: '',
   rc_back_path: '',
   pan_front_path: '',
@@ -191,7 +189,10 @@ async function submit(): Promise<void> {
             {{ detailsSectionTitle }}
           </h6>
 
-          <BaseInputGrid class="col-span-5 lg:col-span-4">
+          <BaseInputGrid
+            v-if="form.type === 'OWNER' || form.type === 'BROKER'"
+            class="col-span-5 lg:col-span-4"
+          >
             <!-- OWNER fields -->
             <template v-if="form.type === 'OWNER'">
               <BaseInputGroup label="Owner Bank Account No.">
@@ -335,26 +336,14 @@ async function submit(): Promise<void> {
               </BaseInputGroup>
             </template>
 
-            <!-- DRIVER fields -->
-            <template v-else-if="form.type === 'DRIVER'">
-              <BaseInputGroup label="Driver Bank Account No.">
+            <!-- BROKER fields -->
+            <template v-else-if="form.type === 'BROKER'">
+              <BaseInputGroup label="Broker Bank Account No.">
                 <BaseInput v-model.trim="form.bank_account_no" type="text" />
               </BaseInputGroup>
 
-              <BaseInputGroup label="Licence No.">
-                <BaseInput v-model.trim="form.licence_no" type="text" />
-              </BaseInputGroup>
-
-              <BaseInputGroup label="Issued Date">
-                <BaseInput v-model.trim="form.licence_date" type="date" />
-              </BaseInputGroup>
-
-              <BaseInputGroup label="Valid up Dt.">
-                <BaseInput v-model.trim="form.valid_up_to" type="date" />
-              </BaseInputGroup>
-
-              <BaseInputGroup label="RTO">
-                <BaseTextarea v-model.trim="form.rto_address" rows="3" />
+              <BaseInputGroup label="Broker Pan No.">
+                <BaseInput v-model.trim="form.advice_no" type="text" />
               </BaseInputGroup>
 
               <div class="col-span-5 mt-4 mb-2">
@@ -363,6 +352,86 @@ async function submit(): Promise<void> {
                 </h6>
               </div>
 
+              <BaseInputGroup label="Attach PAN Front">
+                <div v-if="form.pan_front_path_broker" class="flex flex-col p-3 border border-line-default rounded-md bg-surface-secondary">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-heading truncate max-w-[200px]" :title="getFileName(form.pan_front_path_broker)">
+                      {{ getFileName(form.pan_front_path_broker) }}
+                    </span>
+                    <div class="flex items-center space-x-2">
+                      <a
+                        v-if="!form.pan_front_path_broker.startsWith('data:')"
+                        :href="form.pan_front_path_broker"
+                        target="_blank"
+                        class="text-xs text-primary-500 hover:text-primary-600 hover:underline"
+                      >
+                        View
+                      </a>
+                      <button
+                        type="button"
+                        class="text-xs text-status-red hover:underline"
+                        @click="removeFile('pan_front_path_broker')"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  v-else
+                  class="relative border-2 border-dashed border-line-default rounded-md bg-surface-secondary hover:bg-hover transition p-4 text-center cursor-pointer"
+                >
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    @change="handleFileChange('pan_front_path_broker', $event)"
+                  />
+                  <div class="flex flex-col items-center justify-center space-y-1">
+                    <BaseIcon name="CloudArrowUpIcon" class="h-6 w-6 text-muted" />
+                    <span class="text-xs text-muted">Click to upload document</span>
+                  </div>
+                </div>
+              </BaseInputGroup>
+            </template>
+          </BaseInputGrid>
+
+          <!-- DRIVER fields (separate layout to avoid overlap) -->
+          <div
+            v-if="form.type === 'DRIVER'"
+            class="col-span-5 lg:col-span-4 space-y-6"
+          >
+            <BaseInputGrid>
+              <BaseInputGroup label="Driver Bank Account No.">
+                <BaseInput v-model.trim="form.bank_account_no" type="text" />
+              </BaseInputGroup>
+
+              <BaseInputGroup label="Licence No.">
+                <BaseInput v-model.trim="form.licence_no" type="text" />
+              </BaseInputGroup>
+
+              <BaseInputGroup label="RTO">
+                <BaseInput v-model.trim="form.rto_address" type="text" />
+              </BaseInputGroup>
+            </BaseInputGrid>
+
+            <BaseInputGrid>
+              <BaseInputGroup label="Issued Date">
+                <BaseInput v-model.trim="form.licence_date" type="date" />
+              </BaseInputGroup>
+
+              <BaseInputGroup label="Valid up Dt.">
+                <BaseInput v-model.trim="form.valid_up_to" type="date" />
+              </BaseInputGroup>
+            </BaseInputGrid>
+
+            <div class="mt-2 mb-2">
+              <h6 class="text-base font-semibold text-muted text-left">
+                Mandatory Required Documents
+              </h6>
+            </div>
+
+            <BaseInputGrid>
               <BaseInputGroup label="Attach Driving License Front">
                 <div v-if="form.license_front_path" class="flex flex-col p-3 border border-line-default rounded-md bg-surface-secondary">
                   <div class="flex items-center justify-between">
@@ -446,75 +515,8 @@ async function submit(): Promise<void> {
                   </div>
                 </div>
               </BaseInputGroup>
-            </template>
-
-            <!-- BROKER fields -->
-            <template v-else-if="form.type === 'BROKER'">
-              <BaseInputGroup label="Broker Bank Account No.">
-                <BaseInput v-model.trim="form.bank_account_no" type="text" />
-              </BaseInputGroup>
-
-              <BaseInputGroup label="Broker Pan No.">
-                <BaseInput v-model.trim="form.advice_no" type="text" />
-              </BaseInputGroup>
-
-              <BaseInputGroup label="Desti. Broker Name">
-                <BaseInput v-model.trim="form.destination_broker_name" type="text" />
-              </BaseInputGroup>
-
-              <BaseInputGroup label="Destination Broker Address">
-                <BaseTextarea v-model.trim="form.destination_broker_address" rows="3" />
-              </BaseInputGroup>
-
-              <div class="col-span-5 mt-4 mb-2">
-                <h6 class="text-base font-semibold text-muted text-left">
-                  Mandatory Required Documents
-                </h6>
-              </div>
-
-              <BaseInputGroup label="Attach PAN Front">
-                <div v-if="form.pan_front_path_broker" class="flex flex-col p-3 border border-line-default rounded-md bg-surface-secondary">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-heading truncate max-w-[200px]" :title="getFileName(form.pan_front_path_broker)">
-                      {{ getFileName(form.pan_front_path_broker) }}
-                    </span>
-                    <div class="flex items-center space-x-2">
-                      <a
-                        v-if="!form.pan_front_path_broker.startsWith('data:')"
-                        :href="form.pan_front_path_broker"
-                        target="_blank"
-                        class="text-xs text-primary-500 hover:text-primary-600 hover:underline"
-                      >
-                        View
-                      </a>
-                      <button
-                        type="button"
-                        class="text-xs text-status-red hover:underline"
-                        @click="removeFile('pan_front_path_broker')"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  v-else
-                  class="relative border-2 border-dashed border-line-default rounded-md bg-surface-secondary hover:bg-hover transition p-4 text-center cursor-pointer"
-                >
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    @change="handleFileChange('pan_front_path_broker', $event)"
-                  />
-                  <div class="flex flex-col items-center justify-center space-y-1">
-                    <BaseIcon name="CloudArrowUpIcon" class="h-6 w-6 text-muted" />
-                    <span class="text-xs text-muted">Click to upload document</span>
-                  </div>
-                </div>
-              </BaseInputGroup>
-            </template>
-          </BaseInputGrid>
+            </BaseInputGrid>
+          </div>
         </div>
       </div>
 
@@ -528,7 +530,7 @@ async function submit(): Promise<void> {
           {{ $t('general.cancel') }}
         </BaseButton>
 
-        <BaseButton :loading="isSaving" variant="primary" type="submit">
+        <BaseButton :loading="isSaving" variant="primary" type="button" @click="submit">
           <template #left="slotProps">
             <BaseIcon
               v-if="!isSaving"

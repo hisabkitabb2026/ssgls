@@ -14,6 +14,7 @@ use App\Models\ExchangeRateLog;
 use App\Models\Invoice;
 use App\Services\Mail\CompanyMailConfigService;
 use App\Services\Report\ProfitLossCalculationService;
+use App\Services\Document\TransportDocumentService;
 use App\Support\Pdf\PdfTemplateUtils;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -25,45 +26,8 @@ class InvoiceService
     public function __construct(
         private readonly DocumentItemService $documentItemService,
         private readonly ProfitLossCalculationService $profitLossService,
+        private readonly TransportDocumentService $transportDocumentService,
     ) {}
-
-    /**
-     * Auto-add prefixes for document numbers based on template type
-     * - LR Receipt: challan_no -> "CH {value}"
-     * - Lorry Receipt: docket_no -> "DOC {value}"
-     * - Invoice: invoice_number -> "INV {value}" (only for non-auto-generated numbers)
-     */
-    private function addDocumentPrefixes(array &$data, Request $request): void
-    {
-        $templateName = $data['template_name'] ?? $request->input('template_name', '');
-
-        // For LR Receipt (template: lr_receipt) - add CH prefix to challan_no
-        if ($templateName === 'lr_receipt' && ! empty($data['challan_no'])) {
-            $challanNo = trim($data['challan_no']);
-            // Only add prefix if it doesn't already start with "CH"
-            if (! preg_match('/^CH[-\s]?/i', $challanNo)) {
-                $data['challan_no'] = 'CH '.$challanNo;
-            }
-        }
-
-        // For Lorry Receipt (template: lorry_receipt) - add DOC prefix to docket_no
-        if ($templateName === 'lorry_receipt' && ! empty($data['docket_no'])) {
-            $docketNo = trim($data['docket_no']);
-            // Only add prefix if it doesn't already start with "DOC"
-            if (! preg_match('/^DOC[-\s]?/i', $docketNo)) {
-                $data['docket_no'] = 'DOC '.$docketNo;
-            }
-        }
-
-        // For Office Invoice - add INV prefix to invoice_number (only if manually provided)
-        if ($templateName === 'office_invoice' && $request->has('invoice_number') && ! empty($request->invoice_number)) {
-            $invoiceNo = trim($data['invoice_number']);
-            // Only add prefix if it doesn't already start with "INV"
-            if (! preg_match('/^INV[-\s]?/i', $invoiceNo)) {
-                $data['invoice_number'] = 'INV '.$invoiceNo;
-            }
-        }
-    }
 
     public function create(Request $request): Invoice
     {
@@ -74,23 +38,25 @@ class InvoiceService
         }
 
         // Auto-add prefixes for document numbers based on template type
-        $this->addDocumentPrefixes($data, $request);
+        $this->transportDocumentService->addDocumentPrefixes($data, $request);
 
         $invoice = Invoice::create($data);
 
-        // Only generate sequence numbers if invoice_number was auto-generated (not provided)
-        // For manual invoice numbers, we still track sequence for internal ordering
-        if (! $request->has('invoice_number') || empty($request->invoice_number)) {
-            $serial = (new SerialNumberService)
-                ->setModel($invoice)
-                ->setCompany($invoice->company_id)
-                ->setCustomer($invoice->customer_id)
-                ->setTemplateName($invoice->template_name)
-                ->setNextNumbers();
+        // Always generate sequence numbers for ordering
+        $serial = (new SerialNumberService)
+            ->setModel($invoice)
+            ->setCompany($invoice->company_id)
+            ->setCustomer($invoice->customer_id)
+            ->setTemplateName($invoice->template_name)
+            ->setNextNumbers();
 
-            $invoice->sequence_number = $serial->nextSequenceNumber;
-        }
+        $invoice->sequence_number = $serial->nextSequenceNumber;
         
+        // Only auto-generate invoice_number if not provided by user
+        if (! $request->has('invoice_number') || empty($request->invoice_number)) {
+            $invoice->invoice_number = $serial->getNextNumber();
+        }
+
         $invoice->customer_sequence_number = null;
         $invoice->unique_hash = Hashids::connection(Invoice::class)->encode($invoice->id);
         $invoice->save();
@@ -117,6 +83,13 @@ class InvoiceService
 
         if ($request->has('taxes') && (! empty($request->taxes))) {
             $this->documentItemService->createTaxes($invoice, $request->taxes);
+        }
+
+        // Handle transport documents (lr_receipt, lorry_receipt, office_invoice)
+        if ($this->transportDocumentService->isTransportTemplate($invoice)) {
+            $this->transportDocumentService->createItems($invoice, $request);
+            $this->transportDocumentService->createTaxes($invoice, $request);
+            $this->transportDocumentService->recalculateProfitLoss($invoice);
         }
 
         if ($request->customFields) {
@@ -183,7 +156,7 @@ class InvoiceService
         $data['customer_sequence_number'] = $serial->nextCustomerSequenceNumber;
 
         // Auto-add prefixes for document numbers based on template type (for updates)
-        $this->addDocumentPrefixes($data, $request);
+        $this->transportDocumentService->addDocumentPrefixes($data, $request);
 
         $invoice->update($data);
 
@@ -224,6 +197,14 @@ class InvoiceService
 
         if ($request->has('taxes') && (! empty($request->taxes))) {
             $this->documentItemService->createTaxes($invoice, $request->taxes);
+        }
+
+        // Handle transport documents (lr_receipt, lorry_receipt, office_invoice)
+        if ($this->transportDocumentService->isTransportTemplate($invoice)) {
+            $this->transportDocumentService->updateItems($invoice, $request);
+            $invoice->taxes()->delete();
+            $this->transportDocumentService->createTaxes($invoice, $request);
+            $this->transportDocumentService->recalculateProfitLoss($invoice);
         }
 
         if ($request->customFields) {

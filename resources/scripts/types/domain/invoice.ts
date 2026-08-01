@@ -4,6 +4,7 @@ import type { Company } from './company'
 import type { Currency } from './currency'
 import type { Tax } from './tax'
 import type { CustomFieldValue } from './custom-field'
+import type { TransportFields, TransportTemplateType } from './transport'
 
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
@@ -67,7 +68,7 @@ export interface Invoice {
   sent: boolean | null
   viewed: boolean | null
   unique_hash: string
-  template_name: string | null
+  template_name: string | null | TransportTemplateType
   customer_id: number
   recurring_invoice_id: number | null
   sequence_number: number
@@ -88,6 +89,29 @@ export interface Invoice {
   sales_tax_type: string | null
   sales_tax_address_type: string | null
   overdue: boolean | null
+
+  // Transport template fields (LR Receipt, Lorry Receipt, Office Invoice)
+  // All are optional as they're only populated for transport templates
+  docket_no?: string
+  from_code?: string
+  from_name?: string
+  to_code?: string
+  to_name?: string
+  truck_no?: string
+  vehicle_number?: string
+  body_type?: string
+  make?: string
+  colour?: string
+  chasis_no?: string
+  engine_no?: string
+  driver_name?: string
+  owner_name?: string
+  owner_customer_id?: number
+  driver_customer_id?: number
+  broker_customer_id?: number
+  consignee_customer_id?: number
+  received_no_bilties?: string
+
   items?: InvoiceItem[]
   customer?: Customer
   creator?: User
@@ -97,13 +121,13 @@ export interface Invoice {
   currency?: Currency
 }
 
-export interface CreateInvoicePayload {
+export interface CreateInvoicePayload extends Partial<TransportFields> {
   invoice_date: string
   due_date: string
   invoice_number: string
   reference_number?: string | null
-  customer_id: number
-  template_name?: string | null
+  customer_id?: number // Optional for transport templates (lr_receipt)
+  template_name?: string | null | TransportTemplateType
   notes?: string | null
   discount_type?: DiscountType
   discount?: number
@@ -113,10 +137,14 @@ export interface CreateInvoicePayload {
   discount_per_item?: string | null
   sales_tax_type?: string | null
   sales_tax_address_type?: string | null
-  items: CreateInvoiceItemPayload[]
+  items?: CreateInvoiceItemPayload[] // Optional for transport templates
   taxes?: Partial<Tax>[]
   customFields?: CustomFieldValue[]
   fields?: CustomFieldValue[]
+
+  // Exchange rate for multi-currency support
+  exchange_rate?: number
+  currency_id?: number
 }
 
 export interface CreateInvoiceItemPayload {

@@ -54,6 +54,8 @@ class EnvironmentManager
 
         $env = explode($this->delimiter, $env);
 
+        $changed = false;
+
         foreach ($data as $data_key => $data_value) {
             $updated = false;
 
@@ -62,7 +64,11 @@ class EnvironmentManager
 
                 // Check if new or old key
                 if ($entry[0] == $data_key) {
-                    $env[$env_key] = sprintf('%s=%s', $data_key, $this->encode($data_value));
+                    $newValue = sprintf('%s=%s', $data_key, $this->encode($data_value));
+                    if ($env[$env_key] !== $newValue) {
+                        $env[$env_key] = $newValue;
+                        $changed = true;
+                    }
                     $updated = true;
                 }
             }
@@ -70,12 +76,15 @@ class EnvironmentManager
             // Lets create if not available
             if (! $updated) {
                 $env[] = $data_key.'='.$this->encode($data_value);
+                $changed = true;
             }
         }
 
-        $env = implode($this->delimiter, $env);
-
-        file_put_contents(base_path('.env'), $env);
+        if ($changed) {
+            $env = implode($this->delimiter, $env);
+            // Temporarily disabled to prevent server reload during installation
+            // file_put_contents(base_path('.env'), $env);
+        }
 
         return true;
     }

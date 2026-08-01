@@ -23,6 +23,9 @@ class DatabaseConfigurationController extends Controller
 
     public function saveDatabaseEnvironment(DatabaseEnvironmentRequest $request)
     {
+        @set_time_limit(180);
+        @ini_set('max_execution_time', 180);
+
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
 

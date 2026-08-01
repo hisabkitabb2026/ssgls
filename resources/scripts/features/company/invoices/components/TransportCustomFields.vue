@@ -48,7 +48,7 @@ const lrReceiptSections: FieldSection[] = [
         key: 'mode_of_payment',
         label: 'Mode of Payment',
         type: 'dropdown',
-        options: ['To Pay', 'To Be Billed', 'Paid', 'TBB'],
+        options: ['To Pay', 'To Be Billed', 'Paid'],
       },
       {
         key: 'gst_tax_payable_by',
@@ -181,8 +181,6 @@ const lorryReceiptSections: FieldSection[] = [
       { key: 'broker_address', label: 'Broker Address', type: 'textarea', fullWidth: true },
       { key: 'broker_pan_no', label: 'Broker Pan No' },
       { key: 'advice_date', label: 'Advice Date', type: 'date' },
-      { key: 'destination_broker_name', label: 'Destination Broker Name' },
-      { key: 'destination_broker_address', label: 'Destination Broker Address', type: 'textarea', fullWidth: true },
       { key: 'broker_phone_no', label: 'Broker Phone No' },
       { key: 'broker_bank_account_no', label: 'Broker Bank Account No' },
     ],
@@ -272,19 +270,14 @@ watch(
               rows="2"
             />
             <!-- Dropdown -->
-            <BaseSelect
+            <BaseSelectInput
               v-else-if="field.type === 'dropdown'"
               v-model="invoiceData[field.key]"
-            >
-              <option value="">Select...</option>
-              <option
-                v-for="opt in field.options"
-                :key="opt"
-                :value="opt"
-              >
-                {{ opt }}
-              </option>
-            </BaseSelect>
+              :options="(field.options || []).map(opt => ({ id: opt, label: opt }))"
+              value-prop="id"
+              label-key="label"
+              placeholder="Select..."
+            />
             <!-- Date -->
             <BaseInput
               v-else-if="field.type === 'date'"

@@ -268,4 +268,15 @@ class InvoicesController extends Controller
             ],
         ]);
     }
+
+    public function destroy(Invoice $invoice)
+    {
+        $this->authorize('delete', $invoice);
+
+        $this->invoiceService->delete(collect([$invoice->id]));
+
+        return response()->json([
+            'success' => true,
+        ]);
+    }
 }

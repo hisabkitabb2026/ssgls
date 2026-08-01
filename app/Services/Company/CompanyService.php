@@ -222,6 +222,7 @@ class CompanyService
             'enable_invoice_receipts' => 'YES',
             'enable_lr_receipts' => 'YES',
             'enable_lorry_receipts' => 'YES',
+            'enable_warehouse_items' => 'YES',
         ];
 
         CompanySetting::setSettings($settings, $company->id);

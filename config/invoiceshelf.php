@@ -414,6 +414,18 @@ return [
             'model' => Invoice::class,
         ],
         [
+            'title' => 'Warehouse Items',
+            'group' => 'documents',
+            'group_label' => 'navigation.documents',
+            'priority' => 23,
+            'link' => '/admin/warehouse-items',
+            'icon' => 'CubeIcon',
+            'name' => 'Warehouse Items',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => '',
+        ],
+        [
             'title' => 'navigation.payments',
             'group' => 'documents',
             'group_label' => 'navigation.documents',

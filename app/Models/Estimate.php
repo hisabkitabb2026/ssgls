@@ -62,6 +62,7 @@ class Estimate extends Model implements HasMedia
             'discount' => 'float',
             'discount_val' => 'integer',
             'exchange_rate' => 'float',
+            'quotation_rates' => 'array',
         ];
     }
 
@@ -294,6 +295,17 @@ class Estimate extends Model implements HasMedia
      */
     public function getInvoiceTemplateName(): string
     {
+        if ($this->template_name === 'quotation') {
+            $estimateTemplates = [];
+            foreach (PdfTemplateUtils::getFormattedTemplates('estimate') as $template) {
+                $estimateTemplates[] = $template['name'];
+            }
+            if (in_array('quotation', $estimateTemplates)) {
+                return 'quotation';
+            }
+            return 'estimate1';
+        }
+
         $templateName = Str::replace('estimate', 'invoice', $this->template_name);
 
         $name = [];

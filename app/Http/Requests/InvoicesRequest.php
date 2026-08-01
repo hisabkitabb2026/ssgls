@@ -21,17 +21,22 @@ class InvoicesRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.s
+     * Check if this request is for a transport template.
      */
-    public function rules(): array
+    private function isTransportTemplate(): bool
     {
-        // Transport receipt templates (lr_receipt, lorry_receipt, office_invoice)
-        // use native transport columns instead of line items, and LR receipts
-        // don't require a customer.
-        $isTransportTemplate = in_array(
+        return in_array(
             $this->template_name,
             ['lr_receipt', 'lorry_receipt', 'office_invoice'],
         );
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     */
+    public function rules(): array
+    {
+        $isTransportTemplate = $this->isTransportTemplate();
 
         $rules = [
             'invoice_date' => [

@@ -183,6 +183,13 @@ class EstimateService
 
         $logo = $company->logo_path;
 
+        $quotationRates = [];
+        if ($estimate->quotation_rates) {
+            $quotationRates = is_string($estimate->quotation_rates)
+                ? json_decode($estimate->quotation_rates, true)
+                : $estimate->quotation_rates;
+        }
+
         view()->share([
             'estimate' => $estimate,
             'customFields' => $customFields,
@@ -192,6 +199,7 @@ class EstimateService
             'billing_address' => $estimate->getCustomerBillingAddress(),
             'notes' => $estimate->getNotes(),
             'taxes' => $taxes,
+            'quotation_rates' => $quotationRates,
         ]);
 
         $template = PdfTemplateUtils::findFormattedTemplate('estimate', $estimateTemplate, '');

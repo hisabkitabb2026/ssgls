@@ -349,6 +349,31 @@ class Invoice extends Model implements HasMedia
         return $query->paginate($limit);
     }
 
+    /**
+     * Eager-load all common relationships to prevent N+1 queries.
+     *
+     * Use this scope when you need to fetch invoices with all their related data.
+     */
+    public function scopeWithAllRelations($query)
+    {
+        return $query->with([
+            'customer',
+            'consigneeCustomer',
+            'items',
+            'items.taxes',
+            'items.fields',
+            'items.fields.customField',
+            'payments',
+            'taxes',
+            'fields',
+            'fields.customField',
+            'tags',
+            'recurringInvoice',
+            'creator',
+            'company',
+        ]);
+    }
+
     public function getPDFData(): mixed
     {
         return app(InvoiceService::class)->getPdfData($this);

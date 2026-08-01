@@ -4,6 +4,23 @@
     :description="$t('settings.customization.custom_template_description')"
   >
     <div class="mt-4">
+      <!-- Active Template Selector -->
+      <div class="mb-6 pb-6 border-b border-line-light flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex-1">
+          <h4 class="text-sm font-semibold text-heading">Active PDF Template</h4>
+          <p class="text-xs text-muted mt-0.5">Select the active template to use for rendering PDF documents.</p>
+        </div>
+        <div class="w-full md:w-64">
+          <BaseSelectInput
+            v-model="activeTemplate"
+            :options="allTemplatesOptions"
+            value-prop="id"
+            label-key="label"
+            :content-loading="isLoading"
+            placeholder="Select Template..."
+          />
+        </div>
+      </div>
       <!-- Built-in Templates -->
       <div v-if="builtinTemplates.length" class="mb-6">
         <h4 class="text-sm font-semibold text-heading mb-3">Built-in Templates</h4>
@@ -155,10 +172,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { customTemplateService } from '@/scripts/api/services/custom-template.service'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
 import { useDialogStore } from '@/scripts/stores/dialog.store'
+import { useCompanyStore } from '@/scripts/stores/company.store'
 import type { CustomTemplate } from '@/scripts/api/services/custom-template.service'
 
 interface Props {
@@ -169,6 +187,64 @@ const props = defineProps<Props>()
 
 const notificationStore = useNotificationStore()
 const dialogStore = useDialogStore()
+const companyStore = useCompanyStore()
+
+const settingKey = computed(() => {
+  switch (props.documentType) {
+    case 'invoice1':
+      return 'default_invoice_template'
+    case 'estimate1':
+      return 'default_estimate_template'
+    case 'office_invoice':
+      return 'default_office_invoice_template'
+    case 'lr_receipt':
+      return 'default_lr_receipt_template'
+    case 'lorry_receipt':
+      return 'default_lorry_receipt_template'
+    case 'payment':
+      return 'default_payment_template'
+    default:
+      return `default_${props.documentType}_template`
+  }
+})
+
+const allTemplatesOptions = computed(() => {
+  const options: Array<{ id: string; label: string }> = []
+  
+  builtinTemplates.value.forEach((tpl) => {
+    options.push({ id: tpl.name, label: tpl.name })
+  })
+  
+  customTemplates.value.forEach((tpl) => {
+    options.push({ id: tpl.name, label: `${tpl.name} (Custom)` })
+  })
+  
+  return options
+})
+
+const activeTemplate = computed<string>({
+  get: () => {
+    return (companyStore.selectedCompanySettings?.[settingKey.value] as string | undefined) || props.documentType
+  },
+  set: async (newValue: string) => {
+    const data = {
+      settings: {
+        [settingKey.value]: newValue,
+      },
+    }
+    try {
+      await companyStore.updateCompanySettings({
+        data,
+        message: 'general.setting_updated',
+      })
+    } catch {
+      notificationStore.showNotification({
+        type: 'error',
+        message: 'Failed to update active template setting.',
+      })
+    }
+  },
+})
 
 const builtinTemplates = ref<CustomTemplate[]>([])
 const customTemplates = ref<CustomTemplate[]>([])

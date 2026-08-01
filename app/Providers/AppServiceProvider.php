@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\AiConversation;
+use App\Models\WarehouseItem;
 use App\Policies\AiConversationPolicy;
 use App\Policies\CompanyPolicy;
 use App\Policies\CustomerPolicy;
@@ -20,6 +21,7 @@ use App\Policies\ReportPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SettingsPolicy;
 use App\Policies\UserPolicy;
+use App\Policies\WarehouseItemPolicy;
 use App\Support\Bouncer\BouncerDefaultScope;
 use App\Support\Setup\InstallUtils;
 use App\Support\Setup\InstallWizardAuth;
@@ -67,6 +69,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(AiConversation::class, AiConversationPolicy::class);
+        Gate::policy(WarehouseItem::class, WarehouseItemPolicy::class);
 
         View::addNamespace('pdf_templates', storage_path('app/templates/pdf'));
 

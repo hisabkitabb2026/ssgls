@@ -57,8 +57,9 @@
       />
 
       <BaseScrollPane>
-        <!-- Estimate Items -->
+        <!-- Estimate Items (hidden for quotation template) -->
         <DocumentItemsTable
+          v-if="!isQuotationTemplate"
           :currency="estimateStore.newEstimate.selectedCurrency"
           :is-loading="isLoadingContent"
           :item-validation-scope="estimateValidationScope"
@@ -66,11 +67,20 @@
           store-prop="newEstimate"
         />
 
+        <!-- Quotation Rate Sheet (only for quotation template) -->
+        <div v-if="isQuotationTemplate" class="px-6 py-4">
+          <QuotationRateSection :store="estimateStore" />
+        </div>
+
         <!-- Estimate Footer Section -->
         <div
-          class="block mt-10 estimate-foot lg:flex lg:justify-between lg:items-start"
+          class="block mt-10 estimate-foot"
+          :class="isQuotationTemplate
+            ? 'block mt-10 estimate-foot px-6'
+            : 'block mt-10 estimate-foot lg:flex lg:justify-between lg:items-start'
+          "
         >
-          <div class="relative w-full lg:w-1/2">
+          <div :class="isQuotationTemplate ? 'relative w-full' : 'relative w-full lg:w-1/2'">
             <!-- Estimate Custom Notes -->
             <DocumentNotes
               :store="estimateStore"
@@ -79,16 +89,11 @@
               type="Estimate"
             />
 
-            <!-- Estimate Template Button -->
-            <TemplateSelectButton
-              :store="estimateStore"
-              store-prop="newEstimate"
-              :is-mark-as-default="isMarkAsDefault"
-            />
-            <SelectTemplateModal />
+
           </div>
 
           <DocumentTotals
+            v-if="!isQuotationTemplate"
             :currency="estimateStore.newEstimate.selectedCurrency"
             :is-loading="isLoadingContent"
             :store="estimateStore"
@@ -120,8 +125,7 @@ import {
   DocumentItemsTable,
   DocumentTotals,
   DocumentNotes,
-  TemplateSelectButton,
-  SelectTemplateModal,
+  QuotationRateSection,
 } from '../../../shared/document-form'
 
 const estimateStore = useEstimateStore()
@@ -137,6 +141,10 @@ const estimateNoteFieldList = ref<string[]>(['customer', 'company', 'estimate'])
 
 const isLoadingContent = computed<boolean>(
   () => estimateStore.isFetchingInitialSettings,
+)
+
+const isQuotationTemplate = computed<boolean>(
+  () => estimateStore.newEstimate.template_name === 'quotation',
 )
 
 const pageTitle = computed<string>(() =>
@@ -202,27 +210,32 @@ async function submitForm(): Promise<void> {
 
   const data: Record<string, unknown> = {
     ...cloneDeep(estimateStore.newEstimate),
-    sub_total: Math.round(estimateStore.getSubTotal),
-    total: Math.round(estimateStore.getTotal),
-    tax: Math.round(estimateStore.getTotalTax),
+    sub_total: isQuotationTemplate.value ? 0 : Math.round(estimateStore.getSubTotal),
+    total: isQuotationTemplate.value ? 0 : Math.round(estimateStore.getTotal),
+    tax: isQuotationTemplate.value ? 0 : Math.round(estimateStore.getTotalTax),
   }
 
-  const items = data.items as Array<Record<string, unknown>>
-  if (data.discount_per_item === 'YES') {
-    items.forEach((item, index) => {
-      if (item.discount_type === 'fixed') {
-        items[index].discount = Math.round((item.discount as number) * 100)
-      }
-    })
+  if (isQuotationTemplate.value) {
+    data.items = []
+    data.taxes = []
   } else {
-    if (data.discount_type === 'fixed') {
-      data.discount = Math.round((data.discount as number) * 100)
+    const items = data.items as Array<Record<string, unknown>>
+    if (data.discount_per_item === 'YES') {
+      items.forEach((item, index) => {
+        if (item.discount_type === 'fixed') {
+          items[index].discount = Math.round((item.discount as number) * 100)
+        }
+      })
+    } else {
+      if (data.discount_type === 'fixed') {
+        data.discount = Math.round((data.discount as number) * 100)
+      }
     }
-  }
 
-  const taxes = data.taxes as Array<Record<string, unknown>>
-  if (data.tax_per_item !== 'YES' && taxes.length) {
-    data.tax_type_ids = taxes.map((tax) => tax.tax_type_id)
+    const taxes = data.taxes as Array<Record<string, unknown>>
+    if (data.tax_per_item !== 'YES' && taxes.length) {
+      data.tax_type_ids = taxes.map((tax) => tax.tax_type_id)
+    }
   }
 
   try {

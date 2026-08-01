@@ -91,7 +91,7 @@ const userStore = useUserStore()
       v-if="userStore.hasAbilities(ABILITIES.VIEW_LR_RECEIPT)"
       :icon-component="LrReceiptIcon"
       :loading="!dashboardStore.isDashboardDataLoaded"
-      route="/admin/invoices?template=lr_receipt"
+      route="/admin/lr-receipts"
       :label="
         dashboardStore.stats.totalLrReceiptCount <= 1
           ? $t('dashboard.cards.lr_receipts', 1)
@@ -106,7 +106,7 @@ const userStore = useUserStore()
       v-if="userStore.hasAbilities(ABILITIES.VIEW_LORRY_RECEIPT)"
       :icon-component="LorryReceiptIcon"
       :loading="!dashboardStore.isDashboardDataLoaded"
-      route="/admin/invoices?template=lorry_receipt"
+      route="/admin/lorry-receipts"
       :label="
         dashboardStore.stats.totalLorryReceiptCount <= 1
           ? $t('dashboard.cards.lorry_receipts', 1)
