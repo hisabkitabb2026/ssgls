@@ -31,6 +31,7 @@ class PaymentsController extends Controller
         $limit = $request->has('limit') ? $request->limit : 10;
 
         $payments = Payment::whereCompany()
+            ->with(['customer', 'currency', 'paymentMethod'])
             ->join('customers', 'customers.id', '=', 'payments.customer_id')
             ->leftJoin('invoices', 'invoices.id', '=', 'payments.invoice_id')
             ->leftJoin('payment_methods', 'payment_methods.id', '=', 'payments.payment_method_id')
@@ -57,12 +58,16 @@ class PaymentsController extends Controller
 
         $payment = $this->paymentService->create($request);
 
+        $payment->load(['customer', 'currency', 'paymentMethod', 'fields.customField', 'company']);
+
         return new PaymentResource($payment);
     }
 
     public function show(Request $request, Payment $payment)
     {
         $this->authorize('view', $payment);
+
+        $payment->load(['customer', 'currency', 'paymentMethod', 'fields.customField', 'company']);
 
         return new PaymentResource($payment);
     }
@@ -72,6 +77,8 @@ class PaymentsController extends Controller
         $this->authorize('update', $payment);
 
         $payment = $this->paymentService->update($payment, $request);
+
+        $payment->load(['customer', 'currency', 'paymentMethod', 'fields.customField', 'company']);
 
         return new PaymentResource($payment);
     }

@@ -302,12 +302,13 @@ async function submitForm() {
 
     emit('update')
     closeSendEstimateModal()
-  } catch (error) {
+  } catch (error: any) {
     console.error(error)
     isLoading.value = false
+    const errorMessage = error.response?.data?.errors?.mail?.[0] || error.response?.data?.message || t('estimates.something_went_wrong')
     notificationStore.showNotification({
       type: 'error',
-      message: 'estimates.something_went_wrong',
+      message: errorMessage,
     })
   }
 }

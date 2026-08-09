@@ -102,9 +102,9 @@ class SerialNumberService
         $modelName = strtolower(class_basename($this->model));
         $settingKey = $modelName.'_number_format';
 
-        // For invoice models with a template_name, use the per-type format setting
+        // For invoice models with a transport template_name, use the per-type format setting
         // (e.g. 'lr_receipt_number_format') instead of the generic 'invoice_number_format'.
-        if ($modelName === 'invoice' && $this->templateName) {
+        if ($modelName === 'invoice' && $this->templateName && in_array($this->templateName, ['lr_receipt', 'lorry_receipt', 'office_invoice'])) {
             $settingKey = $this->templateName.'_number_format';
         }
 

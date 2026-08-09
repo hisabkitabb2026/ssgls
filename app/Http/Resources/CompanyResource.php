@@ -31,12 +31,8 @@ class CompanyResource extends JsonResource
             'slug' => $this->slug,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'address' => $this->when($this->address()->exists(), function () {
-                return new AddressResource($this->address);
-            }),
-            'owner' => $this->when($this->relationLoaded('owner'), function () {
-                return new UserResource($this->owner);
-            }),
+            'address' => $this->whenLoaded('address', fn () => new AddressResource($this->address)),
+            'owner' => $this->whenLoaded('owner', fn () => new UserResource($this->owner)),
             'roles' => RoleResource::collection($this->roles),
             'user_role' => $this->getUserRoleTitle(),
         ];

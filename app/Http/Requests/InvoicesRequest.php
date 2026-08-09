@@ -76,8 +76,19 @@ class InvoicesRequest extends FormRequest
                 : ['required'],
             'template_name' => [
                 'required',
+                function ($attribute, $value, $fail) {
+                    if (! \App\Support\Pdf\PdfTemplateUtils::findFormattedTemplate('invoice', $value)) {
+                        $fail("The selected {$attribute} is invalid.");
+                    }
+                },
             ],
         ];
+
+        if ($this->template_name === 'lorry_receipt') {
+            $rules['truck_no'] = ['required', 'string', 'max:255'];
+            $rules['from_code'] = ['required', 'string', 'max:255'];
+            $rules['to_code'] = ['required', 'string', 'max:255'];
+        }
 
         if (! $isTransportTemplate) {
             $rules['items'] = ['required', 'array'];

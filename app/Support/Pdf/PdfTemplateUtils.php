@@ -14,7 +14,7 @@ class PdfTemplateUtils
      * @param  string  $imageFormat
      * @return array|null
      */
-    public static function findFormattedTemplate($templateType, $templateName, $imageFormat = 'base64')
+    public static function findFormattedTemplate($templateType, $templateName, $imageFormat = null)
     {
         foreach (array_reverse(self::getFormattedTemplates($templateType, $imageFormat)) as $formattedTemplate) {
             if ($formattedTemplate['name'] === $templateName) {

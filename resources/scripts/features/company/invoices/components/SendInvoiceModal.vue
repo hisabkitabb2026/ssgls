@@ -360,11 +360,12 @@ async function submitForm(): Promise<void> {
     }
 
     closeModal()
-  } catch {
+  } catch (error: any) {
     isLoading.value = false
+    const errorMessage = error.response?.data?.errors?.mail?.[0] || error.response?.data?.message || t('invoices.something_went_wrong')
     notificationStore.showNotification({
       type: 'error',
-      message: t('invoices.something_went_wrong'),
+      message: errorMessage,
     })
   }
 }

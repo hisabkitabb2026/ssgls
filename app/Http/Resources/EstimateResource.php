@@ -47,27 +47,13 @@ class EstimateResource extends JsonResource
             'estimate_pdf_url' => $this->estimatePdfUrl,
             'sales_tax_type' => $this->sales_tax_type,
             'sales_tax_address_type' => $this->sales_tax_address_type,
-            'items' => $this->when($this->items()->exists(), function () {
-                return EstimateItemResource::collection($this->items);
-            }),
-            'customer' => $this->when($this->customer()->exists(), function () {
-                return new CustomerResource($this->customer);
-            }),
-            'creator' => $this->when($this->creator()->exists(), function () {
-                return new UserResource($this->creator);
-            }),
-            'taxes' => $this->when($this->taxes()->exists(), function () {
-                return TaxResource::collection($this->taxes);
-            }),
-            'fields' => $this->when($this->fields()->exists(), function () {
-                return CustomFieldValueResource::collection($this->fields);
-            }),
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
-            'currency' => $this->when($this->currency()->exists(), function () {
-                return new CurrencyResource($this->currency);
-            }),
+            'items' => $this->whenLoaded('items', fn () => EstimateItemResource::collection($this->items)),
+            'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
+            'taxes' => $this->whenLoaded('taxes', fn () => TaxResource::collection($this->taxes)),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
         ];
     }
 }

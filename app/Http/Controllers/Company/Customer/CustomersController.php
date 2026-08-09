@@ -28,7 +28,7 @@ class CustomersController extends Controller
 
         $limit = $request->has('limit') ? $request->limit : 10;
 
-        $customers = Customer::with('creator')
+        $customers = Customer::with(['creator', 'billingAddress', 'shippingAddress', 'fields.customField', 'currency', 'company'])
             ->whereCompany()
             ->applyFilters($request->all())
             ->withSum('invoices as base_due_amount', 'base_due_amount')
@@ -53,6 +53,8 @@ class CustomersController extends Controller
 
         $customer = $this->customerService->create($request);
 
+        $customer->load(['billingAddress', 'shippingAddress', 'fields.customField', 'currency', 'company']);
+
         return new CustomerResource($customer);
     }
 
@@ -64,6 +66,8 @@ class CustomersController extends Controller
     public function show(Customer $customer)
     {
         $this->authorize('view', $customer);
+
+        $customer->load(['billingAddress', 'shippingAddress', 'fields.customField', 'currency', 'company']);
 
         return new CustomerResource($customer);
     }
@@ -79,6 +83,8 @@ class CustomersController extends Controller
         $this->authorize('update', $customer);
 
         $customer = $this->customerService->update($request, $customer);
+
+        $customer->load(['billingAddress', 'shippingAddress', 'fields.customField', 'currency', 'company']);
 
         return new CustomerResource($customer);
     }

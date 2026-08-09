@@ -86,13 +86,10 @@ class EstimateService
             ExchangeRateLog::addExchangeRateLog($estimate);
         }
 
-        $estimate->items->map(function ($item) {
-            $fields = $item->fields()->get();
-
-            $fields->map(function ($field) {
-                $field->delete();
-            });
-        });
+        $itemIds = $estimate->items()->pluck('id');
+        \App\Models\CustomFieldValue::where('custom_field_valuable_type', (new \App\Models\EstimateItem)->getMorphClass())
+            ->whereIn('custom_field_valuable_id', $itemIds)
+            ->delete();
 
         $estimate->items()->delete();
         $estimate->taxes()->delete();
@@ -145,7 +142,14 @@ class EstimateService
         if (! empty($data['bcc'])) {
             $mail->bcc($data['bcc']);
         }
-        $mail->send(new SendEstimateMail($data));
+        try {
+            $mail->send(new SendEstimateMail($data));
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send estimate email: ' . $e->getMessage());
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'mail' => ['Failed to send email. Please check your mail SMTP configuration under Settings. Details: ' . $e->getMessage()],
+            ]);
+        }
 
         return [
             'success' => true,

@@ -271,6 +271,7 @@
         }
 
         .mode {
+            background-color: #ffffff;
             font-size: 15px;
             font-weight: bold;
             line-height: 12px;
@@ -285,6 +286,7 @@
 
         .mode-selected {
             border-bottom: 1px solid #111;
+            display: inline-block;
             padding-bottom: 1px;
         }
 

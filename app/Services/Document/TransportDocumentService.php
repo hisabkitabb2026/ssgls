@@ -85,12 +85,10 @@ public function createItems(Invoice $invoice, Request $request): void
 */
 public function updateItems(Invoice $invoice, Request $request): void
 {
-  $invoice->items->map(function ($item) {
-      $fields = $item->fields()->get();
-      $fields->map(function ($field) {
-          $field->delete();
-      });
-  });
+  $itemIds = $invoice->items()->pluck('id');
+  \App\Models\CustomFieldValue::where('custom_field_valuable_type', (new \App\Models\InvoiceItem)->getMorphClass())
+      ->whereIn('custom_field_valuable_id', $itemIds)
+      ->delete();
 
   $invoice->items()->delete();
 

@@ -107,6 +107,8 @@ class InvoicesController extends Controller
     {
         $this->authorize('view', $invoice);
 
+        $invoice->load(['customer', 'consigneeCustomer', 'fields', 'items.fields.customField', 'currency', 'taxes', 'company']);
+
         return new InvoiceResource($invoice);
     }
 

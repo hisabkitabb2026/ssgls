@@ -34,9 +34,7 @@ class CustomFieldResource extends JsonResource
             'order' => $this->order,
             'company_id' => $this->company_id,
             'default_answer' => $this->default_answer,
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
         ];
     }
 }

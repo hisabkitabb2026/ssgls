@@ -25,6 +25,7 @@ class SerialNumberController extends Controller
                 case 'invoice':
                     $nextNumber = $serial->setModel($invoice)
                         ->setModelObject($request->model_id)
+                        ->setTemplateName($request->template_name)
                         ->getNextNumber();
 
                     break;

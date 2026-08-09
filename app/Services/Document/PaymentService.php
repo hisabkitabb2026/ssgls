@@ -157,7 +157,14 @@ class PaymentService
         if (! empty($data['bcc'])) {
             $mail->bcc($data['bcc']);
         }
-        $mail->send(new SendPaymentMail($data));
+        try {
+            $mail->send(new SendPaymentMail($data));
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send payment email: ' . $e->getMessage());
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'mail' => ['Failed to send email. Please check your mail SMTP configuration under Settings. Details: ' . $e->getMessage()],
+            ]);
+        }
 
         return [
             'success' => true,

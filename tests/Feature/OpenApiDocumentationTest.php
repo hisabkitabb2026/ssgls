@@ -46,7 +46,7 @@ it('generates a valid OpenAPI document for the v1 API', function () {
     $document = openApiDocument();
 
     expect($document['openapi'] ?? '')->toStartWith('3.')
-        ->and($document['info']['title'])->toBe('InvoiceShelf API')
+        ->and($document['info']['title'])->toBe('HisabKitabb API')
         ->and($document['info']['version'])->toBe(trim((string) file_get_contents(base_path('version.md'))))
         ->and($document['paths'])->not->toBeEmpty();
 });

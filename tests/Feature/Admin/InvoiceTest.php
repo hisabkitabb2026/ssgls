@@ -38,7 +38,7 @@ test('testGetInvoices', function () {
 test('cannot convert an invoice belonging to another company', function () {
     $invoice = Invoice::factory()->create(['company_id' => Company::factory()->create()->id]);
 
-    postJson("api/v1/invoices/{$invoice->id}/convert-to-estimate")->assertStatus(403);
+    postJson("api/v1/invoices/{$invoice->id}/convert-to-estimate")->assertStatus(404);
 });
 
 test('create invoice', function () {
@@ -469,7 +469,7 @@ test('create invoice with EUR currency', function () {
     ]);
 });
 
-test('update invoice with EUR currency', function () {
+test('update invoice with INR currency', function () {
     $invoice = Invoice::factory()
         ->hasItems(1)
         ->hasTaxes(1)
@@ -478,9 +478,16 @@ test('update invoice with EUR currency', function () {
             'due_date' => '1988-08-18',
         ]);
 
+    $customer = \App\Models\Customer::factory()->create([
+        'company_id' => $invoice->company_id,
+        'currency_id' => 2, // INR (different from USD company currency)
+    ]);
+
     $invoice2 = Invoice::factory()
         ->raw([
             'id' => $invoice['id'],
+            'customer_id' => $customer->id,
+            'currency_id' => 2,
             'discount_type' => 'fixed',
             'discount_val' => 20,
             'sub_total' => 100,

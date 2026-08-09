@@ -28,6 +28,7 @@ class EstimatesController extends Controller
         $limit = $request->has('limit') ? $request->limit : 10;
 
         $estimates = Estimate::whereCompany()
+            ->with(['customer', 'currency'])
             ->join('customers', 'customers.id', '=', 'estimates.customer_id')
             ->applyFilters($request->all())
             ->select('estimates.*', 'customers.name')
@@ -52,12 +53,16 @@ class EstimatesController extends Controller
 
         GenerateEstimatePdfJob::dispatch($estimate);
 
+        $estimate->load(['customer', 'currency', 'items.fields.customField', 'taxes', 'fields.customField', 'company']);
+
         return new EstimateResource($estimate);
     }
 
     public function show(Request $request, Estimate $estimate)
     {
         $this->authorize('view', $estimate);
+
+        $estimate->load(['customer', 'currency', 'items.fields.customField', 'taxes', 'fields.customField', 'company']);
 
         return new EstimateResource($estimate);
     }
@@ -69,6 +74,8 @@ class EstimatesController extends Controller
         $estimate = $this->estimateService->update($estimate, $request);
 
         GenerateEstimatePdfJob::dispatch($estimate, true);
+
+        $estimate->load(['customer', 'currency', 'items.fields.customField', 'taxes', 'fields.customField', 'company']);
 
         return new EstimateResource($estimate);
     }

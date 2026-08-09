@@ -345,4 +345,15 @@ class Estimate extends Model implements HasMedia
 
         return true;
     }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (request()->header('company')) {
+            return $this->where('company_id', request()->header('company'))
+                ->where($field ?? $this->getKeyName(), $value)
+                ->firstOrFail();
+        }
+
+        return parent::resolveRouteBinding($value, $field);
+    }
 }

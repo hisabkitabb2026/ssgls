@@ -94,7 +94,7 @@ export const invoiceService = {
   },
 
   async sendPreview(params: SendPreviewParams): Promise<ApiResponse<string>> {
-    const { data } = await client.get(`${API.INVOICES}/${params.id}/send/preview`, { params })
+    const { data } = await client.post(`${API.INVOICES}/${params.id}/send/preview`, params)
     return data
   },
 

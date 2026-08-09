@@ -27,6 +27,27 @@ class GotenbergPdfDriver
             throw new \InvalidArgumentException('Invalid Gotenberg host: '.$e->getMessage());
         }
 
+        $html = view($viewname)->render();
+        $assets = [];
+
+        // Scan and extract local absolute font files, convert to relative assets
+        if (preg_match_all('/url\((["\'])([^"\']+?\.(?:ttf|otf|woff|woff2))\1\)/i', $html, $matches)) {
+            foreach ($matches[2] as $index => $filePath) {
+                $normalizedPath = str_replace('\\', '/', $filePath);
+                if (file_exists($filePath)) {
+                    $filename = basename($normalizedPath);
+                    $assets[] = Stream::path($filePath);
+
+                    $quote = $matches[1][$index];
+                    $html = str_replace(
+                        "url({$quote}{$filePath}{$quote})",
+                        "url({$quote}{$filename}{$quote})",
+                        $html
+                    );
+                }
+            }
+        }
+
         $request = Gotenberg::chromium($host)
             ->pdf()
             ->margins(0, 0, 0, 0)
@@ -34,9 +55,14 @@ class GotenbergPdfDriver
             ->html(
                 Stream::string(
                     'document.html',
-                    view($viewname)->render(),
+                    $html,
                 )
             );
+
+        if (! empty($assets)) {
+            $request->assets(...$assets);
+        }
+
         $result = Gotenberg::send($request);
 
         return new GotenbergPdfResponse($result);

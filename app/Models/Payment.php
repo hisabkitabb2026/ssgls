@@ -274,4 +274,15 @@ class Payment extends Model implements HasMedia
             '{PAYMENT_AMOUNT}' => format_money_pdf($this->amount, $this->customer->currency),
         ];
     }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (request()->header('company')) {
+            return $this->where('payments.company_id', request()->header('company'))
+                ->where($field ?? $this->getKeyName(), $value)
+                ->firstOrFail();
+        }
+
+        return parent::resolveRouteBinding($value, $field);
+    }
 }
