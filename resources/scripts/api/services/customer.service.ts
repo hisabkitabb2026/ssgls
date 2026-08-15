@@ -1,5 +1,6 @@
 import { client } from '../client'
 import { API } from '../endpoints'
+import { createBasicCrudService } from './crud-service.factory'
 import type { Customer, CreateCustomerPayload } from '@/scripts/types/domain/customer'
 import type {
   ApiResponse,
@@ -48,30 +49,25 @@ export interface CustomerStatsResponse {
   }
 }
 
+const baseCustomerService = createBasicCrudService<
+  Customer,
+  CustomerListResponse,
+  CreateCustomerPayload
+>({
+  basePath: API.CUSTOMERS,
+  deletePath: API.CUSTOMERS_DELETE,
+  usePostDelete: true,
+})
+
 export const customerService = {
+  ...baseCustomerService,
+
   async list(params?: CustomerListParams): Promise<CustomerListResponse> {
-    const { data } = await client.get(API.CUSTOMERS, { params })
-    return data
-  },
-
-  async get(id: number): Promise<ApiResponse<Customer>> {
-    const { data } = await client.get(`${API.CUSTOMERS}/${id}`)
-    return data
-  },
-
-  async create(payload: CreateCustomerPayload): Promise<ApiResponse<Customer>> {
-    const { data } = await client.post(API.CUSTOMERS, payload)
-    return data
-  },
-
-  async update(id: number, payload: Partial<CreateCustomerPayload>): Promise<ApiResponse<Customer>> {
-    const { data } = await client.put(`${API.CUSTOMERS}/${id}`, payload)
-    return data
+    return baseCustomerService.list(params) as Promise<CustomerListResponse>
   },
 
   async delete(payload: DeletePayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.CUSTOMERS_DELETE, payload)
-    return data
+    return baseCustomerService.delete(payload) as Promise<{ success: boolean }>
   },
 
   async getStats(

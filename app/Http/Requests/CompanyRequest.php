@@ -41,6 +41,9 @@ class CompanyRequest extends FormRequest
             'pan_no' => [
                 'nullable',
             ],
+            'billing_branch' => [
+                'nullable',
+            ],
             'address.country_id' => [
                 'required',
             ],
@@ -57,6 +60,7 @@ class CompanyRequest extends FormRequest
                 'enrollment_no',
                 'gstin',
                 'pan_no',
+                'billing_branch',
             ])
             ->merge([
                 'slug' => Str::slug($this->name),

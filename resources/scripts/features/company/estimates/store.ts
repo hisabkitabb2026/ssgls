@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { toRef } from 'vue'
 import { useNotificationStore } from '../../../stores/notification.store'
 import { useCompanyStore } from '../../../stores/company.store'
 import { useUserStore } from '../../../stores/user.store'
@@ -10,56 +11,23 @@ import type {
   EstimateStatusPayload,
   EstimateTemplate,
 } from '../../../api/services/estimate.service'
-import type { Estimate, EstimateItem, DiscountType } from '../../../types/domain/estimate'
+import type { Estimate } from '../../../types/domain/estimate'
+import type { DiscountType } from '../../../types/domain/estimate'
 import type { Invoice } from '../../../types/domain/invoice'
-import type { Tax, TaxType } from '../../../types/domain/tax'
 import type { Currency } from '../../../types/domain/currency'
 import type { Customer } from '../../../types/domain/customer'
 import type { Note } from '../../../types/domain/note'
 import type { CustomFieldValue } from '../../../types/domain/custom-field'
 import type { DocumentTax, DocumentItem } from '../../shared/document-form/use-document-calculations'
-import { generateClientId } from '../../../utils'
+import { createEstimateItemStub } from '../../shared/document-form/document-stubs'
+import { useDocumentActions } from '../../shared/document-form/use-document-actions'
+import { useDocumentCalculations } from '../../shared/document-form/use-document-calculations'
+import { formatDate as formatDateUtil } from '../../../utils'
+
 
 // ----------------------------------------------------------------
-// Stub factories
+// Types
 // ----------------------------------------------------------------
-
-function createTaxStub(): DocumentTax {
-  return {
-    id: generateClientId(),
-    name: '',
-    tax_type_id: 0,
-    type: 'GENERAL',
-    amount: null,
-    percent: null,
-    compound_tax: false,
-    calculation_type: null,
-    fixed_amount: 0,
-  }
-}
-
-function createEstimateItemStub(): DocumentItem {
-  return {
-    id: generateClientId(),
-    estimate_id: null,
-    item_id: null,
-    name: '',
-    description: null,
-    quantity: 1,
-    price: 0,
-    discount_type: 'fixed',
-    discount_val: 0,
-    discount: 0,
-    total: 0,
-    sub_total: 0,
-    totalTax: 0,
-    totalSimpleTax: 0,
-    totalCompoundTax: 0,
-    tax: 0,
-    taxes: [createTaxStub()],
-    unit_name: null,
-  }
-}
 
 export interface EstimateFormData {
   id: number | null
@@ -91,7 +59,6 @@ export interface EstimateFormData {
   unique_hash?: string
   exchange_rate?: number | null
   currency_id?: number
-  quotation_rates?: Array<Record<string, string | number>>
 }
 
 function createEstimateStub(): EstimateFormData {
@@ -153,11 +120,18 @@ export const useEstimateStore = defineStore('estimate', {
   }),
 
   getters: {
+    // Tax calculations delegated to the shared useDocumentCalculations composable
+    // — eliminates ~55 lines of duplicated getter logic that was identical to
+    // the invoice store.
     getSubTotal(state): number {
-      return state.newEstimate.items.reduce(
-        (sum: number, item: DocumentItem) => sum + (item.total ?? 0),
-        0,
-      )
+      const { subTotal } = useDocumentCalculations({
+        items: toRef(state.newEstimate, 'items') as unknown as import('vue').Ref<DocumentItem[]>,
+        taxes: toRef(state.newEstimate, 'taxes'),
+        discountVal: toRef(state.newEstimate, 'discount_val'),
+        taxPerItem: toRef(state.newEstimate, 'tax_per_item'),
+        taxIncluded: toRef(state.newEstimate, 'tax_included'),
+      })
+      return subTotal.value
     },
 
     getNetTotal(): number {
@@ -165,36 +139,29 @@ export const useEstimateStore = defineStore('estimate', {
     },
 
     getTotalSimpleTax(state): number {
-      return state.newEstimate.taxes.reduce(
-        (sum: number, tax: DocumentTax) => {
-          if (!tax.compound_tax) return sum + (tax.amount ?? 0)
-          return sum
-        },
-        0,
-      )
+      const { totalSimpleTax } = useDocumentCalculations({
+        items: toRef(state.newEstimate, 'items') as unknown as import('vue').Ref<DocumentItem[]>,
+        taxes: toRef(state.newEstimate, 'taxes'),
+        discountVal: toRef(state.newEstimate, 'discount_val'),
+        taxPerItem: toRef(state.newEstimate, 'tax_per_item'),
+        taxIncluded: toRef(state.newEstimate, 'tax_included'),
+      })
+      return totalSimpleTax.value
     },
 
     getTotalCompoundTax(state): number {
-      return state.newEstimate.taxes.reduce(
-        (sum: number, tax: DocumentTax) => {
-          if (tax.compound_tax) return sum + (tax.amount ?? 0)
-          return sum
-        },
-        0,
-      )
+      const { totalCompoundTax } = useDocumentCalculations({
+        items: toRef(state.newEstimate, 'items') as unknown as import('vue').Ref<DocumentItem[]>,
+        taxes: toRef(state.newEstimate, 'taxes'),
+        discountVal: toRef(state.newEstimate, 'discount_val'),
+        taxPerItem: toRef(state.newEstimate, 'tax_per_item'),
+        taxIncluded: toRef(state.newEstimate, 'tax_included'),
+      })
+      return totalCompoundTax.value
     },
 
     getTotalTax(): number {
-      if (
-        this.newEstimate.tax_per_item === 'NO' ||
-        this.newEstimate.tax_per_item === null
-      ) {
-        return this.getTotalSimpleTax + this.getTotalCompoundTax
-      }
-      return this.newEstimate.items.reduce(
-        (sum: number, item: DocumentItem) => sum + (item.tax ?? 0),
-        0,
-      )
+      return this.getTotalSimpleTax + this.getTotalCompoundTax
     },
 
     getSubtotalWithDiscount(): number {
@@ -214,6 +181,15 @@ export const useEstimateStore = defineStore('estimate', {
   },
 
   actions: {
+    // Shared document actions — eliminates ~200 lines of duplicated action
+    // implementations that were identical to the invoice store.
+    _getDocumentActions() {
+      return useDocumentActions({
+        formRef: toRef(this, 'newEstimate') as unknown as import('vue').Ref<EstimateFormData & import('../../shared/document-form/use-document-calculations').DocumentFormData>,
+        createItemStub: createEstimateItemStub,
+      })
+    },
+
     resetCurrentEstimate(): void {
       this.newEstimate = createEstimateStub()
     },
@@ -244,67 +220,22 @@ export const useEstimateStore = defineStore('estimate', {
 
     async fetchEstimate(id: number): Promise<{ data: { data: Estimate } }> {
       const response = await estimateService.get(id)
-      this.setEstimateData(response.data)
-      this.setCustomerAddresses(this.newEstimate.customer)
+      this._getDocumentActions().setDocumentData(response.data)
+      this._getDocumentActions().setCustomerAddresses(this.newEstimate.customer)
       return { data: response }
     },
 
+    // Delegate to shared actions
     setEstimateData(estimate: Estimate): void {
-      Object.assign(this.newEstimate, estimate)
-
-      if (this.newEstimate.tax_per_item === 'YES') {
-        this.newEstimate.items.forEach((item) => {
-          if (item.taxes && !item.taxes.length) {
-            item.taxes.push(createTaxStub())
-          }
-        })
-      }
-
-      if (this.newEstimate.discount_per_item === 'YES') {
-        this.newEstimate.items.forEach((item, index) => {
-          if (item.discount_type === 'fixed') {
-            this.newEstimate.items[index].discount = item.discount / 100
-          }
-        })
-      } else {
-        if (this.newEstimate.discount_type === 'fixed') {
-          this.newEstimate.discount = this.newEstimate.discount / 100
-        }
-      }
+      this._getDocumentActions().setDocumentData(estimate)
     },
 
     setCustomerAddresses(customer: Customer | null): void {
-      if (!customer) return
-      const business = (customer as Record<string, unknown>).customer_business as
-        | Record<string, unknown>
-        | undefined
-
-      if (business?.billing_address) {
-        ;(this.newEstimate.customer as Record<string, unknown>).billing_address =
-          business.billing_address
-      }
-      if (business?.shipping_address) {
-        ;(this.newEstimate.customer as Record<string, unknown>).shipping_address =
-          business.shipping_address
-      }
+      this._getDocumentActions().setCustomerAddresses(customer)
     },
 
-    addSalesTaxUs(taxTypes: TaxType[]): void {
-      const salesTax = createTaxStub()
-      const found = this.newEstimate.taxes.find(
-        (t) => t.name === 'Sales Tax' && t.type === 'MODULE',
-      )
-      if (found) {
-        for (const key in found) {
-          if (Object.prototype.hasOwnProperty.call(salesTax, key)) {
-            ;(salesTax as Record<string, unknown>)[key] = (
-              found as Record<string, unknown>
-            )[key]
-          }
-        }
-        salesTax.id = found.tax_type_id
-        taxTypes.push(salesTax as unknown as TaxType)
-      }
+    addSalesTaxUs(taxTypes: import('../../../types/domain/tax').TaxType[]): void {
+      this._getDocumentActions().addSalesTaxUs(taxTypes)
     },
 
     async sendEstimate(data: SendEstimatePayload): Promise<unknown> {
@@ -425,17 +356,41 @@ export const useEstimateStore = defineStore('estimate', {
       }
     },
 
+    // Delegate item/note/customer/template actions to shared composable
     async selectCustomer(id: number): Promise<unknown> {
-      const { customerService } = await import(
-        '../../../api/services/customer.service'
-      )
-      const response = await customerService.get(id)
-      this.newEstimate.customer = response.data as unknown as Customer
-      this.newEstimate.customer_id = response.data.id
-      if (response.data.currency) {
-        this.newEstimate.currency_id = (response.data.currency as { id: number }).id
-      }
-      return response
+      return this._getDocumentActions().selectCustomer(id)
+    },
+
+    selectNote(data: Note): void {
+      this._getDocumentActions().selectNote(data)
+    },
+
+    setTemplate(name: string): void {
+      this._getDocumentActions().setTemplate(name)
+    },
+
+    resetSelectedCustomer(): void {
+      this._getDocumentActions().resetSelectedCustomer()
+    },
+
+    addItem(): void {
+      this._getDocumentActions().addItem()
+    },
+
+    updateItem(data: DocumentItem & { index: number }): void {
+      this._getDocumentActions().updateItem(data)
+    },
+
+    removeItem(index: number): void {
+      this._getDocumentActions().removeItem(index)
+    },
+
+    deselectItem(index: number): void {
+      this._getDocumentActions().deselectItem(index)
+    },
+
+    resetSelectedNote(): void {
+      this._getDocumentActions().resetSelectedNote()
     },
 
     async fetchEstimateTemplates(): Promise<{
@@ -444,40 +399,6 @@ export const useEstimateStore = defineStore('estimate', {
       const response = await estimateService.getTemplates()
       this.templates = response.estimateTemplates
       return { data: response }
-    },
-
-    setTemplate(name: string): void {
-      this.newEstimate.template_name = name
-    },
-
-    resetSelectedCustomer(): void {
-      this.newEstimate.customer = null
-      this.newEstimate.customer_id = null
-    },
-
-    selectNote(data: Note): void {
-      this.newEstimate.selectedNote = null
-      this.newEstimate.selectedNote = data
-    },
-
-    resetSelectedNote(): void {
-      this.newEstimate.selectedNote = null
-    },
-
-    addItem(): void {
-      this.newEstimate.items.push(createEstimateItemStub())
-    },
-
-    updateItem(data: DocumentItem & { index: number }): void {
-      Object.assign(this.newEstimate.items[data.index], { ...data })
-    },
-
-    removeItem(index: number): void {
-      this.newEstimate.items.splice(index, 1)
-    },
-
-    deselectItem(index: number): void {
-      this.newEstimate.items[index] = createEstimateItemStub()
     },
 
     async fetchEstimateInitialSettings(
@@ -516,7 +437,7 @@ export const useEstimateStore = defineStore('estimate', {
           companySettings.discount_per_item ?? null
 
         const now = new Date()
-        this.newEstimate.estimate_date = formatDate(now, 'YYYY-MM-DD')
+        this.newEstimate.estimate_date = formatDateUtil(now, 'yyyy-MM-dd')
 
         if (companySettings.estimate_set_expiry_date_automatically === 'YES') {
           const expiryDate = new Date(now)
@@ -524,7 +445,7 @@ export const useEstimateStore = defineStore('estimate', {
             expiryDate.getDate() +
               Number(companySettings.estimate_expiry_date_days ?? 7),
           )
-          this.newEstimate.expiry_date = formatDate(expiryDate, 'YYYY-MM-DD')
+          this.newEstimate.expiry_date = formatDateUtil(expiryDate, 'yyyy-MM-dd')
         }
       } else if (isEdit && routeParams?.id) {
         editActions.push(this.fetchEstimate(Number(routeParams.id)))
@@ -568,13 +489,5 @@ export const useEstimateStore = defineStore('estimate', {
     },
   },
 })
-
-/** Simple date formatter without moment dependency */
-function formatDate(date: Date, _format: string): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 export type EstimateStore = ReturnType<typeof useEstimateStore>

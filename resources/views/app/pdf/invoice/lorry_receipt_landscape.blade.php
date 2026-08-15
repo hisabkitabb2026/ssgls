@@ -30,12 +30,28 @@ $fieldValue = function ($fields, $keys) use ($normalize) {
 $fv = function ($keys, $fallback = '') use ($fieldValue, $invoice) {
   $value = '';
   foreach ((array) $keys as $key) {
-      $normalizedKey = strtolower(trim($key));
-      
-      // Map common aliases to native columns
-      if ($normalizedKey === 'e_way_bill_no') {
-          $normalizedKey = 'eway_bill_no';
-      }
+      // Convert spaces to underscores so "No Of Pages" → "no_of_pages",
+      // matching the actual snake_case column names on the invoices table.
+      $normalizedKey = strtolower(str_replace(' ', '_', trim($key)));
+
+      // Map common label-to-column aliases where the display label
+      // doesn't directly match the database column name.
+      $columnAliases = [
+          'e_way_bill_no' => 'eway_bill_no',
+          'charge_weight' => 'charged_weight',
+          'lorry_no' => 'truck_no',
+          'model' => 'vehicle_model',
+          'owner_phone_no' => 'owner_phone',
+          'lorry_hire_contract_no' => 'contract_no',
+          'driver_rto' => 'driver_rto_address',
+          'final_balance_date' => 'final_balance_on',
+           'final_cash_cheque_no' => 'final_cash_cheque_no',
+           'final_balance_code' => 'final_balance_paid_at',
+           'final_balance_amount_paid_at' => 'final_balance_paid_at',
+           'received_no_of_bilties' => 'received_no_bilties',
+       ];
+      $normalizedKey = $columnAliases[$normalizedKey] ?? $normalizedKey;
+
       if ($normalizedKey === 'gst_no' || $normalizedKey === 'gstin') {
           if (isset($invoice->gstin) && trim((string)$invoice->gstin) !== '') {
               $value = $invoice->gstin;

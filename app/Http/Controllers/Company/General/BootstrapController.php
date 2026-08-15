@@ -32,7 +32,7 @@ class BootstrapController extends Controller
     {
         $current_user = $request->user();
         $current_user_settings = $current_user->getAllSettings();
-        $companies = $current_user->companies;
+        $companies = $current_user->companies()->with('address')->get();
 
         $pendingInvitations = CompanyInvitation::forUser($current_user)
             ->pending()
@@ -96,10 +96,10 @@ class BootstrapController extends Controller
 
         // Filter out disabled document types from the sidebar menu.
         // Each document type has a company-level enable/disable setting.
-        $current_company = Company::find($request->header('company'));
+        $current_company = Company::with('address')->find($request->header('company'));
 
         if ((! $current_company) || ($current_company && ! $current_user->hasCompany($current_company->id))) {
-            $current_company = $current_user->companies()->first();
+            $current_company = $current_user->companies()->with('address')->first();
         }
 
         $documentTypeSettings = [
@@ -178,7 +178,7 @@ class BootstrapController extends Controller
 
     public function currentCompany(Request $request)
     {
-        $company = Company::find($request->header('company'));
+        $company = Company::with('address')->find($request->header('company'));
 
         return new CompanyResource($company);
     }

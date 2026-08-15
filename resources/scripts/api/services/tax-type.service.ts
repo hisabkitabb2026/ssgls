@@ -1,5 +1,5 @@
-import { client } from '../client'
 import { API } from '../endpoints'
+import { createBasicCrudService } from './crud-service.factory'
 import type { TaxType } from '@/scripts/types/domain/tax'
 import type { ApiResponse, ListParams } from '@/scripts/types/api'
 
@@ -13,29 +13,15 @@ export interface CreateTaxTypePayload {
   description?: string | null
 }
 
+const baseTaxTypeService = createBasicCrudService<TaxType, ApiResponse<TaxType[]>, CreateTaxTypePayload>({
+  basePath: API.TAX_TYPES,
+  usePostDelete: false,
+})
+
 export const taxTypeService = {
+  ...baseTaxTypeService,
+
   async list(params?: ListParams): Promise<ApiResponse<TaxType[]>> {
-    const { data } = await client.get(API.TAX_TYPES, { params })
-    return data
-  },
-
-  async get(id: number): Promise<ApiResponse<TaxType>> {
-    const { data } = await client.get(`${API.TAX_TYPES}/${id}`)
-    return data
-  },
-
-  async create(payload: CreateTaxTypePayload): Promise<ApiResponse<TaxType>> {
-    const { data } = await client.post(API.TAX_TYPES, payload)
-    return data
-  },
-
-  async update(id: number, payload: Partial<CreateTaxTypePayload>): Promise<ApiResponse<TaxType>> {
-    const { data } = await client.put(`${API.TAX_TYPES}/${id}`, payload)
-    return data
-  },
-
-  async delete(id: number): Promise<{ success: boolean }> {
-    const { data } = await client.delete(`${API.TAX_TYPES}/${id}`)
-    return data
+    return baseTaxTypeService.list(params) as Promise<ApiResponse<TaxType[]>>
   },
 }

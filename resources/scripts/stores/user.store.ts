@@ -92,6 +92,19 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function uploadSignature(data: FormData): Promise<ApiResponse<User>> {
+    try {
+      const response = await userService.uploadSignature(data)
+      if (currentUser.value) {
+        currentUser.value.signature = response.data.signature
+      }
+      return response
+    } catch (err: unknown) {
+      handleApiError(err)
+      throw err
+    }
+  }
+
   async function fetchUserSettings(settings?: string[]): Promise<Record<string, string | null>> {
     try {
       const response = await userService.getSettings(settings)
@@ -156,6 +169,7 @@ export const useUserStore = defineStore('user', () => {
     fetchCurrentUser,
     updateCurrentUser,
     uploadAvatar,
+    uploadSignature,
     fetchUserSettings,
     updateUserSettings,
     hasAbilities,

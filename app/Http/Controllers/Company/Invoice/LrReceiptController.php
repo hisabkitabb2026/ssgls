@@ -15,6 +15,8 @@ class LrReceiptController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Invoice::class);
+
         $limit = $request->get('limit', 10);
 
         $query = Invoice::whereCompany()
@@ -48,8 +50,11 @@ class LrReceiptController extends Controller
             ->with(['customer', 'consigneeCustomer', 'items', 'items.fields', 'items.fields.customField', 'taxes', 'fields', 'currency'])
             ->findOrFail($id);
 
+        $this->authorize('view', $invoice);
+
         return response()->json([
             'data' => new InvoiceResource($invoice),
         ]);
     }
 }
+

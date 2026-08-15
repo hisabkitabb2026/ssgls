@@ -319,15 +319,42 @@ function onConsignmentNoChange(index: number): void {
 }
 
 
-// Map LR Receipt native fields to Office Invoice item native fields
+// Map LR Receipt native fields to Office Invoice item native fields.
+//
+// Field mapping (LR Receipt → Office Invoice item):
+//   basic_freight         → rate
+//   other_charge          → other_charge (combined with hamali + fov + local_collection)
+//   docket_charge         → lr_charge
+//   door_delivery         → dd_charge
+//   actual_weight         → weight
+//   packing               → pkg
+//   invoice_date          → consignment_date
+//   from_code             → from_code (already mapped)
+//   to_code               → to_code   (already mapped)
+//   truck_no              → truck_no  (already mapped)
+//   amount                → recalculated from rate + other_charge + lr_charge + dd_charge
 function autofillFromLrReceipt(lrInvoice: Record<string, unknown>): void {
   if (!items.value[0]) return
 
   const item = items.value[0]
   // Don't overwrite consignment_number itself
-  // Don't overwrite amount (auto-calculated)
 
-  // Copy matching native fields from the LR Receipt to the first item
+  // Helper to safely get a numeric value from the LR Receipt
+  function getNum(key: string): number {
+    const val = lrInvoice[key]
+    if (val === undefined || val === null) return 0
+    const num = Number(val)
+    return isNaN(num) ? 0 : num
+  }
+
+  // Helper to safely get a string value
+  function getStr(key: string): string | null {
+    const val = lrInvoice[key]
+    if (val === undefined || val === null) return null
+    return String(val)
+  }
+
+  // --- Direct field mappings ---
   const fieldMap: Record<string, string> = {
     from_code: 'from_code',
     to_code: 'to_code',
@@ -341,6 +368,34 @@ function autofillFromLrReceipt(lrInvoice: Record<string, unknown>): void {
     }
   }
 
+  // --- Computed/transformed field mappings ---
+
+  // Rate ← Basic Freight
+  item.rate = getNum('basic_freight') || null
+
+  // LR Charge ← Docket Charge
+  item.lr_charge = getNum('docket_charge') || null
+
+  // DD Charge ← Door Delivery
+  item.dd_charge = getNum('door_delivery') || null
+
+  // Other Charge ← Other Charge + Hamali + FOV + Local Collection (sum)
+  const combinedOtherCharge =
+    getNum('other_charge') +
+    getNum('hamali') +
+    getNum('fov') +
+    getNum('local_collection')
+  item.other_charge = combinedOtherCharge || null
+
+  // Weight ← Actual Weight
+  item.weight = getStr('actual_weight')
+
+  // Pkg ← Packing
+  item.pkg = getStr('packing')
+
+  // Consignment Date ← LR Receipt's invoice_date
+  item.consignment_date = getStr('invoice_date')
+
   // Also copy the customer (consignor) from the LR Receipt
   const lrCustomer = lrInvoice.customer as Record<string, unknown> | undefined
   if (lrCustomer && formData.value) {
@@ -348,8 +403,27 @@ function autofillFromLrReceipt(lrInvoice: Record<string, unknown>): void {
     formData.value.customer_id = lrCustomer.id as number
   }
 
-  // Recalculate Amount after auto-fill
+  // Also copy the consignee from the LR Receipt if available
+  const lrConsignee = lrInvoice.consignee_customer as Record<string, unknown> | undefined
+  if (lrConsignee && formData.value) {
+    formData.value.consignee_customer = lrConsignee
+    formData.value.consignee_customer_id = lrConsignee.id as number
+  }
+
+  // Auto-fill "GST Through" from the LR Receipt's gst_tax_payable_by
+  // native column. The Office Invoice stores this as a native column
+  // on the invoices table (not a custom field), and the PDF template
+  // reads it directly from $invoice->gst_tax_payable_by.
+  const gstPayableBy = lrInvoice.gst_tax_payable_by as string | undefined
+  if (gstPayableBy && formData.value) {
+    formData.value.gst_tax_payable_by = gstPayableBy
+  }
+
+
+  // Recalculate Amount after auto-fill:
+  // amount = rate + other_charge + lr_charge + dd_charge
   recalcAmount(0)
+
 
   notificationStore.showNotification({
     type: 'success',

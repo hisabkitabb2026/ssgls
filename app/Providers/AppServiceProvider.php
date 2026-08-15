@@ -3,15 +3,19 @@
 namespace App\Providers;
 
 use App\Models\AiConversation;
+use App\Models\ConsolidationGroup;
+use App\Models\LoadTrip;
 use App\Models\WarehouseItem;
 use App\Policies\AiConversationPolicy;
 use App\Policies\CompanyPolicy;
+use App\Policies\ConsolidationGroupPolicy;
 use App\Policies\CustomerPolicy;
 use App\Policies\DashboardPolicy;
 use App\Policies\EstimatePolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\ItemPolicy;
+use App\Policies\LoadTripPolicy;
 use App\Policies\ModulesPolicy;
 use App\Policies\NotePolicy;
 use App\Policies\OwnerPolicy;
@@ -70,6 +74,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(AiConversation::class, AiConversationPolicy::class);
         Gate::policy(WarehouseItem::class, WarehouseItemPolicy::class);
+        Gate::policy(ConsolidationGroup::class, ConsolidationGroupPolicy::class);
+        Gate::policy(LoadTrip::class, LoadTripPolicy::class);
 
         View::addNamespace('pdf_templates', storage_path('app/templates/pdf'));
 

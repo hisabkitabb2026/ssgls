@@ -45,4 +45,9 @@ export const userService = {
     const { data } = await client.post(API.ME_UPLOAD_AVATAR, payload)
     return data
   },
+
+  async uploadSignature(payload: FormData): Promise<ApiResponse<User>> {
+    const { data } = await client.post(API.ME_UPLOAD_SIGNATURE, payload)
+    return data
+  },
 }

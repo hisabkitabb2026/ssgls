@@ -1,5 +1,6 @@
 import { client } from '../client'
 import { API } from '../endpoints'
+import { createBasicCrudService } from './crud-service.factory'
 import type { Note } from '@/scripts/types/domain/note'
 import type { ApiResponse, ListParams } from '@/scripts/types/api'
 
@@ -10,29 +11,21 @@ export interface CreateNotePayload {
   is_default?: boolean
 }
 
+const baseNoteService = createBasicCrudService<Note>({
+  basePath: API.NOTES,
+  usePostDelete: false,
+})
+
 export const noteService = {
+  ...baseNoteService,
+
   async list(params?: ListParams): Promise<ApiResponse<Note[]>> {
-    const { data } = await client.get(API.NOTES, { params })
-    return data
+    return baseNoteService.list(params) as Promise<ApiResponse<Note[]>>
   },
 
-  async get(id: number): Promise<ApiResponse<Note>> {
-    const { data } = await client.get(`${API.NOTES}/${id}`)
-    return data
-  },
-
+  // Override create because the API returns the Note directly, not ApiResponse<Note>
   async create(payload: CreateNotePayload): Promise<Note> {
     const { data } = await client.post(API.NOTES, payload)
-    return data
-  },
-
-  async update(id: number, payload: Partial<CreateNotePayload>): Promise<ApiResponse<Note>> {
-    const { data } = await client.put(`${API.NOTES}/${id}`, payload)
-    return data
-  },
-
-  async delete(id: number): Promise<{ success: boolean }> {
-    const { data } = await client.delete(`${API.NOTES}/${id}`)
     return data
   },
 }

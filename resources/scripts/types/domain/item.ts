@@ -22,6 +22,8 @@ export interface Item {
   updated_at: string
   tax_per_item: string | null
   formatted_created_at: string
+  truck_type?: string | null
+  rate_card?: Record<string, number> | null
   unit?: Unit
   company?: Company
   taxes?: Tax[]

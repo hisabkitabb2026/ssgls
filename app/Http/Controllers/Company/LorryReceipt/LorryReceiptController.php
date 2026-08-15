@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Company\LorryReceipt;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LorryReceiptRequest;
 use App\Http\Resources\LorryReceiptResource;
 use App\Models\Customer;
 use App\Models\LorryReceipt;
@@ -13,9 +14,11 @@ class LorryReceiptController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', LorryReceipt::class);
+
         $limit = $request->get('limit', 10);
         $query = LorryReceipt::whereCompany()
-            ->with(['ownerCustomer', 'driverCustomer', 'brokerCustomer']);
+            ->with(['ownerCustomer', 'driverCustomer', 'brokerCustomer', 'partyProfile']);
 
         $lorryReceipts = $query->applyFilters($request->all())
             ->paginate($limit);
@@ -34,17 +37,21 @@ class LorryReceiptController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $lorryReceipt = LorryReceipt::whereCompany()
-            ->with(['ownerCustomer', 'driverCustomer', 'brokerCustomer', 'company'])
+            ->with(['ownerCustomer', 'driverCustomer', 'brokerCustomer', 'partyProfile', 'company'])
             ->findOrFail($id);
+
+        $this->authorize('view', $lorryReceipt);
 
         return response()->json([
             'data' => new LorryReceiptResource($lorryReceipt),
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(LorryReceiptRequest $request): JsonResponse
     {
-        $data = $request->all();
+        $this->authorize('create', LorryReceipt::class);
+
+        $data = $request->validated();
         $data['company_id'] = $request->header('company');
         $data['creator_id'] = $request->user()->id;
 
@@ -58,10 +65,13 @@ class LorryReceiptController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(LorryReceiptRequest $request, int $id): JsonResponse
     {
         $lorryReceipt = LorryReceipt::whereCompany()->findOrFail($id);
-        $data = $request->all();
+
+        $this->authorize('update', $lorryReceipt);
+
+        $data = $request->validated();
         $data['updated_by'] = $request->user()->id;
 
         // Auto-fill owner/driver/broker details from customer records
@@ -82,6 +92,8 @@ class LorryReceiptController extends Controller
 
     public function destroy(Request $request): JsonResponse
     {
+        $this->authorize('deleteMultiple', LorryReceipt::class);
+
         $ids = $request->get('ids', []);
         LorryReceipt::whereCompany()->whereIn('id', $ids)->delete();
 

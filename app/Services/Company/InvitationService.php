@@ -6,6 +6,7 @@ use App\Mail\CompanyInvitationMail;
 use App\Models\Company;
 use App\Models\CompanyInvitation;
 use App\Models\User;
+use App\Services\Mail\CompanyMailConfigService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
@@ -55,6 +56,10 @@ class InvitationService
         $invitation->load(['company', 'role', 'invitedBy']);
 
         try {
+            // Apply per-company mail configuration so the invitation email
+            // respects the same SMTP / mail driver settings as invoice emails.
+            CompanyMailConfigService::apply($company->id);
+
             Mail::to($email)->send(new CompanyInvitationMail($invitation));
         } catch (\Exception $e) {
             \Log::warning('Failed to send invitation email to '.$email.': '.$e->getMessage());

@@ -1,13 +1,12 @@
 import { client } from '../client'
 import { API } from '../endpoints'
+import { createCrudService, type SendPayload, type StatusPayload } from './crud-service.factory'
 import type { Invoice, CreateInvoicePayload } from '@/scripts/types/domain/invoice'
 import type {
   ApiResponse,
-  PaginatedResponse,
   ListParams,
   DateRangeParams,
   NextNumberResponse,
-  DeletePayload,
 } from '@/scripts/types/api'
 
 export interface InvoiceListParams extends ListParams, DateRangeParams {
@@ -28,30 +27,14 @@ export interface InvoiceListResponse {
   meta: InvoiceListMeta
 }
 
-export interface SendInvoicePayload {
-  id: number
-  subject?: string | null
-  body?: string | null
-  from?: string | null
-  to?: string | null
-  cc?: string | null
-  bcc?: string | null
-}
+/** @deprecated Use SendPayload from crud-service.factory.ts */
+export type SendInvoicePayload = SendPayload
 
-export interface InvoiceStatusPayload {
-  id: number
-  status: string
-}
+/** @deprecated Use StatusPayload from crud-service.factory.ts */
+export type InvoiceStatusPayload = StatusPayload
 
-export interface SendPreviewParams {
-  id: number
-  from?: string | null
-  to?: string | null
-  cc?: string | null
-  bcc?: string | null
-  subject?: string | null
-  body?: string | null
-}
+/** @deprecated Use SendPreviewPayload from crud-service.factory.ts */
+export type SendPreviewParams = import('./crud-service.factory').SendPreviewPayload
 
 export interface InvoiceTemplate {
   name: string
@@ -62,54 +45,17 @@ export interface InvoiceTemplatesResponse {
   invoiceTemplates: InvoiceTemplate[]
 }
 
+// Use the factory for standard CRUD + send/clone/changeStatus methods
+const baseInvoiceService = createCrudService<Invoice, InvoiceListParams, CreateInvoicePayload>({
+  basePath: API.INVOICES,
+  deletePath: API.INVOICES_DELETE,
+})
+
 export const invoiceService = {
-  async list(params?: InvoiceListParams): Promise<InvoiceListResponse> {
-    const { data } = await client.get(API.INVOICES, { params })
-    return data
-  },
-
-  async get(id: number): Promise<ApiResponse<Invoice>> {
-    const { data } = await client.get(`${API.INVOICES}/${id}`)
-    return data
-  },
-
-  async create(payload: CreateInvoicePayload): Promise<ApiResponse<Invoice>> {
-    const { data } = await client.post(API.INVOICES, payload)
-    return data
-  },
-
-  async update(id: number, payload: Partial<CreateInvoicePayload>): Promise<ApiResponse<Invoice>> {
-    const { data } = await client.put(`${API.INVOICES}/${id}`, payload)
-    return data
-  },
-
-  async delete(payload: DeletePayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.INVOICES_DELETE, payload)
-    return data
-  },
-
-  async send(payload: SendInvoicePayload): Promise<ApiResponse<Invoice>> {
-    const { data } = await client.post(`${API.INVOICES}/${payload.id}/send`, payload)
-    return data
-  },
-
-  async sendPreview(params: SendPreviewParams): Promise<ApiResponse<string>> {
-    const { data } = await client.post(`${API.INVOICES}/${params.id}/send/preview`, params)
-    return data
-  },
-
-  async clone(id: number): Promise<ApiResponse<Invoice>> {
-    const { data } = await client.post(`${API.INVOICES}/${id}/clone`)
-    return data
-  },
+  ...baseInvoiceService,
 
   async convertToEstimate(id: number): Promise<ApiResponse<Record<string, unknown>>> {
     const { data } = await client.post(`${API.INVOICES}/${id}/convert-to-estimate`)
-    return data
-  },
-
-  async changeStatus(payload: InvoiceStatusPayload): Promise<ApiResponse<Invoice>> {
-    const { data } = await client.post(`${API.INVOICES}/${payload.id}/status`, payload)
     return data
   },
 

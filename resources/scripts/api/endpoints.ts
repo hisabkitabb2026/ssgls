@@ -104,6 +104,7 @@ export const API = {
   ME: '/api/v1/me',
   ME_SETTINGS: '/api/v1/me/settings',
   ME_UPLOAD_AVATAR: '/api/v1/me/upload-avatar',
+  ME_UPLOAD_SIGNATURE: '/api/v1/me/upload-signature',
 
   // Global Settings (admin)
   SETTINGS: '/api/v1/settings',

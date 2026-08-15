@@ -7,16 +7,34 @@ use App\Facades\Pdf;
 use App\Mail\SendPaymentMail;
 use App\Models\Company;
 use App\Models\CompanySetting;
-use App\Models\ExchangeRateLog;
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Services\Mail\CompanyMailConfigService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
-class PaymentService
+class PaymentService extends BaseDocumentService
 {
+    /**
+     * Document-type configuration for SendDocumentMail.
+     */
+    protected array $mailType = [
+        'model_class' => Payment::class,
+        'data_key' => 'payment',
+        'route_name' => 'payment',
+        'template' => 'emails.send.payment',
+        'number_field' => 'payment_number',
+        'mailable_class' => SendPaymentMail::class,
+    ];
+
+    /**
+     * Get the fully-qualified model class for this service.
+     */
+    protected function getModelClass(): string
+    {
+        return Payment::class;
+    }
+
     public function create(Request $request): Payment
     {
         $data = $request->getPaymentPayload();
@@ -39,11 +57,7 @@ class PaymentService
         $payment->customer_sequence_number = $serial->nextCustomerSequenceNumber;
         $payment->save();
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
-
-        if ((string) $payment['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($payment);
-        }
+        $this->logExchangeRateIfNeeded($payment, $request->header('company'));
 
         $customFields = $request->customFields;
 
@@ -89,11 +103,7 @@ class PaymentService
         $data['customer_sequence_number'] = $serial->nextCustomerSequenceNumber;
         $payment->update($data);
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
-
-        if ((string) $data['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($payment);
-        }
+        $this->logExchangeRateIfNeeded($payment, $request->header('company'));
 
         $customFields = $request->customFields;
 
@@ -108,33 +118,35 @@ class PaymentService
         ])->find($payment->id);
     }
 
-    public function delete(Collection $ids): bool
+    /**
+     * Pre-deletion hook: restore invoice due amount before deleting payment.
+     */
+    protected function beforeDelete(Model $document): void
     {
-        foreach ($ids as $id) {
-            $payment = Payment::find($id);
+        $payment = $document;
 
-            if ($payment->invoice_id != null) {
-                $invoice = Invoice::find($payment->invoice_id);
-                $invoice->due_amount = ((int) $invoice->due_amount + (int) $payment->amount);
+        if ($payment->invoice_id != null) {
+            $invoice = Invoice::find($payment->invoice_id);
+            $invoice->due_amount = ((int) $invoice->due_amount + (int) $payment->amount);
 
-                if ($invoice->due_amount == $invoice->total) {
-                    $invoice->paid_status = Invoice::STATUS_UNPAID;
-                } else {
-                    $invoice->paid_status = Invoice::STATUS_PARTIALLY_PAID;
-                }
-
-                $invoice->status = $invoice->getPreviousStatus();
-                $invoice->save();
+            if ($invoice->due_amount == $invoice->total) {
+                $invoice->paid_status = Invoice::STATUS_UNPAID;
+            } else {
+                $invoice->paid_status = Invoice::STATUS_PARTIALLY_PAID;
             }
 
-            $payment->delete();
+            $invoice->status = $invoice->getPreviousStatus();
+            $invoice->save();
         }
-
-        return true;
     }
 
-    public function sendPaymentData(Payment $payment, array $data): array
+    /**
+     * Prepare email send data for a payment (implements BaseDocumentService template method).
+     */
+    protected function prepareSendData(Model $document, array $data): array
     {
+        $payment = $document;
+
         $data['payment'] = $payment->toArray();
         $data['user'] = $payment->customer->toArray();
         $data['company'] = Company::find($payment->company_id);
@@ -144,31 +156,12 @@ class PaymentService
         return $data;
     }
 
+    /**
+     * Send a payment email — delegates to BaseDocumentService::sendDocument().
+     */
     public function send(Payment $payment, array $data): array
     {
-        $data = $this->sendPaymentData($payment, $data);
-
-        CompanyMailConfigService::apply($payment->company_id);
-
-        $mail = \Mail::to($data['to']);
-        if (! empty($data['cc'])) {
-            $mail->cc($data['cc']);
-        }
-        if (! empty($data['bcc'])) {
-            $mail->bcc($data['bcc']);
-        }
-        try {
-            $mail->send(new SendPaymentMail($data));
-        } catch (\Throwable $e) {
-            \Log::error('Failed to send payment email: ' . $e->getMessage());
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'mail' => ['Failed to send email. Please check your mail SMTP configuration under Settings. Details: ' . $e->getMessage()],
-            ]);
-        }
-
-        return [
-            'success' => true,
-        ];
+        return $this->sendDocument($payment, $data);
     }
 
     public function getPdfData(Payment $payment)

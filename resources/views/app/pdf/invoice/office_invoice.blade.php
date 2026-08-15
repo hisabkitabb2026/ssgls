@@ -7,7 +7,7 @@
 
     <style type="text/css">
         @page {
-            margin: 6px;
+            margin: 10mm;
             size: 297mm 210mm;
         }
 
@@ -15,10 +15,17 @@
             box-sizing: border-box;
         }
 
+        @media print {
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+            .footer { page-break-inside: avoid; }
+            .words-row { page-break-inside: avoid; }
+        }
+
         body {
             color: #111;
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 11.8px;
+            font-size: 12px;
             margin: 0;
         }
 
@@ -29,8 +36,8 @@
 
         td,
         th {
-            border: 1.5px solid #000;
-            padding: 2px 4px;
+            border: 1px solid #666;
+            padding: 4px 6px;
             vertical-align: top;
         }
 
@@ -47,10 +54,10 @@
         }
 
         .jurisdiction {
-            font-size: 10.5px;
-            line-height: 9px;
+            font-size: 11px;
+            line-height: 13px;
             margin-bottom: 2px;
-            text-align: center;
+            text-align: right;
             text-decoration: underline;
         }
 
@@ -78,7 +85,9 @@
         }
 
         .brand-row {
-            height: 88px;
+            background: #f8f8f8;
+            border-bottom: 2px solid #000;
+            min-height: 104px;
             table-layout: fixed;
         }
 
@@ -86,24 +95,25 @@
             border-left: 0;
             border-right: 0;
             border-top: 0;
-            padding: 2px 5px;
+            padding: 6px 8px;
+            vertical-align: middle;
         }
 
         .logo-cell {
             text-align: center;
-            width: 17%;
+            width: 20%;
         }
 
         .company-logo {
-            max-height: 72px;
-            max-width: 112px;
+            max-height: 100px;
+            max-width: 150px;
         }
 
         .brand-fallback {
             color: #111;
             font-size: 34px;
             font-weight: bold;
-            line-height: 27px;
+            line-height: 34px;
             padding-top: 8px;
         }
 
@@ -111,75 +121,75 @@
             display: block;
             font-size: 11px;
             letter-spacing: 0;
-            line-height: 9px;
+            line-height: 13px;
         }
 
         .company-cell {
             text-align: center;
-            width: 63%;
+            width: 80%;
         }
 
         .company-name {
             font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 27px;
+            font-size: 30px;
             font-weight: bold;
-            line-height: 24px;
+            line-height: 32px;
             margin-top: 1px;
         }
 
         .company-tagline {
-            font-size: 14.5px;
+            font-size: 16px;
             font-weight: bold;
-            line-height: 12px;
+            line-height: 18px;
         }
 
         .company-address {
-            font-size: 11.4px;
-            line-height: 9.8px;
+            font-size: 13px;
+            line-height: 15px;
             margin-top: 4px;
-            text-align: left;
+            text-align: center;
         }
 
-        .contact-cell {
-            font-size: 12px;
-            line-height: 11px;
-            text-align: right;
-            white-space: nowrap;
-            width: 20%;
+        .company-contact {
+            font-size: 13px;
+            font-weight: bold;
+            line-height: 15px;
+            margin-top: 2px;
+            text-align: center;
         }
 
         .branch-box {
-            height: 82px;
-            line-height: 10px;
-            overflow: hidden;
+            min-height: 76px;
+            line-height: 14px;
             padding: 4px 6px !important;
+            vertical-align: middle;
             white-space: normal;
             word-break: break-word;
         }
 
         .branch-label {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: bold;
         }
 
         .branch-address {
             display: block;
-            line-height: 11px;
+            line-height: 14px;
             margin-top: 2px;
             overflow-wrap: anywhere;
             white-space: normal;
         }
 
         .tax-box {
-            height: 30px;
-            overflow: hidden;
-            padding: 11px 6px 2px !important;
+            min-height: 26px;
+            padding: 5px 6px !important;
         }
 
         .tax-box div {
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: bold;
-            line-height: 13px;
+            line-height: 16px;
+            overflow: hidden;
             overflow-wrap: anywhere;
             white-space: normal;
             word-break: break-all;
@@ -187,13 +197,11 @@
 
         .party-box {
             border-top: 0 !important;
-            height: 142px;
+            min-height: 130px;
             padding: 0 !important;
-            position: relative;
         }
 
         .party-head {
-            height: 16px;
             table-layout: fixed;
         }
 
@@ -202,23 +210,20 @@
             border-left: 0;
             border-right: 0;
             border-top: 0;
-            font-size: 13px;
-            height: 16px;
-            padding: 2px 8px;
+            font-size: 19px;
+            min-height: 18px;
+            padding: 3px 8px;
         }
 
         .party-address-lines {
-            bottom: 18px;
-            left: 0;
-            line-height: 13px;
+            font-size: 16px;
+            line-height: 20px;
             overflow: hidden;
-            padding: 2px 8px 1px;
-            position: absolute;
-            right: 0;
-            top: 16px;
+            padding: 3px 8px 20px;
         }
 
         .party-display-name {
+            font-size: 17px;
             font-weight: normal;
             margin-bottom: 2px;
         }
@@ -226,142 +231,202 @@
         .party-gstin {
             border-top: 1px solid #111;
             bottom: 0;
-            font-size: 11px;
-            height: 18px;
-            line-height: 16px;
+            font-size: 16px;
+            line-height: 20px;
             overflow: hidden;
-            padding: 1px 8px;
-            position: absolute;
-            right: auto;
+            padding: 4px 8px;
             text-overflow: clip;
             white-space: nowrap;
-            width: 55%;
+        }
+
+        .party-gstin b {
+            font-size: 19px;
         }
 
         .bill-details td {
-            font-size: 11.8px;
-            height: 15px;
-            padding: 2px 6px;
+            font-size: 13px;
+            min-height: 16px;
+            padding: 3px 6px;
             vertical-align: middle;
         }
 
         .payment-table th,
         .payment-table td {
-            font-size: 10.6px;
-            height: 14px;
-            padding: 1px 2px;
+            border: 1px solid #000;
+            font-size: 11px;
+            min-height: 20px;
+            overflow: hidden;
+            padding: 3px 4px;
             text-align: center;
             vertical-align: middle;
+            word-break: break-word;
         }
 
         .basis-row {
-            font-size: 11.8px;
-            height: 23px;
-            line-height: 11px;
-            padding: 2px 6px !important;
+            font-size: 12px;
+            line-height: 15px;
+            min-height: 23px;
+            padding: 3px 6px !important;
+        }
+
+        .items thead tr:first-child th {
+            border-top: 2px solid #000;
         }
 
         .items th {
-            font-size: 10.8px;
+            background-color: #e8e8e8;
+            border: 1px solid #000;
+            font-size: 12px;
             font-weight: bold;
-            height: 16px;
-            line-height: 8.8px;
-            padding: 1px 2px;
+            letter-spacing: 0.3px;
+            line-height: 14px;
+            padding: 5px 3px;
             text-align: center;
+            text-transform: uppercase;
             vertical-align: middle;
         }
 
         .items .group-head th {
-            height: 18px;
+            min-height: 20px;
+        }
+
+        .items {
+            table-layout: fixed;
         }
 
         .items td {
-            font-size: 11.8px;
-            height: 19px;
-            padding: 2px 3px;
+            border: 0;
+            border-bottom: 1px solid #999;
+            font-size: 12px;
+            padding: 4px 3px;
             text-align: center;
             vertical-align: top;
         }
 
+        .items tbody tr.alt-row td {
+            background-color: #f7f7f7;
+        }
+
+        .items tbody tr:last-child td {
+            border-bottom: 1px solid #000;
+        }
+
+        .words-row {
+            border-top: 2px solid #000;
+        }
+
         .words-row td {
+            background-color: #e0e0e0;
             font-size: 12px;
-            height: 22px;
-            padding: 4px 6px;
+            padding: 6px 8px;
             vertical-align: middle;
         }
 
         .grand-label {
-            font-size: 12px;
+            background-color: #d0d0d0;
+            font-size: 14px;
             font-weight: bold;
             text-align: center;
         }
 
+        .grand-total-value {
+            background-color: #d0d0d0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
         .footer td {
+            border: 1px solid #666;
             font-size: 12px;
-            padding: 3px 6px;
+            padding: 5px 7px;
         }
 
         .footer-head td {
-            height: 20px;
+            min-height: 20px;
         }
 
         .footer-body td {
-            height: 58px;
+            min-height: 58px;
         }
 
         .terms {
-            font-size: 13px !important;
-            line-height: 13px;
+            font-size: 12px;
+            line-height: 17px;
+        }
+
+        .term-item {
+            margin-bottom: 4px;
+            padding-left: 12px;
         }
 
         .prepared {
-            font-size: 11.2px;
-            vertical-align: bottom !important;
+            font-size: 11px;
+            line-height: 14px;
+            overflow: hidden;
+            vertical-align: top !important;
+            word-break: break-word;
         }
 
         .emp-box {
             border: 1px solid #111;
             display: inline-block;
-            height: 38px;
-            line-height: 12px;
+            line-height: 14px;
             margin-top: 4px;
+            min-height: 38px;
+            overflow: hidden;
             padding-top: 9px;
             text-align: center;
             width: 52px;
+            word-break: break-all;
         }
 
         .for-company {
             font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
             font-size: 15px;
             font-weight: bold;
-            line-height: 14px;
+            line-height: 18px;
             text-align: center;
-        }
-
-        .signature {
-            bottom: 2px;
-            font-size: 15px;
-            left: 72px;
-            line-height: 14px;
-            position: absolute;
-            right: 0;
-            text-align: center;
-        }
-
-        .signature-image {
-            bottom: 16px;
-            display: block;
-            height: 42px;
-            margin: 0;
-            max-width: 210px;
-            object-fit: contain;
-            position: absolute;
-            right: 22px;
         }
 
         .signature-cell {
             overflow: hidden;
-            position: relative;
+        }
+
+        .signature-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .signature-table td {
+            border: 0;
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .sig-emp {
+            text-align: center;
+            width: 60px;
+        }
+
+        .sig-image-area {
+            min-height: 42px;
+            text-align: center;
+        }
+
+        .signature-image {
+            display: block;
+            margin: 0 auto;
+            max-height: 42px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+
+        .sig-label {
+            border-top: 1px solid #000;
+            font-size: 12px;
+            font-weight: bold;
+            padding-top: 4px;
+            text-align: center;
         }
 
         .bold {
@@ -378,6 +443,47 @@
 
         .text-center {
             text-align: center !important;
+        }
+
+        .highlight-value {
+            background: #f0f0f0;
+            display: inline;
+            font-weight: bold;
+            line-height: 1.4;
+            padding: 2px 8px;
+        }
+
+        .tax-box div {
+            font-size: 15px;
+        }
+
+        .tax-box .highlight-value {
+            font-size: 15px;
+        }
+
+        .bill-details td {
+            font-size: 14px;
+            overflow: hidden;
+            word-break: break-word;
+        }
+
+        .bill-details .highlight-value {
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        .words-row .highlight-value {
+            font-size: 14px;
+        }
+
+        .footer-head .highlight-value {
+            font-size: 14px;
+        }
+
+        .sig-label {
+            font-size: 15px;
+            letter-spacing: 1px;
+            padding-top: 6px;
         }
     </style>
 </head>
@@ -517,7 +623,45 @@
         return $invoice->customer ? $fieldValue($invoice->customer->fields, $keys) : '';
     };
 
-    $itemField = function ($item, $keys) use ($fieldValue) {
+    $itemField = function ($item, $keys) use ($fieldValue, $normalize) {
+        // Check native item columns first (transport fields are now native
+        // columns on invoice_items, not custom fields).
+        foreach ((array) $keys as $key) {
+            $normalizedKey = strtolower(trim($key));
+
+            // Map template field names to actual database column names
+            $columnMap = [
+                'from' => 'from_code',
+                'to' => 'to_code',
+                'destination' => 'to_code',
+                'vehicle_no' => 'truck_no',
+                'vehicle_number' => 'truck_no',
+                'consignment_no' => 'consignment_number',
+                'consignment_number' => 'consignment_number',
+                'old_bill_number' => 'consignment_number',
+                'old_bill_date' => 'consignment_date',
+                'date' => 'consignment_date',
+                'invoice_no' => 'party_inv_no',
+                'invoice_number' => 'party_inv_no',
+                'package' => 'pkg',
+                'packages' => 'pkg',
+                'charged_weight_kgs' => 'weight',
+                'charged_weight' => 'weight',
+            ];
+
+            $columnName = $columnMap[$normalizedKey] ?? $normalizedKey;
+
+            if (isset($item->$columnName) && trim((string) $item->$columnName) !== '') {
+                return $item->$columnName;
+            }
+
+            // Also check the original key name directly
+            if (isset($item->$normalizedKey) && trim((string) $item->$normalizedKey) !== '') {
+                return $item->$normalizedKey;
+            }
+        }
+
+        // Fallback to custom fields relationship
         return $fieldValue($item->fields, $keys);
     };
 
@@ -527,7 +671,7 @@
         ->map(fn ($word) => mb_substr($word, 0, 1))
         ->take(2)
         ->implode('');
-    $billingBranch = $invoice->company?->billing_branch_name_address ?: $invoiceField(['billing_branch_name_address', 'billing_branch_address', 'billing_branch']);
+    $billingBranch = $invoice->company?->billing_branch ?: $invoiceField(['billing_branch_name_address', 'billing_branch_address', 'billing_branch']);
     $billingBranchHtml = preg_replace('/<br\s*\/?>/i', "\n", (string) $billingBranch);
     $billingBranchHtml = preg_replace('/<\/p>\s*<p[^>]*>/i', "\n", $billingBranchHtml);
     $billingBranchHtml = preg_replace('/<\/?p[^>]*>/i', "\n", $billingBranchHtml);
@@ -549,7 +693,8 @@
     $tickBillType = $invoiceField(['tick_bill_type', 'bill_type']);
     $basisOfCharges = $invoiceField(['basis_of_charges', 'basis']);
     $enclosures = $invoiceField(['enclosures']);
-    $gstTaxThrough = $invoiceField(['gst_tax_through', 'service_tax_through']);
+    $gstTaxThrough = $invoice->gst_tax_payable_by ?: $invoiceField(['gst_tax_through', 'service_tax_through']);
+
     $empCode = $invoiceField(['emp_code', 'employee_code']);
     $preparedBy = $invoiceField(['prepared_by']);
     $checkedBy = $invoiceField(['checked_by']);
@@ -587,7 +732,7 @@
         }
     }
     $companyPhone = $invoice->company?->address?->phone;
-    $companyEmail = $invoice->company?->notification_email ?: \App\Models\CompanySetting::getSetting('notification_email', $invoice->company_id);
+    $companyEmail = $invoice->company?->address?->email ?: ($invoice->company?->notification_email ?: \App\Models\CompanySetting::getSetting('notification_email', $invoice->company_id));
     $mobile = $invoiceField(['mobile', 'phone']) ?: ($companyPhone ?: '');
     $email = $invoiceField(['email']) ?: ($companyEmail ?: '');
     $displayCompanyAddress = preg_replace('/^\s*<h[1-6][^>]*>.*?<\/h[1-6]>\s*/is', '', (string) $company_address);
@@ -605,6 +750,8 @@
     }
     $officeGrandTotal = 0;
     $signaturePath = base_path('resources/static/img/PDF/authorized_signature.jpeg');
+    $userSignatureMedia = auth()->user()?->getMedia('user_signature')->first();
+    $userSignaturePath = $userSignatureMedia ? $userSignatureMedia->getPath() : null;
 
     // Auto-fit font sizing: shrinks font size for text that would overflow
     // its container. Each block shrinks independently so other blocks are
@@ -629,7 +776,7 @@
     // Party box is 50% of left-zone (65% of page) ≈ 349px usable.
     $partyDisplayNameStyle = $getFontForWidth($partyDisplayName, 330, 11.5, 6.5);
     // Party GSTIN box is 55% of party box ≈ 184px usable, nowrap.
-    $partyGstinStyle = $getFontForWidth($partyGstin, 170, 11, 6.5);
+    $partyGstinStyle = $getFontForWidth($partyGstin, 170, 16, 6.5);
     // Company name is in center cell (63% of left zone) ≈ 450px usable.
     $companyNameStyle = $getFontForWidth($companyName, 430, 27, 10);
     // Billing branch address is in right zone (35%) ≈ 370px usable.
@@ -640,6 +787,7 @@
 @endphp
 
 
+    <div class="jurisdiction">{{ $companyTopHeading }}</div>
     <div class="invoice-shell">
         <table class="master">
             <tr>
@@ -647,7 +795,6 @@
                     <table class="brand-row">
                         <tr>
                             <td class="logo-cell">
-                                <div class="jurisdiction">{{ $companyTopHeading }}</div>
                                 @if ($logo)
                                     <img class="company-logo" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
                                 @else
@@ -658,10 +805,7 @@
                                 <div class="company-name" style="{{ $companyNameStyle }}">{{ $companyName }}</div>
                                 <div class="company-tagline">{{ $companyTagline }}</div>
                                 <div class="company-address">{!! $displayCompanyAddress !!}</div>
-                            </td>
-                            <td class="contact-cell">
-                                Mob. {{ $mobile }}<br>
-                                E-mail : {{ $email }}
+                                <div class="company-contact">Mob. {{ $mobile }} &nbsp;|&nbsp; E-mail : {{ $email }}</div>
                             </td>
                         </tr>
                     </table>
@@ -673,34 +817,37 @@
             </tr>
 
             <tr>
-                <td rowspan="4" class="party-box">
+                <td rowspan="3" class="party-box">
                     <table class="party-head">
                         <tr>
                             <td width="50%"><b>Party Name & Address :</b></td>
                             <td><b>Party Code :</b> {{ $partyCode }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td class="party-gstin" style="{{ $partyGstinStyle }}"><b>GSTIN :</b> {{ $partyGstin }}</td>
                         </tr>
                     </table>
                     <div class="party-address-lines">
                         <div class="party-display-name" style="{{ $partyDisplayNameStyle }}">{{ $partyDisplayName }}</div>
                         {!! nl2br(e($partyAddressLines->implode("\n"))) ?: "\u{00A0}" !!}
                     </div>
-                    <div class="party-gstin" style="{{ $partyGstinStyle }}"><b>GSTIN :</b> {{ $partyGstin }}</div>
                 </td>
                 <td class="tax-box">
-                    <div>PAN No.: {{ $panNo }}</div>
-                    <div>{{ $companyTaxIdentityLabel }} : {{ $companyTaxIdentityValue }}</div>
+                    <div>PAN No.: <span class="highlight-value">{{ $panNo }}</span></div>
+                    <div>{{ $companyTaxIdentityLabel }} : <span class="highlight-value">{{ $companyTaxIdentityValue }}</span></div>
                 </td>
             </tr>
             <tr>
                 <td>
                     <table class="bill-details">
                         <tr>
-                            <td width="50%"><b>Bill No.:</b> {{ $invoice->invoice_number }}</td>
+                            <td width="50%"><b>Bill No.:</b> <span class="highlight-value">{{ $invoice->invoice_number }}</span></td>
                             <td><b>Branch Code :</b> {{ $branchCode }}</td>
                         </tr>
                         <tr>
-                            <td><b>Bill Date :</b> {{ $invoice->formattedInvoiceDate }}</td>
-                            <td><b>Payment Due Date :</b> {{ $invoice->formattedDueDate }}</td>
+                            <td><b>Bill Date :</b> <span class="highlight-value">{{ $invoice->formattedInvoiceDate }}</span></td>
+                            <td><b>Due Date :</b> {{ $invoice->formattedDueDate }}</td>
                         </tr>
                     </table>
                 </td>
@@ -725,9 +872,6 @@
                         </tr>
                     </table>
                 </td>
-            </tr>
-            <tr>
-                <td class="basis-row">Basis of Charges as per G. C. Note or Contract No. : {{ $basisOfCharges }}</td>
             </tr>
         </table>
 
@@ -787,7 +931,8 @@
                         // destination 6.8%≈71px, vehicle_no 9%≈88px, invoice_no 8%≈78px.
                         $consignmentNo = $itemField($item, ['consignment_no', 'consignment_number', 'old_bill_number']);
                         $consignmentDate = $itemField($item, ['consignment_date', 'old_bill_date', 'date']);
-                        $partyInvNo = $itemField($item, ['party_inv_no', 'invoice_no', 'invoice_number']) ?: $invoice->invoice_number;
+                        $partyInvNo = $itemField($item, ['party_inv_no', 'invoice_no', 'invoice_number']);
+
                         $fromPlace = $itemField($item, ['from']);
                         $toPlace = $itemField($item, ['destination', 'to']);
                         $vehicleNo = $itemField($item, ['vehicle_no', 'vehicle_number']);
@@ -815,7 +960,7 @@
                         $officeGrandTotal += $officeLineTotal;
                         $slNo++;
                     @endphp
-                    <tr>
+                    <tr class="{{ $slNo % 2 === 0 ? 'alt-row' : '' }}">
                         <td>{{ $slNo }}</td>
                         <td style="{{ $consignmentNoStyle }}">{{ $consignmentNo }}</td>
                         <td>{{ $consignmentDate }}</td>
@@ -838,7 +983,8 @@
 
         @php
             $grandTotalForWords = $officeGrandTotal ?: $invoice->total;
-            $rupeesInWords = $invoiceField(['rupees_in_words', 'amount_in_words']) ?: trim($numberToWords((int) floor($grandTotalForWords / 100)).' Rupees');
+            $rupeesInWords = $invoiceField(['rupees_in_words', 'amount_in_words']) ?: trim($numberToWords((int) floor($grandTotalForWords / 100)).' Rupees Only');
+
         @endphp
 
         <table class="words-row">
@@ -848,35 +994,51 @@
                 <col style="width: 18%;">
             </colgroup>
             <tr>
-                <td><b>Rupees in words :</b> {{ $rupeesInWords }}</td>
+                <td><b>Rupees in words :</b> <span class="highlight-value">{{ $rupeesInWords }}</span></td>
                 <td class="grand-label">GRAND TOTAL</td>
-                <td class="text-right bold">{!! format_money_pdf($officeGrandTotal ?: $invoice->total, $invoice->customer->currency) !!}</td>
+                <td class="text-right bold grand-total-value">{!! format_money_pdf($officeGrandTotal ?: $invoice->total, $invoice->customer->currency) !!}</td>
             </tr>
         </table>
 
         <table class="footer">
             <tr class="footer-head">
                 <td width="42%" class="bold">Enclosures : {{ $enclosures }}</td>
-                <td width="20%" colspan="2">GST Through : {{ $gstTaxThrough }}</td>
+                <td width="20%" colspan="2"><b>GST Through :</b> <span class="highlight-value">{{ $gstTaxThrough }}</span></td>
                 <td width="38%" class="text-center">
                     <div class="for-company">For {{ $companyName }}</div>
                 </td>
             </tr>
             <tr class="footer-body">
                 <td width="42%" class="terms">
-                    1) Payment should be made by payee A/c Cheque /<br>
-                    &nbsp;&nbsp;&nbsp;D.D. Favour of {{ $companyName }}<br>
-                    2) Interest @ 10% per annum will be charged if bill<br>
-                    &nbsp;&nbsp;&nbsp;not paid within 7 days from date of bill
+                    <div class="term-item">1) Payment should be made by payee A/c Cheque /<br>D.D. Favour of {{ $companyName }}</div>
+                    <div class="term-item">2) Interest @ 10% per annum will be charged if bill<br>not paid within 7 days from date of bill</div>
                 </td>
+
                 <td width="10%" class="prepared text-center">Prepared by :<br>{{ $preparedBy }}</td>
                 <td width="10%" class="prepared text-center">Checked by :<br>{{ $checkedBy }}</td>
                 <td width="38%" class="signature-cell">
-                    <span class="emp-box">EMP Code<br>{{ $empCode }}</span>
-                    @if (file_exists($signaturePath))
-                        <img class="signature-image" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
-                    @endif
-                    <div class="signature">Signature</div>
+                    <table class="signature-table">
+                        <tr>
+                            <td class="sig-emp">
+                                <span class="emp-box">EMP Code<br>{{ $empCode }}</span>
+                            </td>
+                            <td class="sig-image-area">
+                                @if ($userSignaturePath && file_exists($userSignaturePath))
+                                    <img class="signature-image" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($userSignaturePath) }}" alt="Signature">
+                                @elseif (file_exists($signaturePath))
+                                    <img class="signature-image" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="font-size: 16px; font-weight: bold; text-align: center; padding-top: 4px;">
+                                {{ auth()->user()?->name ?: $preparedBy }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="sig-label">Signature</td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
         </table>

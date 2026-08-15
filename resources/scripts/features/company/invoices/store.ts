@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { toRef } from 'vue'
 import { useNotificationStore } from '../../../stores/notification.store'
 import { useCompanyStore } from '../../../stores/company.store'
 import { useUserStore } from '../../../stores/user.store'
@@ -10,180 +11,24 @@ import type {
   InvoiceStatusPayload,
   InvoiceTemplate,
 } from '../../../api/services/invoice.service'
-import type { Invoice, InvoiceItem, DiscountType } from '../../../types/domain/invoice'
-import type { Tax, TaxType } from '../../../types/domain/tax'
+import type { Invoice } from '../../../types/domain/invoice'
+import type { DiscountType } from '../../../types/domain/invoice'
 import type { Currency } from '../../../types/domain/currency'
 import type { Customer } from '../../../types/domain/customer'
 import type { Note } from '../../../types/domain/note'
 import type { CustomFieldValue } from '../../../types/domain/custom-field'
 import type { DocumentTax, DocumentItem } from '../../shared/document-form/use-document-calculations'
-import { generateClientId } from '../../../utils'
+import { useDocumentCalculations } from '../../shared/document-form/use-document-calculations'
+import { createInvoiceItemStub, createTaxStub } from '../../shared/document-form/document-stubs'
+import { useDocumentActions } from '../../shared/document-form/use-document-actions'
+import { formatDate as formatDateUtil } from '../../../utils'
+import type { InvoiceFormData } from './types'
+import { isTransportInvoice } from './types'
 
-// ----------------------------------------------------------------
-// Stub factories
-// ----------------------------------------------------------------
-
-function createTaxStub(): DocumentTax {
-  return {
-    id: generateClientId(),
-    name: '',
-    tax_type_id: 0,
-    type: 'GENERAL',
-    amount: null,
-    percent: null,
-    compound_tax: false,
-    calculation_type: null,
-    fixed_amount: 0,
-  }
-}
-
-function createInvoiceItemStub(): DocumentItem {
-  return {
-    id: generateClientId(),
-    invoice_id: null,
-    item_id: null,
-    name: '',
-    description: null,
-    quantity: 1,
-    price: 0,
-    discount_type: 'fixed',
-    discount_val: 0,
-    discount: 0,
-    total: 0,
-    totalTax: 0,
-    totalSimpleTax: 0,
-    totalCompoundTax: 0,
-    tax: 0,
-    taxes: [createTaxStub()],
-    unit_name: null,
-    // Office Invoice item-level transport fields (native columns)
-    consignment_number: null,
-    consignment_date: null,
-    party_inv_no: null,
-    from_code: null,
-    to_code: null,
-    truck_no: null,
-    pkg: null,
-    weight: null,
-    rate: null,
-    other_charge: null,
-    lr_charge: null,
-    dd_charge: null,
-    amount: null,
-  }
-}
-
-
-export interface InvoiceFormData {
-  id: number | null
-  invoice_number: string
-  customer: Customer | null
-  customer_id: number | null
-  consignee_customer_id: number | null
-  consignee_customer: Customer | null
-  template_name: string | null
-  invoice_date: string
-  due_date: string
-  notes: string | null
-  discount: number
-  discount_type: DiscountType
-  discount_val: number
-  reference_number: string | null
-  tax: number
-  sub_total: number
-  total: number
-  tax_per_item: string | null
-  tax_included: boolean
-  sales_tax_type: string | null
-  sales_tax_address_type: string | null
-  discount_per_item: string | null
-  taxes: DocumentTax[]
-  items: DocumentItem[]
-  customFields: CustomFieldValue[]
-  fields: CustomFieldValue[]
-  selectedNote: Note | null
-  selectedCurrency: Currency | Record<string, unknown> | string
-  unique_hash?: string
-  exchange_rate?: number | null
-  currency_id?: number
-  // Transport fields (native columns â€” lr_receipt, lorry_receipt, office_invoice)
-  from_code?: string | null
-  to_code?: string | null
-  truck_no?: string | null
-  mode_of_payment?: string | null
-  gst_tax_payable_by?: string | null
-  description_of_goods?: string | null
-  hsn_code?: string | null
-  eway_bill_no?: string | null
-  actual_weight?: string | null
-  charged_weight?: string | null
-  no_of_articles?: string | null
-  packing?: string | null
-  basic_freight?: string | null
-  hamali?: string | null
-  fov?: string | null
-  local_collection?: string | null
-  door_delivery?: string | null
-  docket_charge?: string | null
-  other_charge?: string | null
-  net_amount?: string | null
-  no_of_pages?: string | null
-  no_of_packages?: string | null
-  regd_at?: string | null
-  body_type?: string | null
-  make?: string | null
-  vehicle_model?: string | null
-  colour?: string | null
-  chasis_no?: string | null
-  engine_no?: string | null
-  paid_to?: string | null
-  lorry_hire_amount?: string | null
-  other_charges_amount?: string | null
-  advance_cash_cheque_no?: string | null
-  advance_on?: string | null
-  advance_bank?: string | null
-  advance_amount?: string | null
-  balance_payable_at?: string | null
-  loaded_by?: string | null
-  final_paid_to?: string | null
-  detention_amount?: string | null
-  extra_hire_amount?: string | null
-  final_other_amount?: string | null
-  less_advance_other_branch_amount?: string | null
-  less_deduction_claims_amount?: string | null
-  final_balance_paid_at?: string | null
-  final_balance_on?: string | null
-  final_cash_cheque_no?: string | null
-  final_bank?: string | null
-  owner_name?: string | null
-  owner_address?: string | null
-  owner_phone?: string | null
-  owner_bank_account_no?: string | null
-  owner_pan_no?: string | null
-  financer_address?: string | null
-  driver_name?: string | null
-  driver_address?: string | null
-  driver_place?: string | null
-  driver_licence_no?: string | null
-  driver_licence_date?: string | null
-  driver_licence_issued_by?: string | null
-  driver_rto_address?: string | null
-  driver_valid_up_to?: string | null
-  driver_bank_account_no?: string | null
-  broker_name?: string | null
-  broker_address?: string | null
-  broker_pan_no?: string | null
-  broker_phone_no?: string | null
-  broker_bank_account_no?: string | null
-  advice_date?: string | null
-  destination_broker_name?: string | null
-  destination_broker_address?: string | null
-  // Lorry Receipt computed totals
-  gross_hire_rupees?: string | null
-  net_amount_payable?: string | null
-  received_no_bilties?: string | null
-  contract_no?: string | null
-}
+// Re-export for backward compatibility — components that import InvoiceFormData
+// from the store will still work.
+export type { InvoiceFormData, BaseInvoiceFormData, TransportInvoiceFormData } from './types'
+export { isTransportInvoice, TRANSPORT_TEMPLATE_NAMES } from './types'
 
 
 function createInvoiceStub(): InvoiceFormData {
@@ -216,8 +61,122 @@ function createInvoiceStub(): InvoiceFormData {
     fields: [],
     selectedNote: null,
     selectedCurrency: '',
-  }
+
+    // ------------------------------------------------------------------
+    // Transport receipt native properties (lr_receipt, lorry_receipt,
+    // office_invoice templates).
+    //
+    // These MUST be declared here with null defaults so that Vue's
+    // reactivity proxy tracks them from initialization.  If they are
+    // absent from the initial object, adding them later (e.g. when a
+    // user selects an Owner/Driver/Broker from the dropdown in
+    // LorryReceiptPartyFields.vue) creates non-reactive properties —
+    // the v-model bindings in TransportCustomFields.vue (Owner Details,
+    // Driver Details, Broker Details sections) would not update.
+    // ------------------------------------------------------------------
+
+    // Transport route fields
+    from_code: null,
+    to_code: null,
+    truck_no: null,
+    mode_of_payment: null,
+    gst_tax_payable_by: null,
+    description_of_goods: null,
+    hsn_code: null,
+    eway_bill_no: null,
+
+    // Weight & package fields
+    actual_weight: null,
+    charged_weight: null,
+    no_of_articles: null,
+    packing: null,
+    no_of_pages: null,
+    no_of_packages: null,
+
+    // Freight & charges
+    basic_freight: null,
+    hamali: null,
+    fov: null,
+    local_collection: null,
+    door_delivery: null,
+    docket_charge: null,
+    other_charge: null,
+    net_amount: null,
+
+    // Vehicle details
+    regd_at: null,
+    body_type: null,
+    make: null,
+    vehicle_model: null,
+    colour: null,
+    chasis_no: null,
+    engine_no: null,
+
+    // Lorry hire & advance
+    paid_to: null,
+    lorry_hire_amount: null,
+    other_charges_amount: null,
+    advance_cash_cheque_no: null,
+    advance_on: null,
+    advance_bank: null,
+    advance_amount: null,
+    balance_payable_at: null,
+    loaded_by: null,
+
+    // Final settlement
+    final_paid_to: null,
+    detention_amount: null,
+    extra_hire_amount: null,
+    final_other_amount: null,
+    less_advance_other_branch_amount: null,
+    less_deduction_claims_amount: null,
+    final_balance_paid_at: null,
+    final_balance_on: null,
+    final_cash_cheque_no: null,
+    final_bank: null,
+
+    // Owner details
+    owner_name: null,
+    owner_address: null,
+    owner_phone: null,
+    owner_bank_account_no: null,
+    owner_pan_no: null,
+    financer_address: null,
+
+    // Driver details
+    driver_name: null,
+    driver_address: null,
+    driver_place: null,
+    driver_licence_no: null,
+    driver_licence_date: null,
+    driver_licence_issued_by: null,
+    driver_rto_address: null,
+    driver_valid_up_to: null,
+    driver_bank_account_no: null,
+
+    // Broker details
+    broker_name: null,
+    broker_address: null,
+    broker_pan_no: null,
+    broker_phone_no: null,
+    broker_bank_account_no: null,
+    advice_date: null,
+    destination_broker_name: null,
+    destination_broker_address: null,
+
+    // Lorry Receipt computed totals
+    gross_hire_rupees: null,
+    net_amount_payable: null,
+    received_no_bilties: null,
+    contract_no: null,
+
+    // Party profile reference (LorryPartyProfile ID for the "Party" field
+    // on Lorry Receipts — replaces the Customer-based Party selector)
+    party_profile_id: null,
+  } as InvoiceFormData
+
 }
+
 
 // ----------------------------------------------------------------
 // Store
@@ -255,52 +214,56 @@ export const useInvoiceStore = defineStore('invoice', {
         return state.invoices.find((invoice) => invoice.id === id)
       },
 
-    getSubTotal(state): number {
-      return state.newInvoice.items.reduce(
-        (sum: number, item: DocumentItem) => sum + (item.total ?? 0),
-        0,
-      )
+    isEdit(state): boolean {
+      return !!state.newInvoice.id
     },
 
-    getNetTotal(): number {
-      return this.getSubtotalWithDiscount - this.getTotalTax
+    // Tax calculations delegated to the shared useDocumentCalculations composable
+    // — eliminates ~60 lines of duplicated getter logic that was identical to
+    // the estimate store.
+    getSubTotal(state): number {
+      const { subTotal } = useDocumentCalculations({
+        items: toRef(state.newInvoice, 'items') as unknown as import('vue').Ref<DocumentItem[]>,
+        taxes: toRef(state.newInvoice, 'taxes'),
+        discountVal: toRef(state.newInvoice, 'discount_val'),
+        taxPerItem: toRef(state.newInvoice, 'tax_per_item'),
+        taxIncluded: toRef(state.newInvoice, 'tax_included'),
+      })
+      return subTotal.value
     },
 
     getTotalSimpleTax(state): number {
-      return state.newInvoice.taxes.reduce(
-        (sum: number, tax: DocumentTax) => {
-          if (!tax.compound_tax) return sum + (tax.amount ?? 0)
-          return sum
-        },
-        0,
-      )
+      const { totalSimpleTax } = useDocumentCalculations({
+        items: toRef(state.newInvoice, 'items') as unknown as import('vue').Ref<DocumentItem[]>,
+        taxes: toRef(state.newInvoice, 'taxes'),
+        discountVal: toRef(state.newInvoice, 'discount_val'),
+        taxPerItem: toRef(state.newInvoice, 'tax_per_item'),
+        taxIncluded: toRef(state.newInvoice, 'tax_included'),
+      })
+      return totalSimpleTax.value
     },
 
     getTotalCompoundTax(state): number {
-      return state.newInvoice.taxes.reduce(
-        (sum: number, tax: DocumentTax) => {
-          if (tax.compound_tax) return sum + (tax.amount ?? 0)
-          return sum
-        },
-        0,
-      )
+      const { totalCompoundTax } = useDocumentCalculations({
+        items: toRef(state.newInvoice, 'items') as unknown as import('vue').Ref<DocumentItem[]>,
+        taxes: toRef(state.newInvoice, 'taxes'),
+        discountVal: toRef(state.newInvoice, 'discount_val'),
+        taxPerItem: toRef(state.newInvoice, 'tax_per_item'),
+        taxIncluded: toRef(state.newInvoice, 'tax_included'),
+      })
+      return totalCompoundTax.value
     },
 
     getTotalTax(): number {
-      if (
-        this.newInvoice.tax_per_item === 'NO' ||
-        this.newInvoice.tax_per_item === null
-      ) {
-        return this.getTotalSimpleTax + this.getTotalCompoundTax
-      }
-      return this.newInvoice.items.reduce(
-        (sum: number, item: DocumentItem) => sum + (item.tax ?? 0),
-        0,
-      )
+      return this.getTotalSimpleTax + this.getTotalCompoundTax
     },
 
     getSubtotalWithDiscount(): number {
       return this.getSubTotal - this.newInvoice.discount_val
+    },
+
+    getNetTotal(): number {
+      return this.getSubtotalWithDiscount - this.getTotalTax
     },
 
     getTotal(): number {
@@ -309,13 +272,19 @@ export const useInvoiceStore = defineStore('invoice', {
       }
       return this.getSubtotalWithDiscount + this.getTotalTax
     },
-
-    isEdit(state): boolean {
-      return !!state.newInvoice.id
-    },
   },
 
   actions: {
+    // Initialise shared document actions (item management, note management,
+    // customer management, tax helpers, document data hydration).
+    // These are spread into the store actions below via the setupActions helper.
+    _getDocumentActions() {
+      return useDocumentActions({
+        formRef: toRef(this, 'newInvoice') as unknown as import('vue').Ref<InvoiceFormData & import('../../shared/document-form/use-document-calculations').DocumentFormData>,
+        createItemStub: createInvoiceItemStub,
+      })
+    },
+
     resetCurrentInvoice(): void {
       this.newInvoice = createInvoiceStub()
     },
@@ -335,67 +304,22 @@ export const useInvoiceStore = defineStore('invoice', {
 
     async fetchInvoice(id: number): Promise<{ data: { data: Invoice } }> {
       const response = await invoiceService.get(id)
-      this.setInvoiceData(response.data)
-      this.setCustomerAddresses(this.newInvoice.customer)
+      this._getDocumentActions().setDocumentData(response.data)
+      this._getDocumentActions().setCustomerAddresses(this.newInvoice.customer)
       return { data: response }
     },
 
+    // Delegate to shared actions
     setInvoiceData(invoice: Invoice): void {
-      Object.assign(this.newInvoice, invoice)
-
-      if (this.newInvoice.tax_per_item === 'YES') {
-        this.newInvoice.items.forEach((item) => {
-          if (item.taxes && !item.taxes.length) {
-            item.taxes.push(createTaxStub())
-          }
-        })
-      }
-
-      if (this.newInvoice.discount_per_item === 'YES') {
-        this.newInvoice.items.forEach((item, index) => {
-          if (item.discount_type === 'fixed') {
-            this.newInvoice.items[index].discount = item.discount / 100
-          }
-        })
-      } else {
-        if (this.newInvoice.discount_type === 'fixed') {
-          this.newInvoice.discount = this.newInvoice.discount / 100
-        }
-      }
+      this._getDocumentActions().setDocumentData(invoice)
     },
 
     setCustomerAddresses(customer: Customer | null): void {
-      if (!customer) return
-      const business = (customer as Record<string, unknown>).customer_business as
-        | Record<string, unknown>
-        | undefined
-
-      if (business?.billing_address) {
-        ;(this.newInvoice.customer as Record<string, unknown>).billing_address =
-          business.billing_address
-      }
-      if (business?.shipping_address) {
-        ;(this.newInvoice.customer as Record<string, unknown>).shipping_address =
-          business.shipping_address
-      }
+      this._getDocumentActions().setCustomerAddresses(customer)
     },
 
-    addSalesTaxUs(taxTypes: TaxType[]): void {
-      const salesTax = createTaxStub()
-      const found = this.newInvoice.taxes.find(
-        (t) => t.name === 'Sales Tax' && t.type === 'MODULE',
-      )
-      if (found) {
-        for (const key in found) {
-          if (Object.prototype.hasOwnProperty.call(salesTax, key)) {
-            ;(salesTax as Record<string, unknown>)[key] = (
-              found as Record<string, unknown>
-            )[key]
-          }
-        }
-        salesTax.id = found.tax_type_id
-        taxTypes.push(salesTax as unknown as TaxType)
-      }
+    addSalesTaxUs(taxTypes: import('../../../types/domain/tax').TaxType[]): void {
+      this._getDocumentActions().addSalesTaxUs(taxTypes)
     },
 
     async sendInvoice(data: SendInvoicePayload): Promise<unknown> {
@@ -506,17 +430,41 @@ export const useInvoiceStore = defineStore('invoice', {
       }
     },
 
+    // Delegate item/note/customer/template actions to shared composable
     async selectCustomer(id: number): Promise<unknown> {
-      const { customerService } = await import(
-        '../../../api/services/customer.service'
-      )
-      const response = await customerService.get(id)
-      this.newInvoice.customer = response.data as unknown as Customer
-      this.newInvoice.customer_id = response.data.id
-      if (response.data.currency) {
-        this.newInvoice.currency_id = (response.data.currency as { id: number }).id
-      }
-      return response
+      return this._getDocumentActions().selectCustomer(id)
+    },
+
+    selectNote(data: Note): void {
+      this._getDocumentActions().selectNote(data)
+    },
+
+    setTemplate(name: string): void {
+      this._getDocumentActions().setTemplate(name)
+    },
+
+    resetSelectedCustomer(): void {
+      this._getDocumentActions().resetSelectedCustomer()
+    },
+
+    addItem(): void {
+      this._getDocumentActions().addItem()
+    },
+
+    updateItem(data: DocumentItem & { index: number }): void {
+      this._getDocumentActions().updateItem(data)
+    },
+
+    removeItem(index: number): void {
+      this._getDocumentActions().removeItem(index)
+    },
+
+    deselectItem(index: number): void {
+      this._getDocumentActions().deselectItem(index)
+    },
+
+    resetSelectedNote(): void {
+      this._getDocumentActions().resetSelectedNote()
     },
 
     async fetchInvoiceTemplates(
@@ -525,40 +473,6 @@ export const useInvoiceStore = defineStore('invoice', {
       const response = await invoiceService.getTemplates(documentType)
       this.templates = response.invoiceTemplates
       return { data: response }
-    },
-
-    selectNote(data: Note): void {
-      this.newInvoice.selectedNote = null
-      this.newInvoice.selectedNote = data
-    },
-
-    setTemplate(name: string): void {
-      this.newInvoice.template_name = name
-    },
-
-    resetSelectedCustomer(): void {
-      this.newInvoice.customer = null
-      this.newInvoice.customer_id = null
-    },
-
-    addItem(): void {
-      this.newInvoice.items.push(createInvoiceItemStub())
-    },
-
-    updateItem(data: DocumentItem & { index: number }): void {
-      Object.assign(this.newInvoice.items[data.index], { ...data })
-    },
-
-    removeItem(index: number): void {
-      this.newInvoice.items.splice(index, 1)
-    },
-
-    deselectItem(index: number): void {
-      this.newInvoice.items[index] = createInvoiceItemStub()
-    },
-
-    resetSelectedNote(): void {
-      this.newInvoice.selectedNote = null
     },
 
     async fetchInvoiceInitialSettings(
@@ -596,13 +510,13 @@ export const useInvoiceStore = defineStore('invoice', {
         this.newInvoice.discount_per_item =
           companySettings.discount_per_item ?? null
 
-        let dateFormat = 'YYYY-MM-DD'
+        let dateFormat = 'yyyy-MM-dd'
         if (companySettings.invoice_use_time === 'YES') {
           dateFormat += ' HH:mm'
         }
 
         const now = new Date()
-        this.newInvoice.invoice_date = formatDate(now, dateFormat)
+        this.newInvoice.invoice_date = formatDateUtil(now, dateFormat)
 
         if (companySettings.invoice_set_due_date_automatically === 'YES') {
           const dueDate = new Date(now)
@@ -610,7 +524,7 @@ export const useInvoiceStore = defineStore('invoice', {
             dueDate.getDate() +
               Number(companySettings.invoice_due_date_days ?? 7),
           )
-          this.newInvoice.due_date = formatDate(dueDate, 'YYYY-MM-DD')
+          this.newInvoice.due_date = formatDateUtil(dueDate, 'yyyy-MM-dd')
         }
       } else if (isEdit && routeParams?.id) {
         editActions.push(this.fetchInvoice(Number(routeParams.id)))
@@ -662,20 +576,5 @@ export const useInvoiceStore = defineStore('invoice', {
     },
   },
 })
-
-/** Simple date formatter without moment dependency */
-function formatDate(date: Date, format: string): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-
-  let result = `${year}-${month}-${day}`
-  if (format.includes('HH:mm')) {
-    result += ` ${hours}:${minutes}`
-  }
-  return result
-}
 
 export type InvoiceStore = ReturnType<typeof useInvoiceStore>

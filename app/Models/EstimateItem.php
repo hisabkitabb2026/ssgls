@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EstimateItem extends Model
 {
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
 
@@ -27,6 +28,7 @@ class EstimateItem extends Model
             'quantity' => 'float',
             'discount_val' => 'integer',
             'tax' => 'integer',
+            'rate_card' => 'array',
         ];
     }
 
@@ -43,10 +45,5 @@ class EstimateItem extends Model
     public function taxes(): HasMany
     {
         return $this->hasMany(Tax::class);
-    }
-
-    public function scopeWhereCompany(Builder $query, int $company_id): void
-    {
-        $query->where('company_id', $company_id);
     }
 }

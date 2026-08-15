@@ -18,16 +18,16 @@
     </td>
     <td class="px-4 py-3 text-center w-16 space-x-2">
       <button
-        @click="$emit('edit', item)"
         class="text-primary-500 hover:text-primary-700 p-1 rounded hover:bg-surface"
         :title="$t('invoices.edit')"
+        @click="$emit('edit', item)"
       >
         <BaseIcon name="PencilIcon" class="h-4 w-4" />
       </button>
       <button
-        @click="$emit('delete', item.id)"
         class="text-red-500 hover:text-red-700 p-1 rounded hover:bg-surface"
         :title="$t('invoices.delete')"
+        @click="$emit('delete', item.id)"
       >
         <BaseIcon name="TrashIcon" class="h-4 w-4" />
       </button>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceItem extends Model
 {
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
 
@@ -50,11 +52,6 @@ class InvoiceItem extends Model
     public function recurringInvoice(): BelongsTo
     {
         return $this->belongsTo(RecurringInvoice::class);
-    }
-
-    public function scopeWhereCompany(Builder $query, int $company_id): void
-    {
-        $query->where('company_id', $company_id);
     }
 
     public function scopeInvoicesBetween(Builder $query, Carbon $start, Carbon $end): void

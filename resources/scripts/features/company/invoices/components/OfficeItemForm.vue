@@ -5,8 +5,8 @@
         {{ isEdit ? $t('invoices.edit_item') : $t('invoices.add_item') }}
       </h4>
       <button
-        @click="$emit('cancel')"
         class="text-muted hover:text-heading"
+        @click="$emit('cancel')"
       >
         <BaseIcon name="XMarkIcon" class="h-5 w-5" />
       </button>
@@ -61,8 +61,8 @@
         {{ $t('invoices.cancel') }}
       </BaseButton>
       <BaseButton
-        @click="save"
         :disabled="!isValid"
+        @click="save"
       >
         {{ $t('invoices.save_item') }}
       </BaseButton>

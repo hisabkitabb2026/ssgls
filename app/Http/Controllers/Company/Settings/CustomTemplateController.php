@@ -19,7 +19,7 @@ class CustomTemplateController extends Controller
     private const DOCUMENT_TYPES = [
         'invoice1', 'invoice2', 'invoice3',
         'lr_receipt', 'lorry_receipt', 'office_invoice',
-        'estimate1', 'estimate2', 'estimate3', 'quotation',
+        'estimate1',
         'payment',
     ];
 
@@ -27,12 +27,12 @@ class CustomTemplateController extends Controller
      * Map a document type to its template directory name.
      *
      * Invoice templates (invoice1-3, lr_receipt, lorry_receipt, office_invoice)
-     * live in the 'invoice' directory. Estimates (estimate1-3, quotation) live in 'estimate', and
+     * live in the 'invoice' directory. Estimates (estimate1) live in 'estimate', and
      * payments in 'payment'.
      */
     private function getTemplateDirectory(string $documentType): string
     {
-        if (in_array($documentType, ['estimate1', 'estimate2', 'estimate3', 'quotation'])) {
+        if ($documentType === 'estimate1') {
             return 'estimate';
         }
 
@@ -81,7 +81,7 @@ class CustomTemplateController extends Controller
                         break;
                     }
                 }
-                $matched = !$isTransport;
+                $matched = ! $isTransport;
             } elseif ($documentType === 'estimate1') {
                 // For estimates, return all estimate templates
                 $matched = true;
@@ -135,7 +135,7 @@ class CustomTemplateController extends Controller
                                 break;
                             }
                         }
-                        $matchedCustom = !$isTransport;
+                        $matchedCustom = ! $isTransport;
                     } elseif ($documentType === 'estimate1') {
                         $matchedCustom = true;
                     } else {

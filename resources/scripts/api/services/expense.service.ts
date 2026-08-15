@@ -1,5 +1,6 @@
 import { client } from '../client'
 import { API } from '../endpoints'
+import { createBasicCrudService } from './crud-service.factory'
 import type { Expense, ExpenseCategory, CreateExpensePayload } from '@/scripts/types/domain/expense'
 import type {
   ApiResponse,
@@ -31,15 +32,21 @@ export interface CreateExpenseCategoryPayload {
   description?: string | null
 }
 
-export const expenseService = {
-  async list(params?: ExpenseListParams): Promise<ExpenseListResponse> {
-    const { data } = await client.get(API.EXPENSES, { params })
-    return data
-  },
+const baseExpenseService = createBasicCrudService<
+  Expense,
+  ExpenseListResponse,
+  CreateExpensePayload
+>({
+  basePath: API.EXPENSES,
+  deletePath: API.EXPENSES_DELETE,
+  usePostDelete: true,
+})
 
-  async get(id: number): Promise<ApiResponse<Expense>> {
-    const { data } = await client.get(`${API.EXPENSES}/${id}`)
-    return data
+export const expenseService = {
+  ...baseExpenseService,
+
+  async list(params?: ExpenseListParams): Promise<ExpenseListResponse> {
+    return baseExpenseService.list(params) as Promise<ExpenseListResponse>
   },
 
   async create(payload: FormData): Promise<ApiResponse<Expense>> {
@@ -53,8 +60,7 @@ export const expenseService = {
   },
 
   async delete(payload: DeletePayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.EXPENSES_DELETE, payload)
-    return data
+    return baseExpenseService.delete(payload) as Promise<{ success: boolean }>
   },
 
   async showReceipt(id: number): Promise<Blob> {

@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Jobs\GeneratePaymentPdfJob;
+use App\Jobs\GenerateDocumentPdfJob;
 use App\Services\Document\PaymentService;
 use App\Support\Pdf\PdfHtmlSanitizer;
-use App\Support\SafeOrderBy;
 use App\Traits\GeneratesPdfTrait;
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +19,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Payment extends Model implements HasMedia
 {
     use GeneratesPdfTrait;
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
     use InteractsWithMedia;
@@ -44,11 +45,11 @@ class Payment extends Model implements HasMedia
     protected static function booted()
     {
         static::created(function ($payment) {
-            GeneratePaymentPdfJob::dispatch($payment);
+            GenerateDocumentPdfJob::dispatch($payment, 'payment', 'payment_number');
         });
 
         static::updated(function ($payment) {
-            GeneratePaymentPdfJob::dispatch($payment, true);
+            GenerateDocumentPdfJob::dispatch($payment, 'payment', 'payment_number', true);
         });
     }
 
@@ -139,15 +140,6 @@ class Payment extends Model implements HasMedia
         return $query->where('payments.payment_method_id', $paymentMethodId);
     }
 
-    public function scopePaginateData($query, $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
-    }
-
     public function scopeApplyFilters($query, array $filters)
     {
         $filters = collect($filters);
@@ -193,24 +185,9 @@ class Payment extends Model implements HasMedia
         );
     }
 
-    public function scopeWhereOrder($query, $orderByField, $orderBy)
-    {
-        SafeOrderBy::apply($query, $orderByField, $orderBy);
-    }
-
     public function scopeWherePayment($query, $payment_id)
     {
         $query->orWhere('id', $payment_id);
-    }
-
-    public function scopeWhereCompany($query)
-    {
-        $query->where('payments.company_id', request()->header('company'));
-    }
-
-    public function scopeWhereCustomer($query, $customer_id)
-    {
-        $query->where('payments.customer_id', $customer_id);
     }
 
     public function getPDFData(): mixed
@@ -218,17 +195,17 @@ class Payment extends Model implements HasMedia
         return app(PaymentService::class)->getPdfData($this);
     }
 
-    public function getCompanyAddress(): string|false
+    /**
+     * Payment uses 'payment' as the CompanySetting key prefix.
+     */
+    protected function documentTypePrefix(): string
     {
-        if ($this->company && (! $this->company->address()->exists())) {
-            return false;
-        }
-
-        $format = CompanySetting::getSetting('payment_company_address_format', $this->company_id);
-
-        return $this->getFormattedString($format);
+        return 'payment';
     }
 
+    /**
+     * Override: Payment uses a non-standard key for the billing address format.
+     */
     public function getCustomerBillingAddress(): string|false
     {
         if ($this->customer && (! $this->customer->billingAddress()->exists())) {
@@ -238,31 +215,6 @@ class Payment extends Model implements HasMedia
         $format = CompanySetting::getSetting('payment_from_customer_address_format', $this->company_id);
 
         return $this->getFormattedString($format);
-    }
-
-    public function getEmailAttachmentSetting(): bool
-    {
-        $paymentAsAttachment = CompanySetting::getSetting('payment_email_attachment', $this->company_id);
-
-        if ($paymentAsAttachment == 'NO') {
-            return false;
-        }
-
-        return true;
-    }
-
-    public function getNotes(): string
-    {
-        return PdfHtmlSanitizer::sanitize($this->getFormattedString($this->notes));
-    }
-
-    public function getEmailBody(string $body): string
-    {
-        $values = array_merge($this->getFieldsArray(), $this->getExtraFields());
-
-        $body = strtr($body, $values);
-
-        return preg_replace('/{(.*?)}/', '', $body);
     }
 
     public function getExtraFields(): array
@@ -275,14 +227,4 @@ class Payment extends Model implements HasMedia
         ];
     }
 
-    public function resolveRouteBinding($value, $field = null)
-    {
-        if (request()->header('company')) {
-            return $this->where('payments.company_id', request()->header('company'))
-                ->where($field ?? $this->getKeyName(), $value)
-                ->firstOrFail();
-        }
-
-        return parent::resolveRouteBinding($value, $field);
-    }
 }

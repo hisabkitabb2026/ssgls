@@ -59,55 +59,18 @@
           </template>
         </BaseButton>
 
-        <!-- Create dropdown — shows New Invoice, New LR Receipt, New Lorry Receipt, Record Payment -->
-        <BaseDropdown
+        <!-- New Invoice — direct link to create page -->
+        <router-link
           v-if="canCreate && viewMode === 'one-time'"
-          position="bottom-end"
-          width-class="w-56"
-          class="ml-4"
+          :to="createPath"
         >
-          <template #activator>
-            <BaseButton variant="primary">
-              <template #left="slotProps">
-                <BaseIcon name="PlusIcon" :class="slotProps.class" />
-              </template>
-              {{ $t('invoices.new_invoice') }}
-              <BaseIcon name="ChevronDownIcon" class="w-4 h-4 ml-1" />
-            </BaseButton>
-          </template>
-
-          <!-- New Invoice (Office Invoice / Invoice Receipt) -->
-          <router-link :to="createPath">
-            <BaseDropdownItem>
-              <BaseIcon name="DocumentTextIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
-              {{ $t('invoices.new_invoice') }}
-            </BaseDropdownItem>
-          </router-link>
-
-          <!-- New LR Receipt -->
-          <router-link to="/admin/lr-receipts/create">
-            <BaseDropdownItem>
-              <BaseIcon name="ClipboardDocumentListIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
-              New LR Receipt
-            </BaseDropdownItem>
-          </router-link>
-
-          <!-- New Lorry Receipt -->
-          <router-link to="/admin/lorry-receipts/create">
-            <BaseDropdownItem>
-              <BaseIcon name="TruckIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
-              New Lorry Receipt
-            </BaseDropdownItem>
-          </router-link>
-
-          <!-- Record Payment -->
-          <router-link to="/admin/payments/create">
-            <BaseDropdownItem>
-              <BaseIcon name="CreditCardIcon" class="w-5 h-5 mr-3 text-subtle group-hover:text-muted" />
-              {{ $t('invoices.record_payment') }}
-            </BaseDropdownItem>
-          </router-link>
-        </BaseDropdown>
+          <BaseButton variant="primary" class="ml-4">
+            <template #left="slotProps">
+              <BaseIcon name="PlusIcon" :class="slotProps.class" />
+            </template>
+            {{ $t('invoices.new_invoice') }}
+          </BaseButton>
+        </router-link>
 
         <!-- Recurring mode: simple create button -->
         <router-link
@@ -586,23 +549,18 @@ const isStandardInvoiceRoute = computed<boolean>(() =>
   route.name?.toString().startsWith('standard-invoices') ?? false,
 )
 
-// The create path depends on which document types are enabled.
-// If Invoice Receipts are enabled, prefer that. Otherwise use Standard Invoices.
+// The create path depends on the current route and which document types are enabled.
+// If we're on the standard-invoices route, always go to standard-invoices/create.
+// If we're on the invoices route, go to invoices/create (Invoice Receipts).
 const createPath = computed<string>(() => {
-  const settings = companyStore.selectedCompanySettings
-  const invoiceReceiptsEnabled = settings?.enable_invoice_receipts !== 'NO'
-  const standardInvoicesEnabled = settings?.enable_standard_invoices !== 'NO'
-
-  // If Invoice Receipts are enabled, prefer that (even if both are on)
-  if (invoiceReceiptsEnabled) {
-    return 'invoices/create'
-  }
-  if (standardInvoicesEnabled) {
+  // Standard invoices route → standard-invoices/create
+  if (isStandardInvoiceRoute.value) {
     return 'standard-invoices/create'
   }
-  // Fallback: use current route context
-  return isStandardInvoiceRoute.value ? 'standard-invoices/create' : 'invoices/create'
+  // Invoice Receipts route → invoices/create
+  return 'invoices/create'
 })
+
 
 // ----------------------------------------------------------------
 // Recurring invoice ability

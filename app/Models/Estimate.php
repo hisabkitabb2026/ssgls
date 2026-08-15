@@ -3,10 +3,9 @@
 namespace App\Models;
 
 use App\Services\Document\EstimateService;
-use App\Support\Pdf\PdfHtmlSanitizer;
 use App\Support\Pdf\PdfTemplateUtils;
-use App\Support\SafeOrderBy;
 use App\Traits\GeneratesPdfTrait;
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,6 +20,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Estimate extends Model implements HasMedia
 {
     use GeneratesPdfTrait;
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
     use InteractsWithMedia;
@@ -62,7 +62,6 @@ class Estimate extends Model implements HasMedia
             'discount' => 'float',
             'discount_val' => 'integer',
             'exchange_rate' => 'float',
-            'quotation_rates' => 'array',
         ];
     }
 
@@ -191,91 +190,17 @@ class Estimate extends Model implements HasMedia
         }
     }
 
-    public function scopeWhereOrder($query, $orderByField, $orderBy)
-    {
-        SafeOrderBy::apply($query, $orderByField, $orderBy);
-    }
-
-    public function scopeWhereCompany($query)
-    {
-        $query->where('estimates.company_id', request()->header('company'));
-    }
-
-    public function scopeWhereCustomer($query, $customer_id)
-    {
-        $query->where('estimates.customer_id', $customer_id);
-    }
-
-    public function scopePaginateData($query, $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
-    }
-
     public function getPDFData(): mixed
     {
         return app(EstimateService::class)->getPdfData($this);
     }
 
-    public function getCompanyAddress(): string|false
+    /**
+     * Estimate uses 'estimate' as the CompanySetting key prefix.
+     */
+    protected function documentTypePrefix(): string
     {
-        if ($this->company && (! $this->company->address()->exists())) {
-            return false;
-        }
-
-        $format = CompanySetting::getSetting('estimate_company_address_format', $this->company_id);
-
-        return $this->getFormattedString($format);
-    }
-
-    public function getCustomerShippingAddress(): string|false
-    {
-        if ($this->customer && (! $this->customer->shippingAddress()->exists())) {
-            return false;
-        }
-
-        $format = CompanySetting::getSetting('estimate_shipping_address_format', $this->company_id);
-
-        return $this->getFormattedString($format);
-    }
-
-    public function getCustomerBillingAddress(): string|false
-    {
-        if ($this->customer && (! $this->customer->billingAddress()->exists())) {
-            return false;
-        }
-
-        $format = CompanySetting::getSetting('estimate_billing_address_format', $this->company_id);
-
-        return $this->getFormattedString($format);
-    }
-
-    public function getNotes(): string
-    {
-        return PdfHtmlSanitizer::sanitize($this->getFormattedString($this->notes));
-    }
-
-    public function getEmailAttachmentSetting(): bool
-    {
-        $estimateAsAttachment = CompanySetting::getSetting('estimate_email_attachment', $this->company_id);
-
-        if ($estimateAsAttachment == 'NO') {
-            return false;
-        }
-
-        return true;
-    }
-
-    public function getEmailBody(string $body): string
-    {
-        $values = array_merge($this->getFieldsArray(), $this->getExtraFields());
-
-        $body = strtr($body, $values);
-
-        return preg_replace('/{(.*?)}/', '', $body);
+        return 'estimate';
     }
 
     public function getExtraFields(): array
@@ -295,17 +220,6 @@ class Estimate extends Model implements HasMedia
      */
     public function getInvoiceTemplateName(): string
     {
-        if ($this->template_name === 'quotation') {
-            $estimateTemplates = [];
-            foreach (PdfTemplateUtils::getFormattedTemplates('estimate') as $template) {
-                $estimateTemplates[] = $template['name'];
-            }
-            if (in_array('quotation', $estimateTemplates)) {
-                return 'quotation';
-            }
-            return 'estimate1';
-        }
-
         $templateName = Str::replace('estimate', 'invoice', $this->template_name);
 
         $name = [];
@@ -344,16 +258,5 @@ class Estimate extends Model implements HasMedia
         }
 
         return true;
-    }
-
-    public function resolveRouteBinding($value, $field = null)
-    {
-        if (request()->header('company')) {
-            return $this->where('company_id', request()->header('company'))
-                ->where($field ?? $this->getKeyName(), $value)
-                ->firstOrFail();
-        }
-
-        return parent::resolveRouteBinding($value, $field);
     }
 }

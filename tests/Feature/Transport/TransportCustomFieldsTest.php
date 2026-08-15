@@ -143,7 +143,7 @@ test('office invoice can be created with native item-level transport columns', f
 
     $response->assertOk();
 
-    $invoice = Invoice::where('invoice_number', 'INV OI-TEST-001')->first();
+    $invoice = Invoice::where('invoice_number', 'OI-TEST-001')->first();
 
     expect($invoice)->not->toBeNull();
 

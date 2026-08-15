@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ExchangeRateProvider extends Model
 {
+    use HasCompanyScopes;
     use HasFactory;
 
     protected $guarded = [
@@ -38,8 +40,4 @@ class ExchangeRateProvider extends Model
         $this->attributes['driver_config'] = json_encode($value);
     }
 
-    public function scopeWhereCompany($query)
-    {
-        $query->where('exchange_rate_providers.company_id', request()->header('company'));
-    }
 }

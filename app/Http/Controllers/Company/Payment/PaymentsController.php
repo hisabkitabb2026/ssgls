@@ -93,9 +93,7 @@ class PaymentsController extends Controller
 
         $this->paymentService->delete($ids);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 
     public function send(SendPaymentRequest $request, Payment $payment)
@@ -104,7 +102,7 @@ class PaymentsController extends Controller
 
         $response = $this->paymentService->send($payment, $request->all());
 
-        return response()->json($response);
+        return $this->successResponse(null, 200, $response);
     }
 
     public function sendPreview(Request $request, Payment $payment)
@@ -113,7 +111,7 @@ class PaymentsController extends Controller
 
         $markdown = new Markdown(view(), config('mail.markdown'));
 
-        $data = $this->paymentService->sendPaymentData($payment, $request->all());
+        $data = $this->paymentService->getSendData($payment, $request->all());
         $data['url'] = $payment->paymentPdfUrl;
 
         return $markdown->render('emails.send.payment', ['data' => $data]);

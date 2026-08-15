@@ -15,6 +15,7 @@ import type { Customer } from '../../../types/domain/customer'
 import type { Currency } from '../../../types/domain/currency'
 import type { Note } from '../../../types/domain/note'
 import type { CustomFieldValue } from '../../../types/domain/custom-field'
+import { formatDate as formatDateUtil } from '../../../utils'
 
 // ----------------------------------------------------------------
 // Stub factories
@@ -305,7 +306,7 @@ export const usePaymentStore = defineStore('payment', {
           }
         } else if (!isEdit && nextNumRes) {
           const now = new Date()
-          this.currentPayment.payment_date = formatDate(now)
+          this.currentPayment.payment_date = formatDateUtil(now)
           this.currentPayment.payment_number =
             nextNumRes.data.nextNumber
           if (companyCurrency) {
@@ -320,12 +321,5 @@ export const usePaymentStore = defineStore('payment', {
     },
   },
 })
-
-function formatDate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 export type PaymentStore = ReturnType<typeof usePaymentStore>

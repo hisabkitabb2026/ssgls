@@ -1,11 +1,11 @@
 import { client } from '../client'
 import { API } from '../endpoints'
+import { createCrudService, type SendPayload } from './crud-service.factory'
 import type { Payment, PaymentMethod, CreatePaymentPayload } from '@/scripts/types/domain/payment'
 import type {
   ApiResponse,
   ListParams,
   NextNumberResponse,
-  DeletePayload,
 } from '@/scripts/types/api'
 
 export interface PaymentListParams extends ListParams {
@@ -27,53 +27,21 @@ export interface PaymentListResponse {
   meta: PaymentListMeta
 }
 
-export interface SendPaymentPayload {
-  id: number
-  subject?: string
-  body?: string
-  from?: string
-  to?: string
-}
+/** @deprecated Use SendPayload from crud-service.factory.ts */
+export type SendPaymentPayload = SendPayload
 
 export interface CreatePaymentMethodPayload {
   name: string
 }
 
+// Use the factory for standard CRUD + send/clone/changeStatus methods
+const basePaymentService = createCrudService<Payment, PaymentListParams, CreatePaymentPayload>({
+  basePath: API.PAYMENTS,
+  deletePath: API.PAYMENTS_DELETE,
+})
+
 export const paymentService = {
-  async list(params?: PaymentListParams): Promise<PaymentListResponse> {
-    const { data } = await client.get(API.PAYMENTS, { params })
-    return data
-  },
-
-  async get(id: number): Promise<ApiResponse<Payment>> {
-    const { data } = await client.get(`${API.PAYMENTS}/${id}`)
-    return data
-  },
-
-  async create(payload: CreatePaymentPayload): Promise<ApiResponse<Payment>> {
-    const { data } = await client.post(API.PAYMENTS, payload)
-    return data
-  },
-
-  async update(id: number, payload: Partial<CreatePaymentPayload>): Promise<ApiResponse<Payment>> {
-    const { data } = await client.put(`${API.PAYMENTS}/${id}`, payload)
-    return data
-  },
-
-  async delete(payload: DeletePayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.PAYMENTS_DELETE, payload)
-    return data
-  },
-
-  async send(payload: SendPaymentPayload): Promise<ApiResponse<Payment>> {
-    const { data } = await client.post(`${API.PAYMENTS}/${payload.id}/send`, payload)
-    return data
-  },
-
-  async sendPreview(id: number, params?: Record<string, unknown>): Promise<ApiResponse<string>> {
-    const { data } = await client.get(`${API.PAYMENTS}/${id}/send/preview`, { params })
-    return data
-  },
+  ...basePaymentService,
 
   async getNextNumber(params?: { key?: string }): Promise<NextNumberResponse> {
     const { data } = await client.get(API.NEXT_NUMBER, { params: { key: 'payment', ...params } })

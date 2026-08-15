@@ -2,105 +2,197 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class WarehouseItem extends Model
 {
-use HasFactory;
+    use HasFactory;
 
-protected $guarded = ['id'];
+    protected $guarded = ['id'];
 
-protected function casts(): array
-{
-  return [
-      'date_received' => 'datetime',
-      'created_at' => 'datetime',
-      'updated_at' => 'datetime',
-  ];
-}
+    public const STATUS_STORED = 'stored';
 
-public const STATUS_STORED = 'stored';
+    public const STATUS_PICKED = 'picked_for_consolidation';
 
-public const STATUS_PICKED = 'picked_for_consolidation';
+    public const STATUS_LOADED = 'loaded_on_vehicle';
 
-public const STATUS_LOADED = 'loaded_on_vehicle';
+    public const STATUS_IN_TRANSIT = 'in_transit';
 
-public const STATUS_IN_TRANSIT = 'in_transit';
+    public const STATUS_DELIVERED = 'delivered';
 
-public const STATUS_DELIVERED = 'delivered';
+    public const STATUS_CANCELLED = 'cancelled';
 
-public const STATUS_CANCELLED = 'cancelled';
+    public const LOAD_TYPE_FULL = 'full_load';
 
-public static function getStatuses(): array
-{
-  return [
-      self::STATUS_STORED,
-      self::STATUS_PICKED,
-      self::STATUS_LOADED,
-      self::STATUS_IN_TRANSIT,
-      self::STATUS_DELIVERED,
-      self::STATUS_CANCELLED,
-  ];
-}
+    public const LOAD_TYPE_PART = 'part_load';
 
-public function company(): BelongsTo
-{
-  return $this->belongsTo(Company::class);
-}
+    public const PRIORITY_NORMAL = 'normal';
 
-public function lr(): BelongsTo
-{
-  return $this->belongsTo(Invoice::class, 'lr_id');
-}
+    public const PRIORITY_URGENT = 'urgent';
 
-public function consolidation(): BelongsTo
-{
-  return $this->belongsTo(ConsolidationGroup::class, 'consolidation_id');
-}
+    public const PRIORITY_CRITICAL = 'critical';
 
-public function delivery(): BelongsTo
-{
-  return $this->belongsTo(Delivery::class);
-}
+    protected function casts(): array
+    {
+        return [
+            'date_received' => 'datetime',
+            'promised_dispatch_date' => 'date',
+            'weight_kg' => 'decimal:2',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
-public function getDaysInWarehouseAttribute(): ?int
-{
-  if (! $this->date_received) {
-      return null;
-  }
+    public static function getStatuses(): array
+    {
+        return [
+            self::STATUS_STORED,
+            self::STATUS_PICKED,
+            self::STATUS_LOADED,
+            self::STATUS_IN_TRANSIT,
+            self::STATUS_DELIVERED,
+            self::STATUS_CANCELLED,
+        ];
+    }
 
-  return now()->diffInDays($this->date_received);
-}
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
 
-public function scopeForCompany($query, int $companyId)
-{
-  return $query->where('company_id', $companyId);
-}
+    public function lr(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class, 'lr_id');
+    }
 
-public function scopeStored($query)
-{
-  return $query->where('status', self::STATUS_STORED);
-}
+    public function consolidation(): BelongsTo
+    {
+        return $this->belongsTo(ConsolidationGroup::class, 'consolidation_id');
+    }
 
-public function scopeByDestination($query, string $destination)
-{
-  return $query->where('destination_city', $destination);
-}
+    public function loadTrip(): BelongsTo
+    {
+        return $this->belongsTo(LoadTrip::class, 'delivery_id');
+    }
 
-public function scopeByLocation($query, string $location)
-{
-  return $query->where('warehouse_location', $location);
-}
+    // ──────────────────────────────────────────────────────────────
+    // Accessors
+    // ──────────────────────────────────────────────────────────────
 
-public function scopeByStatus($query, string $status)
-{
-  return $query->where('status', $status);
-}
+    public function getDaysInWarehouseAttribute(): ?int
+    {
+        if (! $this->date_received) {
+            return null;
+        }
 
-public function scopeReadyForConsolidation($query)
-{
-  return $query->where('status', self::STATUS_STORED);
-}
+        return now()->startOfDay()->diffInDays(Carbon::parse($this->date_received)->startOfDay());
+    }
+
+    /**
+     * Whether the item's promised dispatch date has passed and it's still in the warehouse.
+     */
+    public function getIsOverdueAttribute(): bool
+    {
+        if (! $this->promised_dispatch_date) {
+            return false;
+        }
+
+        return $this->promised_dispatch_date < now()->toDateString()
+            && in_array($this->status, [self::STATUS_STORED, self::STATUS_PICKED]);
+    }
+
+    /**
+     * Days remaining until the promised dispatch deadline.
+     * Negative = overdue.
+     */
+    public function getDaysUntilDeadlineAttribute(): ?int
+    {
+        if (! $this->promised_dispatch_date) {
+            return null;
+        }
+
+        return now()->startOfDay()->diffInDays(Carbon::parse($this->promised_dispatch_date)->startOfDay(), false);
+    }
+
+    /**
+     * Aging bucket for dashboard grouping.
+     */
+    public function getAgingBucketAttribute(): string
+    {
+        $days = $this->days_in_warehouse ?? 0;
+
+        if ($days <= 3) {
+            return '0-3';
+        }
+        if ($days <= 7) {
+            return '4-7';
+        }
+        if ($days <= 15) {
+            return '8-15';
+        }
+
+        return '15+';
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Scopes
+    // ──────────────────────────────────────────────────────────────
+
+    public function scopeForCompany(Builder $query, int $companyId): Builder
+    {
+        return $query->where('company_id', $companyId);
+    }
+
+    public function scopeStored(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_STORED);
+    }
+
+    public function scopeByDestination(Builder $query, string $destination): Builder
+    {
+        return $query->where('destination_city', $destination);
+    }
+
+    public function scopeByLocation(Builder $query, string $location): Builder
+    {
+        return $query->where('warehouse_location', $location);
+    }
+
+    public function scopeByStatus(Builder $query, string $status): Builder
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByLoadType(Builder $query, string $loadType): Builder
+    {
+        return $query->where('load_type', $loadType);
+    }
+
+    public function scopeReadyForConsolidation(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_STORED)
+            ->whereNull('consolidation_id');
+    }
+
+    /**
+     * Items past their promised dispatch date that are still in the warehouse.
+     */
+    public function scopeOverdue(Builder $query): Builder
+    {
+        return $query->whereNotNull('promised_dispatch_date')
+            ->where('promised_dispatch_date', '<', now()->toDateString())
+            ->whereIn('status', [self::STATUS_STORED, self::STATUS_PICKED]);
+    }
+
+    /**
+     * Items not yet assigned to any consolidation group.
+     */
+    public function scopeUnassigned(Builder $query): Builder
+    {
+        return $query->whereNull('consolidation_id');
+    }
 }

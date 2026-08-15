@@ -8,7 +8,7 @@ use App\Http\Requests\DeleteInvoiceRequest;
 use App\Http\Requests\SendInvoiceRequest;
 use App\Http\Resources\EstimateResource;
 use App\Http\Resources\InvoiceResource;
-use App\Jobs\GenerateInvoicePdfJob;
+use App\Jobs\GenerateDocumentPdfJob;
 use App\Models\Estimate;
 use App\Models\Invoice;
 use App\Services\Document\InvoiceService;
@@ -93,7 +93,7 @@ class InvoicesController extends Controller
             $this->invoiceService->send($invoice, $request->only(['subject', 'body']));
         }
 
-        GenerateInvoicePdfJob::dispatch($invoice);
+        GenerateDocumentPdfJob::dispatch($invoice, 'invoice', 'invoice_number');
 
         return new InvoiceResource($invoice);
     }
@@ -124,7 +124,7 @@ class InvoicesController extends Controller
 
         $invoice = $this->invoiceService->update($invoice, $request);
 
-        GenerateInvoicePdfJob::dispatch($invoice, true);
+        GenerateDocumentPdfJob::dispatch($invoice, 'invoice', 'invoice_number', true);
 
         return new InvoiceResource($invoice);
     }
@@ -145,9 +145,7 @@ class InvoicesController extends Controller
 
         $this->invoiceService->delete($ids);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 
     public function send(SendInvoiceRequest $request, Invoice $invoice)
@@ -156,9 +154,7 @@ class InvoicesController extends Controller
 
         $this->invoiceService->send($invoice, $request->all());
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 
     public function sendPreview(SendInvoiceRequest $request, Invoice $invoice)
@@ -167,7 +163,7 @@ class InvoicesController extends Controller
 
         $markdown = new Markdown(view(), config('mail.markdown'));
 
-        $data = $this->invoiceService->sendInvoiceData($invoice, $request->all());
+        $data = $this->invoiceService->getSendData($invoice, $request->all());
         $data['url'] = $invoice->invoicePdfUrl;
 
         return $markdown->render('emails.send.invoice', ['data' => $data]);
@@ -201,9 +197,7 @@ class InvoicesController extends Controller
 
         $this->invoiceService->changeStatus($invoice, $request->status);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 
     /**
@@ -233,10 +227,7 @@ class InvoicesController extends Controller
             ->first();
 
         if (! $invoice) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invoice not found',
-            ], 404);
+            return $this->notFoundResponse('Invoice not found');
         }
 
         return response()->json([
@@ -277,8 +268,6 @@ class InvoicesController extends Controller
 
         $this->invoiceService->delete(collect([$invoice->id]));
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 }

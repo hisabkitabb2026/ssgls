@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CustomField extends Model
 {
+    use HasCompanyScopes;
     use HasFactory;
 
     protected $guarded = [
@@ -65,26 +67,12 @@ class CustomField extends Model
         return $this->hasMany(CustomFieldValue::class);
     }
 
-    public function scopeWhereCompany($query)
-    {
-        return $query->where('custom_fields.company_id', request()->header('company'));
-    }
-
     public function scopeWhereSearch($query, $search)
     {
         $query->where(function ($query) use ($search) {
             $query->where('label', 'LIKE', '%'.$search.'%')
                 ->orWhere('name', 'LIKE', '%'.$search.'%');
         });
-    }
-
-    public function scopePaginateData($query, $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
     }
 
     public function scopeApplyFilters($query, array $filters)

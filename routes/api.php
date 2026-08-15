@@ -23,6 +23,7 @@ use App\Http\Controllers\Company\Auth\AuthController;
 use App\Http\Controllers\Company\Auth\ForgotPasswordController;
 use App\Http\Controllers\Company\Auth\InvitationRegistrationController;
 use App\Http\Controllers\Company\Auth\ResetPasswordController;
+use App\Http\Controllers\Company\Consolidation\ConsolidationGroupController;
 use App\Http\Controllers\Company\Customer\CustomersController;
 use App\Http\Controllers\Company\Customer\CustomerStatsController;
 use App\Http\Controllers\Company\CustomField\CustomFieldsController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\Company\Invoice\LrReceiptAutoFillController;
 use App\Http\Controllers\Company\Invoice\LrReceiptController;
 use App\Http\Controllers\Company\Item\ItemsController;
 use App\Http\Controllers\Company\Item\UnitsController;
+use App\Http\Controllers\Company\LoadTrip\LoadTripController;
 use App\Http\Controllers\Company\LorryReceipt\LorryReceiptController;
 use App\Http\Controllers\Company\Members\MembersController;
 use App\Http\Controllers\Company\Modules\CompanyModulesController;
@@ -323,7 +325,21 @@ Route::prefix('/v1')->group(function () {
             Route::get('/warehouse-items/destination/{destination}', [WarehouseItemController::class, 'byDestination']);
             Route::get('/warehouse-items/location/{location}', [WarehouseItemController::class, 'byLocation']);
             Route::patch('/warehouse-items/{id}/status', [WarehouseItemController::class, 'updateStatus']);
+            Route::get('/warehouse-items/overdue', [WarehouseItemController::class, 'overdue']);
+            Route::get('/warehouse-items/aging-report', [WarehouseItemController::class, 'agingReport']);
             Route::apiResource('warehouse-items', WarehouseItemController::class);
+
+            // Transport module - Consolidation Groups (Part-Load consolidation)
+            Route::get('/consolidation-groups/candidates', [ConsolidationGroupController::class, 'candidates']);
+            Route::post('/consolidation-groups/{id}/items', [ConsolidationGroupController::class, 'addItem']);
+            Route::delete('/consolidation-groups/{id}/items/{itemId}', [ConsolidationGroupController::class, 'removeItem']);
+            Route::patch('/consolidation-groups/{id}/ready', [ConsolidationGroupController::class, 'markReady']);
+            Route::apiResource('consolidation-groups', ConsolidationGroupController::class);
+
+            // Transport module - Load Trips (Truck Dispatches)
+            Route::patch('/load-trips/{id}/dispatch', [LoadTripController::class, 'dispatchTrip']);
+            Route::patch('/load-trips/{id}/deliver', [LoadTripController::class, 'markDelivered']);
+            Route::apiResource('load-trips', LoadTripController::class);
 
             // Recurring Invoice
             // -------------------------------------------------
@@ -428,6 +444,7 @@ Route::prefix('/v1')->group(function () {
             Route::put('/me/settings', [UserProfileController::class, 'updateSettings']);
 
             Route::post('/me/upload-avatar', [UserProfileController::class, 'uploadAvatar']);
+            Route::post('/me/upload-signature', [UserProfileController::class, 'uploadSignature']);
 
             Route::put('/company', [CompanyController::class, 'updateCompany']);
 

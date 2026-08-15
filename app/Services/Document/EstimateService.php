@@ -2,24 +2,41 @@
 
 namespace App\Services\Document;
 
-use App;
 use App\Facades\Hashids;
-use App\Facades\Pdf;
 use App\Mail\SendEstimateMail;
-use App\Models\Company;
 use App\Models\CompanySetting;
-use App\Models\CustomField;
+use App\Models\CustomFieldValue;
 use App\Models\Estimate;
-use App\Models\ExchangeRateLog;
+use App\Models\EstimateItem;
 use App\Models\Invoice;
-use App\Services\Mail\CompanyMailConfigService;
-use App\Support\Pdf\PdfTemplateUtils;
+use App\Models\Unit;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class EstimateService
+class EstimateService extends BaseDocumentService
 {
+    /**
+     * Document-type configuration for SendDocumentMail.
+     */
+    protected array $mailType = [
+        'model_class' => Estimate::class,
+        'data_key' => 'estimate',
+        'route_name' => 'estimate',
+        'template' => 'emails.send.estimate',
+        'number_field' => 'estimate_number',
+        'mailable_class' => SendEstimateMail::class,
+    ];
+
+    /**
+     * Get the fully-qualified model class for this service.
+     */
+    protected function getModelClass(): string
+    {
+        return Estimate::class;
+    }
+
     public function __construct(
         private readonly DocumentItemService $documentItemService,
     ) {}
@@ -44,11 +61,7 @@ class EstimateService
         $estimate->customer_sequence_number = $serial->nextCustomerSequenceNumber;
         $estimate->save();
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
-
-        if ((string) $data['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($estimate);
-        }
+        $this->logExchangeRateIfNeeded($estimate, $request->header('company'));
 
         $this->documentItemService->createItems($estimate, $request->items);
 
@@ -80,14 +93,10 @@ class EstimateService
 
         $estimate->update($data);
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
-
-        if ((string) $data['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($estimate);
-        }
+        $this->logExchangeRateIfNeeded($estimate, $request->header('company'));
 
         $itemIds = $estimate->items()->pluck('id');
-        \App\Models\CustomFieldValue::where('custom_field_valuable_type', (new \App\Models\EstimateItem)->getMorphClass())
+        CustomFieldValue::where('custom_field_valuable_type', (new EstimateItem)->getMorphClass())
             ->whereIn('custom_field_valuable_id', $itemIds)
             ->delete();
 
@@ -113,8 +122,13 @@ class EstimateService
         ])->find($estimate->id);
     }
 
-    public function sendEstimateData(Estimate $estimate, array $data): array
+    /**
+     * Prepare email send data for an estimate (implements BaseDocumentService template method).
+     */
+    protected function prepareSendData(Model $document, array $data): array
     {
+        $estimate = $document;
+
         $data['estimate'] = $estimate->toArray();
         $data['user'] = $estimate->customer->toArray();
         $data['company'] = $estimate->company->toArray();
@@ -124,96 +138,42 @@ class EstimateService
         return $data;
     }
 
+    /**
+     * Send an estimate email — delegates to BaseDocumentService::sendDocument().
+     * Updates status to SENT before sending if currently DRAFT.
+     */
     public function send(Estimate $estimate, array $data): array
     {
-        $data = $this->sendEstimateData($estimate, $data);
-
-        CompanyMailConfigService::apply($estimate->company_id);
-
         if ($estimate->status == Estimate::STATUS_DRAFT) {
             $estimate->status = Estimate::STATUS_SENT;
             $estimate->save();
         }
 
-        $mail = \Mail::to($data['to']);
-        if (! empty($data['cc'])) {
-            $mail->cc($data['cc']);
-        }
-        if (! empty($data['bcc'])) {
-            $mail->bcc($data['bcc']);
-        }
-        try {
-            $mail->send(new SendEstimateMail($data));
-        } catch (\Throwable $e) {
-            \Log::error('Failed to send estimate email: ' . $e->getMessage());
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'mail' => ['Failed to send email. Please check your mail SMTP configuration under Settings. Details: ' . $e->getMessage()],
-            ]);
-        }
-
-        return [
-            'success' => true,
-            'type' => 'send',
-        ];
+        return $this->sendDocument($estimate, $data);
     }
 
     public function getPdfData(Estimate $estimate)
     {
-        $taxes = collect();
-
-        if ($estimate->tax_per_item === 'YES') {
-            foreach ($estimate->items as $item) {
-                foreach ($item->taxes as $tax) {
-                    $found = $taxes->filter(function ($item) use ($tax) {
-                        return $item->tax_type_id == $tax->tax_type_id;
-                    })->first();
-
-                    if ($found) {
-                        $found->amount += $tax->amount;
-                    } else {
-                        $taxes->push($tax);
-                    }
-                }
-            }
-        }
+        $taxes = $this->aggregateItemTaxes($estimate);
 
         $estimateTemplate = Estimate::find($estimate->id)->template_name;
 
-        $company = Company::find($estimate->company_id);
-        $locale = CompanySetting::getSetting('language', $company->id);
-        $customFields = CustomField::where('model_type', 'Item')->get();
+        // Pass the units (truck weight types — 9MT, 10MT, etc.) to the PDF
+        // view so the Rate Card Matrix table can render dynamic columns.
+        $units = Unit::where('company_id', $estimate->company_id)
+            ->orderBy('name')
+            ->get();
 
-        App::setLocale($locale);
-
-        $logo = $company->logo_path;
-
-        $quotationRates = [];
-        if ($estimate->quotation_rates) {
-            $quotationRates = is_string($estimate->quotation_rates)
-                ? json_decode($estimate->quotation_rates, true)
-                : $estimate->quotation_rates;
-        }
-
-        view()->share([
-            'estimate' => $estimate,
-            'customFields' => $customFields,
-            'logo' => $logo ?? null,
-            'company_address' => $estimate->getCompanyAddress(),
-            'shipping_address' => $estimate->getCustomerShippingAddress(),
-            'billing_address' => $estimate->getCustomerBillingAddress(),
-            'notes' => $estimate->getNotes(),
-            'taxes' => $taxes,
-            'quotation_rates' => $quotationRates,
-        ]);
-
-        $template = PdfTemplateUtils::findFormattedTemplate('estimate', $estimateTemplate, '');
-        $templatePath = $template['custom'] ? sprintf('pdf_templates::estimate.%s', $estimateTemplate) : sprintf('app.pdf.estimate.%s', $estimateTemplate);
-
-        if (request()->has('preview')) {
-            return view($templatePath);
-        }
-
-        return Pdf::loadView($templatePath);
+        return $this->preparePdfView(
+            $estimate,
+            [
+                'estimate' => $estimate,
+                'taxes' => $taxes,
+                'units' => $units,
+            ],
+            'estimate',
+            $estimateTemplate,
+        );
     }
 
     public function clone(Estimate $estimate): Estimate
@@ -284,18 +244,7 @@ class EstimateService
             $this->documentItemService->createTaxes($newEstimate, $estimate->taxes->toArray());
         }
 
-        if ($estimate->fields()->exists()) {
-            $customFields = [];
-
-            foreach ($estimate->fields as $data) {
-                $customFields[] = [
-                    'id' => $data->custom_field_id,
-                    'value' => $data->defaultAnswer,
-                ];
-            }
-
-            $newEstimate->addCustomFields($customFields);
-        }
+        $this->copyCustomFields($estimate, $newEstimate);
 
         return $newEstimate;
     }
@@ -371,18 +320,7 @@ class EstimateService
             $this->documentItemService->createTaxes($invoice, $estimate->taxes->toArray());
         }
 
-        if ($estimate->fields()->exists()) {
-            $customFields = [];
-
-            foreach ($estimate->fields as $data) {
-                $customFields[] = [
-                    'id' => $data->custom_field_id,
-                    'value' => $data->defaultAnswer,
-                ];
-            }
-
-            $invoice->addCustomFields($customFields);
-        }
+        $this->copyCustomFields($estimate, $invoice);
 
         $estimate->checkForEstimateConvertAction();
 

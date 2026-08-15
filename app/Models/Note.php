@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Note extends Model
 {
+    use HasCompanyScopes;
     use HasFactory;
 
     protected $guarded = ['id'];
@@ -41,8 +43,4 @@ class Note extends Model
         return $query->where('type', $type);
     }
 
-    public function scopeWhereCompany(Builder $query): void
-    {
-        $query->where('notes.company_id', request()->header('company'));
-    }
 }

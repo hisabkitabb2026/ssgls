@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, onMounted } from 'vue'
+import { usePaymentStore } from '@/scripts/features/company/payments/store'
+import { useModalStore } from '@/scripts/stores/modal.store'
+import { useI18n } from 'vue-i18n'
+import PaymentModeModal from '@/scripts/features/company/settings/components/PaymentModeModal.vue'
 
 /**
  * TransportCustomFields — renders transport receipt fields (LR Receipt,
@@ -14,11 +18,12 @@ import { computed, watch } from 'vue'
 interface TransportField {
   key: string
   label: string
-  type?: 'text' | 'number' | 'date' | 'textarea' | 'dropdown'
+  type?: 'text' | 'number' | 'date' | 'textarea' | 'dropdown' | 'payment_mode'
   options?: string[]
   readonly?: boolean
   fullWidth?: boolean
 }
+
 
 interface FieldSection {
   title: string
@@ -33,7 +38,26 @@ const props = defineProps<{
   isLoading?: boolean | null
 }>()
 
+const { t } = useI18n()
+const paymentStore = usePaymentStore()
+const modalStore = useModalStore()
+
 const invoiceData = computed(() => props.store[props.storeProp])
+
+// --- Payment Modes ---
+// Fetch payment modes on mount so they're available for payment_mode fields
+onMounted(() => {
+  paymentStore.fetchPaymentModes({ limit: 'all' })
+})
+
+function addPaymentMode(): void {
+  modalStore.openModal({
+    title: t('settings.payment_modes.add_payment_mode'),
+    componentName: 'PaymentModeModal',
+    refreshData: () => paymentStore.fetchPaymentModes({ limit: 'all' }),
+  })
+}
+
 
 // --- LR Receipt field sections ---
 const lrReceiptSections: FieldSection[] = [
@@ -122,11 +146,11 @@ const lorryReceiptSections: FieldSection[] = [
       { key: 'paid_to', label: 'Paid To' },
       { key: 'lorry_hire_amount', label: 'Lorry Hire', type: 'number' },
       { key: 'other_charges_amount', label: 'Add Other Charges', type: 'number' },
-      { key: 'advance_cash_cheque_no', label: 'Advance Paid by Cash/Cheque No' },
+      { key: 'advance_cash_cheque_no', label: 'Advance Payment Mode', type: 'payment_mode' },
       { key: 'advance_on', label: 'Advance On', type: 'date' },
       { key: 'advance_bank', label: 'Bank' },
       { key: 'advance_amount', label: 'Advance Paid Rs', type: 'number' },
-      { key: 'balance_payable_at', label: 'Balance Payable at' },
+      { key: 'balance_payable_at', label: 'Balance Payable at', type: 'dropdown', options: ['UMB', 'VAPI'] },
       { key: 'loaded_by', label: 'Loaded By' },
     ],
   },
@@ -140,9 +164,9 @@ const lorryReceiptSections: FieldSection[] = [
       { key: 'final_other_amount', label: 'Other Rs', type: 'number' },
       { key: 'less_advance_other_branch_amount', label: 'Less Adv. at other branch', type: 'number' },
       { key: 'less_deduction_claims_amount', label: 'Less Deduction for Claims', type: 'number' },
-      { key: 'final_balance_paid_at', label: 'Final Balance Amount Paid at' },
+      { key: 'final_balance_paid_at', label: 'Final Balance Amount Paid at', type: 'dropdown', options: ['UMB', 'VAPI'] },
       { key: 'final_balance_on', label: 'Final Balance Date', type: 'date' },
-      { key: 'final_cash_cheque_no', label: 'Cash/Cheque No.' },
+      { key: 'final_cash_cheque_no', label: 'Final Payment Mode', type: 'payment_mode' },
       { key: 'final_bank', label: 'Final Bank' },
     ],
   },
@@ -292,6 +316,27 @@ watch(
               :disabled="field.readonly"
               :class="field.readonly ? 'bg-surface-muted font-semibold' : ''"
             />
+            <!-- Payment Mode (BaseMultiselect with add-new action) -->
+            <BaseMultiselect
+              v-else-if="field.type === 'payment_mode'"
+              v-model="invoiceData[field.key]"
+              :options="paymentStore.paymentModes"
+              value-prop="name"
+              label="name"
+              track-by="name"
+              searchable
+              :placeholder="t('payments.select_payment_mode')"
+            >
+              <template #action>
+                <BaseSelectAction @click="addPaymentMode">
+                  <BaseIcon
+                    name="PlusIcon"
+                    class="h-4 mr-2 -ml-2 text-center text-primary-400"
+                  />
+                  {{ t('settings.payment_modes.add_payment_mode') }}
+                </BaseSelectAction>
+              </template>
+            </BaseMultiselect>
             <!-- Text (default) -->
             <BaseInput
               v-else
@@ -301,5 +346,8 @@ watch(
         </div>
       </div>
     </BaseCard>
+
+    <!-- Payment Mode Modal (for adding new payment modes inline) -->
+    <PaymentModeModal />
   </div>
 </template>

@@ -11,6 +11,7 @@ export interface UpdateCompanyPayload {
   enrollment_no?: string | null
   gstin?: string | null
   pan_no?: string | null
+  billing_branch?: string | null
   phone?: string | null
   address?: {
     address_street_1?: string | null

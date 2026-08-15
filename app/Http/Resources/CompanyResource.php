@@ -24,6 +24,7 @@ class CompanyResource extends JsonResource
             'enrollment_no' => $this->enrollment_no,
             'gstin' => $this->gstin,
             'pan_no' => $this->pan_no,
+            'billing_branch' => $this->billing_branch,
             'logo' => $this->logo,
             'logo_path' => $this->logo_path,
             'unique_hash' => $this->unique_hash,

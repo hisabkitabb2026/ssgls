@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -12,9 +12,8 @@ import useVuelidate from '@vuelidate/core'
 import { useItemStore } from '../store'
 import { useTaxTypes } from '../use-tax-types'
 import { useCompanyStore } from '../../../../stores/company.store'
-import { useModalStore } from '../../../../stores/modal.store'
 import { useUserStore } from '../../../../stores/user.store'
-import ItemUnitModal from '@/scripts/features/company/settings/components/ItemUnitModal.vue'
+import { useNotificationStore } from '../../../../stores/notification.store'
 import type { TaxType } from '@/scripts/types/domain/tax'
 
 interface TaxOption {
@@ -33,28 +32,28 @@ const ABILITIES = {
 
 const itemStore = useItemStore()
 const { taxTypes, fetchTaxTypes } = useTaxTypes()
-const modalStore = useModalStore()
 const companyStore = useCompanyStore()
 const userStore = useUserStore()
+const notificationStore = useNotificationStore()
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
 const isSaving = ref<boolean>(false)
+const isAddingUnit = ref<boolean>(false)
 const taxPerItem = ref<string>(companyStore.selectedCompanySettings.tax_per_item || 'NO')
 const isFetchingInitialData = ref<boolean>(false)
 const isEdit = computed<boolean>(() => route.name === 'items.edit')
 
+// Inline "Add Weight + Rate" form state
+const newUnitForm = reactive({
+  name: '',
+  rate: 0, // in display units (will be converted to cents)
+})
+
 itemStore.resetCurrentItem()
 loadData()
-
-const price = computed<number>({
-  get: () => itemStore.currentItem.price / 100,
-  set: (value: number) => {
-    itemStore.currentItem.price = Math.round(value * 100)
-  },
-})
 
 const taxes = computed({
   get: () =>
@@ -125,15 +124,59 @@ const rules = computed(() => ({
 
 const v$ = useVuelidate(rules, itemStore)
 
-async function addItemUnit(): Promise<void> {
-  modalStore.openModal({
-    title: t('settings.customization.items.add_item_unit'),
-    componentName: 'ItemUnitModal',
-    size: 'sm',
-    refreshData: (unit: { id: number }) => {
-      itemStore.currentItem.unit_id = unit.id
-    },
-  })
+// --- Rate Card helpers ---
+// rate_card is { "unitId": rateInCents }.  Columns come from the units table
+// (itemStore.itemUnits).  The inline "Add Weight + Rate" form lets users
+// create a new unit and set its rate without leaving this page.
+
+function getRateCardRate(unitId: number | string): number {
+  return (itemStore.currentItem.rate_card ?? {})[String(unitId)] ?? 0
+}
+
+function setRateCardRate(unitId: number | string, valueCents: number): void {
+  if (!itemStore.currentItem.rate_card) {
+    itemStore.currentItem.rate_card = {}
+  }
+  itemStore.currentItem.rate_card[String(unitId)] = valueCents
+}
+
+function removeRateCardEntry(unitId: number | string): void {
+  if (itemStore.currentItem.rate_card) {
+    delete itemStore.currentItem.rate_card[String(unitId)]
+  }
+}
+
+// Add a new weight type + rate inline.  Creates the unit via the API,
+// which adds it to itemStore.itemUnits (so it appears as a new row
+// in the Rate Card editor), then sets the rate in the rate_card JSON.
+async function addInlineWeightRate(): Promise<void> {
+  const name = newUnitForm.name.trim()
+  if (!name) {
+    notificationStore.showNotification({
+      type: 'error',
+      message: t('validation.required'),
+    })
+    return
+  }
+
+  isAddingUnit.value = true
+  try {
+    const res = await itemStore.addItemUnit({ name })
+    const newUnitId = res.data.id
+
+    // Set the rate for the newly created unit
+    if (newUnitForm.rate > 0) {
+      setRateCardRate(newUnitId, Math.round(newUnitForm.rate * 100))
+    }
+
+    // Reset the inline form
+    newUnitForm.name = ''
+    newUnitForm.rate = 0
+  } catch {
+    // Error handled by store
+  } finally {
+    isAddingUnit.value = false
+  }
 }
 
 async function loadData(): Promise<void> {
@@ -174,6 +217,10 @@ async function submitItem(): Promise<void> {
     }
 
     if (itemStore.currentItem.taxes) {
+      // Use the first rate from rate_card as the base price for tax calc,
+      // or fall back to 0 if no rates are set.
+      const rateCard = itemStore.currentItem.rate_card ?? {}
+      const firstRate = Object.values(rateCard)[0] ?? 0
       data.taxes = itemStore.currentItem.taxes.map((tax) => ({
         tax_type_id: (tax as Record<string, unknown>).tax_type_id ?? tax.id,
         calculation_type: tax.calculation_type,
@@ -181,7 +228,7 @@ async function submitItem(): Promise<void> {
         amount:
           tax.calculation_type === 'fixed'
             ? tax.fixed_amount
-            : Math.round(price.value * tax.percent),
+            : Math.round((firstRate / 100) * tax.percent),
         percent: tax.percent,
         name: tax.name,
         collective_tax: 0,
@@ -208,8 +255,6 @@ async function submitItem(): Promise<void> {
       </BaseBreadcrumb>
     </BasePageHeader>
 
-    <ItemUnitModal />
-
     <form
       class="grid lg:grid-cols-2 mt-6"
       action="submit"
@@ -218,7 +263,7 @@ async function submitItem(): Promise<void> {
       <BaseCard class="w-full">
         <BaseInputGrid layout="one-column">
           <BaseInputGroup
-            :label="$t('items.name')"
+            :label="$t('items.station_name')"
             :content-loading="isFetchingInitialData"
             required
             :error="
@@ -234,40 +279,76 @@ async function submitItem(): Promise<void> {
             />
           </BaseInputGroup>
 
+          <!-- Rate Card Editor: weight → rate rows.
+               Each row shows a weight type (from the units table) and an
+               editable rate.  The "Add Weight + Rate" button below lets
+               users create a new weight type and set its rate inline,
+               without navigating to Settings. -->
           <BaseInputGroup
-            :label="$t('items.price')"
+            :label="$t('items.rate_card')"
             :content-loading="isFetchingInitialData"
           >
-            <BaseMoney
-              v-model="price"
-              :content-loading="isFetchingInitialData"
-            />
-          </BaseInputGroup>
+            <div class="space-y-2">
+              <div
+                v-for="unit in itemStore.itemUnits"
+                :key="unit.id"
+                class="flex items-center gap-2"
+              >
+                <span class="w-24 text-sm text-body">{{ unit.name }}</span>
+                <BaseMoney
+                  :model-value="getRateCardRate(unit.id) / 100"
+                  :currency="companyStore.selectedCompanyCurrency"
+                  class="relative w-full"
+                  @update:model-value="(val: number) => setRateCardRate(unit.id, Math.round(val * 100))"
+                />
+                <BaseIcon
+                  name="TrashIcon"
+                  class="h-5 w-5 text-muted cursor-pointer hover:text-status-red"
+                  @click="removeRateCardEntry(unit.id)"
+                />
+              </div>
+              <p
+                v-if="itemStore.itemUnits.length === 0"
+                class="text-sm text-muted"
+              >
+                {{ $t('items.no_units_available') }}
+              </p>
 
-          <BaseInputGroup
-            :content-loading="isFetchingInitialData"
-            :label="$t('items.unit')"
-          >
-            <BaseMultiselect
-              v-model="itemStore.currentItem.unit_id"
-              :content-loading="isFetchingInitialData"
-              label="name"
-              :options="itemStore.itemUnits"
-              value-prop="id"
-              :placeholder="$t('items.select_a_unit')"
-              searchable
-              track-by="name"
-            >
-              <template #action>
-                <BaseSelectAction @click="addItemUnit">
-                  <BaseIcon
-                    name="PlusIcon"
-                    class="h-4 mr-2 -ml-2 text-center text-primary-400"
+              <!-- Inline Add Weight + Rate form -->
+              <div class="pt-2 border-t border-line-light">
+                <div class="flex items-center gap-2">
+                  <BaseInput
+                    v-model="newUnitForm.name"
+                    type="text"
+                    :placeholder="$t('items.weight_name_placeholder')"
+                    class="w-24"
+                    :disabled="isAddingUnit"
                   />
-                  {{ $t('settings.customization.items.add_item_unit') }}
-                </BaseSelectAction>
-              </template>
-            </BaseMultiselect>
+                  <BaseMoney
+                    v-model="newUnitForm.rate"
+                    :currency="companyStore.selectedCompanyCurrency"
+                    class="relative w-full"
+                    :disabled="isAddingUnit"
+                  />
+                  <BaseButton
+                    variant="primary-outline"
+                    type="button"
+                    size="sm"
+                    :loading="isAddingUnit"
+                    :disabled="isAddingUnit"
+                    @click="addInlineWeightRate"
+                  >
+                    <template #left="slotProps">
+                      <BaseIcon
+                        name="PlusIcon"
+                        :class="slotProps.class"
+                      />
+                    </template>
+                    {{ $t('items.add_weight_rate') }}
+                  </BaseButton>
+                </div>
+              </div>
+            </div>
           </BaseInputGroup>
 
           <BaseInputGroup

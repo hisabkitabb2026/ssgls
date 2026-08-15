@@ -29,6 +29,14 @@ class ItemsRequest extends FormRequest
             'unit_id' => [
                 'nullable',
             ],
+            'truck_type' => [
+                'nullable',
+                'string',
+            ],
+            'rate_card' => [
+                'nullable',
+                'array',
+            ],
             'description' => [
                 'nullable',
             ],

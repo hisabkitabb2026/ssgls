@@ -269,8 +269,16 @@ watchEffect(() => {
   }
 })
 
+// Request-ID guard: prevents stale API responses from overwriting
+// invoiceList when a newer customer_id change has already been triggered.
+// Without this, overlapping onCustomerChange calls can replace the options
+// array while the user is hovering in the dropdown, breaking hover state.
+let customerChangeRequestId = 0
+
 async function onCustomerChange(customerId: number): Promise<void> {
-  const params: Record<string, unknown> = {
+  const currentRequestId = ++customerChangeRequestId
+
+  const baseParams: Record<string, unknown> = {
     customer_id: customerId,
     status: isEdit.value ? '' : 'DUE',
     limit: 'all',
@@ -278,12 +286,23 @@ async function onCustomerChange(customerId: number): Promise<void> {
 
   isLoadingInvoices.value = true
   try {
-    const [invoiceResponse, customerResponse] = await Promise.all([
-      invoiceService.list(params as never),
+    // Fetch both standard invoices (no template_name → backend excludes
+    // transport templates) and Invoice Receipts (template_name=office_invoice)
+    // so the user can record payments against either type.
+    const officeParams = { ...baseParams, template_name: 'office_invoice' }
+
+    const [standardInvoiceResponse, officeInvoiceResponse, customerResponse] = await Promise.all([
+      invoiceService.list(baseParams as never),
+      invoiceService.list(officeParams as never),
       customerService.get(customerId),
     ])
 
-    invoiceList.value = [...(invoiceResponse.data as unknown as Invoice[])]
+    // Bail out if a newer request has superseded this one
+    if (currentRequestId !== customerChangeRequestId) return
+
+    const standardInvoices = (standardInvoiceResponse.data as unknown as Invoice[]) ?? []
+    const officeInvoices = (officeInvoiceResponse.data as unknown as Invoice[]) ?? []
+    invoiceList.value = [...standardInvoices, ...officeInvoices]
 
     // Set currency from customer
     if (customerResponse.data) {
@@ -321,11 +340,15 @@ async function onCustomerChange(customerId: number): Promise<void> {
       )
     }
   } catch {
+    if (currentRequestId !== customerChangeRequestId) return
     invoiceList.value = []
   } finally {
-    isLoadingInvoices.value = false
+    if (currentRequestId === customerChangeRequestId) {
+      isLoadingInvoices.value = false
+    }
   }
 }
+
 
 function onManualCustomerSelect(): void {
   const params: Record<string, unknown> = {
@@ -366,10 +389,21 @@ async function submitPaymentData(): Promise<void> {
       : paymentStore.addPayment
 
     const response = await action(data)
-    router.push(`/admin/payments/${response.data.data.id}/view`)
+
+    // If we came from an invoice list (via "Record Payment"), redirect back
+    // to that list after saving. Otherwise go to the payment detail view.
+    const fromRoute = route.query.from as string | undefined
+    if (fromRoute === 'standard-invoices') {
+      router.push('/admin/standard-invoices')
+    } else if (fromRoute === 'invoices') {
+      router.push('/admin/invoices')
+    } else {
+      router.push(`/admin/payments/${response.data.data.id}/view`)
+    }
   } catch {
     isSaving.value = false
   }
+
 }
 
 onBeforeUnmount(() => {

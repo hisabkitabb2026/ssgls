@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\SafeOrderBy;
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
 use Carbon\Carbon;
 use Cron;
@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RecurringInvoice extends Model
 {
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
 
@@ -114,33 +115,9 @@ class RecurringInvoice extends Model
         return $this->belongsTo(Currency::class);
     }
 
-    public function scopeWhereCompany($query)
-    {
-        $query->where('recurring_invoices.company_id', request()->header('company'));
-    }
-
-    public function scopePaginateData($query, $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
-    }
-
-    public function scopeWhereOrder($query, $orderByField, $orderBy)
-    {
-        SafeOrderBy::apply($query, $orderByField, $orderBy);
-    }
-
     public function scopeWhereStatus($query, $status)
     {
         return $query->where('recurring_invoices.status', $status);
-    }
-
-    public function scopeWhereCustomer($query, $customer_id)
-    {
-        $query->where('customer_id', $customer_id);
     }
 
     public function scopeRecurringInvoicesStartBetween($query, $start, $end)

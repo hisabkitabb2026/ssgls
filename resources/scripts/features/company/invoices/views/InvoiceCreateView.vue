@@ -23,7 +23,7 @@
   </div>
 
   <BasePage class="relative invoice-create-page">
-    <form @submit.prevent="submitForm">
+    <form @submit.prevent="submitForm" @keydown.enter="handleEnterKey">
       <BasePageHeader :title="pageTitle">
         <BaseBreadcrumb>
           <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
@@ -94,168 +94,157 @@
       </BasePageHeader>
 
 
-      <!-- Booking Information box (LR Receipt only) -->
-      <BaseCard v-if="isLrReceipt" class="mb-6">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <BaseIcon name="ClipboardIcon" class="h-5 w-5 text-primary-500" />
-            <h3 class="text-base font-semibold text-heading">Booking Information</h3>
+      <!-- Single white card wrapping all form content — matches CustomerCreateView layout -->
+      <BaseCard class="mt-5">
+        <!-- Section 1: Booking / Invoice Information -->
+        <div class="grid grid-cols-5 gap-4 mb-8">
+          <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
+            {{ isLrReceipt ? 'Booking Information' : isOfficeInvoice ? 'Invoice Information' : 'Invoice Details' }}
+          </h6>
+
+          <div class="col-span-5 lg:col-span-4">
+            <InvoiceBasicFields
+              :v="v$"
+              :is-loading="isLoadingContent"
+              :is-edit="isEdit"
+              :is-recurring="isRecurring"
+              :show-consignee="isLrReceipt"
+              :is-transport-receipt="isTransportReceipt"
+            />
           </div>
-        </template>
-        <InvoiceBasicFields
-          :v="v$"
-          :is-loading="isLoadingContent"
-          :is-edit="isEdit"
-          :is-recurring="isRecurring"
-          :show-consignee="isLrReceipt"
-          :is-transport-receipt="isTransportReceipt"
-        />
-      </BaseCard>
-
-      <!-- Invoice Information box (office_invoice only) -->
-      <BaseCard v-else-if="isOfficeInvoice" class="mb-6">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <BaseIcon name="DocumentTextIcon" class="h-5 w-5 text-primary-500" />
-            <h3 class="text-base font-semibold text-heading">Invoice Information</h3>
-          </div>
-        </template>
-        <InvoiceBasicFields
-          :v="v$"
-          :is-loading="isLoadingContent"
-          :is-edit="isEdit"
-          :is-recurring="isRecurring"
-          :show-consignee="false"
-          :is-transport-receipt="isTransportReceipt"
-        />
-      </BaseCard>
-
-      <!-- Regular invoices: basic fields without a card wrapper -->
-      <InvoiceBasicFields
-        v-else
-        :v="v$"
-        :is-loading="isLoadingContent"
-        :is-edit="isEdit"
-        :is-recurring="isRecurring"
-        :show-consignee="isLrReceipt"
-        :is-transport-receipt="isTransportReceipt"
-      />
+        </div>
 
 
 
 
 
-      <!-- Transport-specific: Custom fields & Lorry Receipt party fields -->
-      <div v-if="isTransportReceipt" class="mb-8">
-        <!-- Lorry Receipt: Owner/Driver/Broker party selector -->
-        <LorryReceiptPartyFields v-if="isLorryReceipt" />
+        <!-- Transport-specific sections -->
+        <template v-if="isTransportReceipt">
+          <!-- Lorry Receipt: Owner/Driver/Broker party selector -->
+          <template v-if="isLorryReceipt">
+            <BaseDivider class="mb-5 md:mb-8" />
 
-        <!-- Office Invoice: Consignment items table with Add New Item -->
-        <OfficeInvoiceItemsTable
-          v-if="isOfficeInvoice"
-          :is-edit="isEdit"
-          :is-loading="isLoadingContent"
-          :store="invoiceStore"
-          store-prop="newInvoice"
-          :item-validation-scope="invoiceValidationScope"
-          @consignment-valid="onConsignmentValidChange"
-        />
+            <div class="grid grid-cols-5 gap-4 mb-8">
+              <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
+                Party Details
+              </h6>
 
-
-        <!-- Transport fields — sectioned card layout (lr_receipt, lorry_receipt only) -->
-        <TransportCustomFields
-          v-if="!isOfficeInvoice"
-          :is-loading="isLoadingContent"
-          :store="invoiceStore"
-          store-prop="newInvoice"
-          :template-name="transportTemplateName"
-          :class="isLorryReceipt ? 'mt-6' : ''"
-        />
-
-        <!-- Lorry Receipt: Document uploads (Aadhar, PAN, RC copies) -->
-        <BaseCard v-if="isLorryReceipt" class="mt-6">
-          <template #header>
-            <div class="flex items-center gap-2">
-              <BaseIcon name="PaperClipIcon" class="h-5 w-5 text-primary-500" />
-              <h3 class="text-base font-semibold text-heading">
-                Attached Document
-              </h3>
+              <div class="col-span-5 lg:col-span-4">
+                <LorryReceiptPartyFields />
+              </div>
             </div>
           </template>
 
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <BaseInputGroup
-              v-for="document in lorryDocumentFields"
-              :key="document.key"
-              :label="document.label"
-              variant="vertical"
-            >
-              <BaseFileUploader
-                accept="image/*,application/pdf"
-                base64
-                :input-field-name="document.key"
-                :model-value="getLorryDocumentValue(document.key)"
-                :recommended-text="getLorryDocumentHint(document.key)"
-                @change="onLorryDocumentChange"
-                @remove="onLorryDocumentRemove(document.key)"
+          <!-- Office Invoice: Consignment items table with Add New Item -->
+          <template v-if="isOfficeInvoice">
+            <BaseDivider class="mb-5 md:mb-8" />
+
+            <div class="grid grid-cols-5 gap-4 mb-8">
+              <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
+                Consignment Items
+              </h6>
+
+              <div class="col-span-5 lg:col-span-4">
+                <OfficeInvoiceItemsTable
+                  :is-edit="isEdit"
+                  :is-loading="isLoadingContent"
+                  :store="invoiceStore"
+                  store-prop="newInvoice"
+                  :item-validation-scope="invoiceValidationScope"
+                  @consignment-valid="onConsignmentValidChange"
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- Transport fields (lr_receipt, lorry_receipt only) -->
+          <template v-if="!isOfficeInvoice">
+            <BaseDivider class="mb-5 md:mb-8" />
+
+            <div class="grid grid-cols-5 gap-4 mb-8">
+              <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
+                Transport Details
+              </h6>
+
+              <div class="col-span-5 lg:col-span-4">
+                <TransportCustomFields
+                  :is-loading="isLoadingContent"
+                  :store="invoiceStore"
+                  store-prop="newInvoice"
+                  :template-name="transportTemplateName"
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- Lorry Receipt: Document uploads removed — documents (RC, PAN, Insurance,
+               License, etc.) are now captured when creating/editing Owner, Driver,
+               and Broker profiles via the LorryPartyProfileModal. -->
+        </template>
+
+        <!-- Standard Invoice: Items, Notes, Custom Fields, Totals -->
+        <template v-if="!isTransportEntryTemplate">
+          <BaseDivider class="mb-5 md:mb-8" />
+
+          <!-- Items Table -->
+          <div class="grid grid-cols-5 gap-4 mb-8">
+            <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
+              Items
+            </h6>
+
+            <div class="col-span-5 lg:col-span-4">
+              <DocumentItemsTable
+                :currency="invoiceStore.newInvoice.selectedCurrency"
+                :is-loading="isLoadingContent"
+                :item-validation-scope="invoiceValidationScope"
+                :store="invoiceStore"
+                store-prop="newInvoice"
               />
-            </BaseInputGroup>
-          </div>
-        </BaseCard>
-      </div>
-
-      <BaseScrollPane>
-        <!-- Invoice Items (hidden for transport receipt templates which use custom fields) -->
-        <DocumentItemsTable
-          v-if="!isTransportEntryTemplate"
-
-          :currency="invoiceStore.newInvoice.selectedCurrency"
-
-          :is-loading="isLoadingContent"
-          :item-validation-scope="invoiceValidationScope"
-          :store="invoiceStore"
-          store-prop="newInvoice"
-        />
-
-        <!-- Invoice Footer Section -->
-        <div
-          class="block mt-10 invoice-foot lg:flex lg:justify-between lg:items-start"
-        >
-          <div class="relative w-full lg:w-1/2 lg:mr-4">
-            <!-- Invoice Custom Notes (hidden for transport entry templates) -->
-            <DocumentNotes
-              v-if="!isTransportEntryTemplate"
-              :store="invoiceStore"
-              store-prop="newInvoice"
-              :fields="invoiceNoteFieldList"
-              type="Invoice"
-            />
-
-            <!-- Invoice Custom Fields (for regular invoices only) -->
-            <InvoiceCustomFields
-              v-if="!isTransportReceipt"
-              type="Invoice"
-              :is-edit="isEdit"
-              :is-loading="isLoadingContent"
-              :store="invoiceStore"
-              store-prop="newInvoice"
-              :custom-field-scope="invoiceValidationScope"
-              class="mb-6"
-            />
-
-
+            </div>
           </div>
 
-          <DocumentTotals
-            v-if="!isTransportEntryTemplate"
-            :currency="invoiceStore.newInvoice.selectedCurrency"
-            :is-loading="isLoadingContent"
-            :store="invoiceStore"
-            store-prop="newInvoice"
-            tax-popup-type="invoice"
-          />
-        </div>
-      </BaseScrollPane>
+          <BaseDivider class="mb-5 md:mb-8" />
+
+          <!-- Notes, Custom Fields & Totals -->
+          <div class="grid grid-cols-5 gap-4 mb-8">
+            <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
+              Notes & Totals
+            </h6>
+
+            <div class="col-span-5 lg:col-span-4">
+              <div class="block invoice-foot lg:flex lg:justify-between lg:items-start">
+                <div class="relative w-full lg:w-1/2 lg:mr-4">
+                  <DocumentNotes
+                    :store="invoiceStore"
+                    store-prop="newInvoice"
+                    :fields="invoiceNoteFieldList"
+                    type="Invoice"
+                  />
+
+                  <InvoiceCustomFields
+                    v-if="!isTransportReceipt"
+                    type="Invoice"
+                    :is-edit="isEdit"
+                    :is-loading="isLoadingContent"
+                    :store="invoiceStore"
+                    store-prop="newInvoice"
+                    :custom-field-scope="invoiceValidationScope"
+                    class="mb-6"
+                  />
+                </div>
+
+                <DocumentTotals
+                  :currency="invoiceStore.newInvoice.selectedCurrency"
+                  :is-loading="isLoadingContent"
+                  :store="invoiceStore"
+                  store-prop="newInvoice"
+                  tax-popup-type="invoice"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
+      </BaseCard>
     </form>
   </BasePage>
 </template>
@@ -417,84 +406,6 @@ function setItemCustomField(itemIndex: number, label: string, value: string | nu
 }
 
 
-// --- Lorry Receipt: Document uploads ---
-interface LorryDocumentField {
-  key: string
-  label: string
-}
-
-const lorryDocumentFields: LorryDocumentField[] = [
-  { key: 'aadhar_front_copy', label: 'Aadhar Front Copy' },
-  { key: 'aadhar_back_copy', label: 'Aadhar Back Copy' },
-  { key: 'pan_card_front_copy', label: 'Pan Card Copy Front' },
-  { key: 'pan_card_back_copy', label: 'Pan Card Copy Back' },
-  { key: 'rc_copy_front', label: 'RC Copy Front' },
-  { key: 'rc_copy_back', label: 'RC Copy Back' },
-]
-
-interface LorryDocument {
-  name?: string
-  data?: string
-  file_name?: string
-  url?: string
-  image?: string
-  mime_type?: string
-}
-
-function onLorryDocumentChange(
-  fieldName: string,
-  data: FileList | File | string,
-  _fileCount: number,
-  file?: File,
-): void {
-  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
-    | Record<string, LorryDocument>
-    | undefined
-  ;(invoiceStore.newInvoice as Record<string, unknown>).lorry_documents = {
-    ...(docs || {}),
-    [fieldName]: {
-      name: file?.name,
-      data: data as string,
-    },
-  }
-}
-
-function onLorryDocumentRemove(fieldName: string): void {
-  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
-    | Record<string, LorryDocument>
-    | undefined
-  if (!docs) return
-  delete docs[fieldName]
-}
-
-function getLorryDocumentHint(fieldName: string): string {
-  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
-    | Record<string, LorryDocument>
-    | undefined
-  const document = docs?.[fieldName]
-  if (document?.file_name) {
-    return `Uploaded: ${document.file_name}`
-  }
-  return 'PNG, JPEG, or PDF'
-}
-
-function getLorryDocumentValue(fieldName: string): Array<{ name: string; image: string | null }> {
-  const docs = (invoiceStore.newInvoice as Record<string, unknown>).lorry_documents as
-    | Record<string, LorryDocument>
-    | undefined
-  const doc = docs?.[fieldName]
-  if (!doc) return []
-  const name = doc.file_name || doc.name || ''
-  const isPdf = name.toLowerCase().endsWith('.pdf') || doc.mime_type === 'application/pdf'
-  const isImage = !isPdf
-  return [
-    {
-      name,
-      image: isImage ? (doc.url || doc.image || null) : null,
-    },
-  ]
-}
-
 // Auto-due-date bookkeeping: tracks whether the user has manually edited the
 // due date, so the invoice_date watcher can avoid clobbering a manual value.
 const dueDateManuallyChanged = ref<boolean>(false)
@@ -517,6 +428,12 @@ const isStandardInvoice = computed<boolean>(() => route.path.includes('/admin/st
 // are transport receipts with their own custom field layouts.
 const isTransportReceipt = computed<boolean>(() => !isStandardInvoice.value)
 const transportTemplateName = computed<string>(() => {
+  // Standard invoices use the upstream InvoiceShelf flow (items table, taxes,
+  // discounts). They must NOT fall through to 'office_invoice', otherwise the
+  // consignment-number validation and Office Invoice items table are activated.
+  if (isStandardInvoice.value) {
+    return invoiceStore.newInvoice.template_name || 'invoice1'
+  }
   if (isLorryReceipt.value) {
     return companyStore.selectedCompanySettings.default_lorry_receipt_template || 'lorry_receipt'
   }
@@ -525,6 +442,7 @@ const transportTemplateName = computed<string>(() => {
   }
   return companyStore.selectedCompanySettings.default_office_invoice_template || 'office_invoice'
 })
+
 
 const isOfficeInvoice = computed<boolean>(() =>
   transportTemplateName.value === 'office_invoice',
@@ -792,6 +710,16 @@ watch(
     isAutoUpdatingDueDate = false
   },
 )
+
+/**
+ * Prevent Enter key from auto-submitting the form on text inputs.
+ * Textareas are excluded so Enter still creates newlines.
+ */
+function handleEnterKey(event: KeyboardEvent): void {
+  if (!(event.target instanceof HTMLTextAreaElement)) {
+    event.preventDefault()
+  }
+}
 
 async function submitForm(): Promise<void> {
   v$.value.$touch()

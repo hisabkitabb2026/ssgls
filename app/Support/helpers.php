@@ -190,6 +190,7 @@ function getRelatedSlugs($type, $slug, $id = 0)
 function respondJson($error, $message)
 {
     return response()->json([
+        'success' => false,
         'error' => $error,
         'message' => $message,
     ], 422);

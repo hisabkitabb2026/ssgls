@@ -93,9 +93,7 @@ class ExpensesController extends Controller
 
         Expense::destroy($ids);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 
     public function showReceipt(Expense $expense)
@@ -109,7 +107,7 @@ class ExpensesController extends Controller
                 return response()->file($media->getPath());
             }
 
-            return respondJson('receipt_does_not_exist', 'Receipt does not exist.');
+            return $this->errorResponse('Receipt does not exist.', 404, 'receipt_does_not_exist');
         }
     }
 
@@ -129,9 +127,7 @@ class ExpensesController extends Controller
                 ->toMediaCollection('receipts');
         }
 
-        return response()->json([
-            'success' => 'Expense receipts uploaded successfully',
-        ], 200);
+        return $this->successResponse('Expense receipts uploaded successfully');
     }
 
     public function downloadReceipt(Expense $expense)
@@ -151,8 +147,6 @@ class ExpensesController extends Controller
             }
         }
 
-        return response()->json([
-            'error' => 'receipt_not_found',
-        ]);
+        return $this->notFoundResponse('Receipt not found', ['error' => 'receipt_not_found']);
     }
 }

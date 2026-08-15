@@ -1,5 +1,6 @@
 import { client } from '../client'
 import { API } from '../endpoints'
+import { createBasicCrudService } from './crud-service.factory'
 import type { Item, Unit } from '@/scripts/types/domain/item'
 import type {
   ApiResponse,
@@ -36,30 +37,25 @@ export interface CreateUnitPayload {
   name: string
 }
 
+const baseItemService = createBasicCrudService<
+  Item,
+  ItemListResponse,
+  CreateItemPayload
+>({
+  basePath: API.ITEMS,
+  deletePath: API.ITEMS_DELETE,
+  usePostDelete: true,
+})
+
 export const itemService = {
+  ...baseItemService,
+
   async list(params?: ItemListParams): Promise<ItemListResponse> {
-    const { data } = await client.get(API.ITEMS, { params })
-    return data
-  },
-
-  async get(id: number): Promise<ApiResponse<Item>> {
-    const { data } = await client.get(`${API.ITEMS}/${id}`)
-    return data
-  },
-
-  async create(payload: CreateItemPayload): Promise<ApiResponse<Item>> {
-    const { data } = await client.post(API.ITEMS, payload)
-    return data
-  },
-
-  async update(id: number, payload: Partial<CreateItemPayload>): Promise<ApiResponse<Item>> {
-    const { data } = await client.put(`${API.ITEMS}/${id}`, payload)
-    return data
+    return baseItemService.list(params) as Promise<ItemListResponse>
   },
 
   async delete(payload: DeletePayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.ITEMS_DELETE, payload)
-    return data
+    return baseItemService.delete(payload) as Promise<{ success: boolean }>
   },
 
   // Units

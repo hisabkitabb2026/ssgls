@@ -439,6 +439,7 @@ const defaultClasses: Required<MultiselectClasses> = {
   optionSelected: 'text-white bg-primary-500',
   optionDisabled: 'text-subtle cursor-not-allowed',
   optionSelectedPointed: 'text-white bg-primary-500 opacity-90',
+
   optionSelectedDisabled:
     'text-primary-100 bg-primary-500/50 cursor-not-allowed',
   noOptions: 'py-2 px-3 text-muted bg-surface',

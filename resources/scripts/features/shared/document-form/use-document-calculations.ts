@@ -21,6 +21,8 @@ export interface DocumentItem {
   unit_name?: string | null
   invoice_id?: number | null
   estimate_id?: number | null
+  truck_type?: string | null
+  rate_card?: Record<string, number>  // { "unitId": rateInCents }
   [key: string]: unknown
 }
 

@@ -10,7 +10,7 @@ beforeEach(function () {
 });
 
 test('country has many addresses', function () {
-    $country = Country::find(1);
+    $country = Country::first();
 
     $address = Address::factory()->count(5)->create([
         'country_id' => $country->id,

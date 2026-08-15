@@ -4,13 +4,13 @@
       <table class="w-full">
         <colgroup>
           <col style="width: 40%; min-width: 280px" />
-          <col style="width: 10%; min-width: 120px" />
+          <col style="width: 15%; min-width: 120px" />
           <col style="width: 15%; min-width: 120px" />
           <col
             v-if="formData.discount_per_item === 'YES'"
             style="width: 15%; min-width: 160px"
           />
-          <col style="width: 15%; min-width: 120px" />
+          <col v-if="!isEstimateContext" style="width: 15%; min-width: 120px" />
         </colgroup>
         <tbody>
           <tr v-if="!isTransportEntryTemplate">
@@ -39,9 +39,10 @@
               </div>
             </td>
 
-            <!-- Quantity -->
+            <!-- Quantity / Weight (weight selector in estimate context) -->
             <td class="px-5 py-4 text-right align-top">
               <BaseInput
+                v-if="!isEstimateContext"
                 v-model="quantity"
                 :invalid="v$.quantity.$error"
                 :content-loading="loading"
@@ -50,6 +51,19 @@
                 step="any"
                 @change="syncItemToStore()"
                 @input="v$.quantity.$touch()"
+              />
+              <BaseMultiselect
+                v-else
+                v-model="selectedUnit"
+                :options="unitOptions"
+                :placeholder="$t('items.select_weight')"
+                :content-loading="loading"
+                label="name"
+                track-by="name"
+                value-prop="id"
+                object
+                searchable
+                @select="onUnitSelect"
               />
             </td>
 
@@ -117,8 +131,8 @@
               </div>
             </td>
 
-            <!-- Amount -->
-            <td class="px-5 py-4 text-right align-top">
+            <!-- Amount (hidden in estimate context, but remove button still shown) -->
+            <td v-if="!isEstimateContext" class="px-5 py-4 text-right align-top">
               <div class="flex items-center justify-end text-sm">
                 <span>
                   <BaseContentPlaceholders v-if="loading">
@@ -148,6 +162,18 @@
                     @click="store.removeItem(index)"
                   />
                 </div>
+              </div>
+            </td>
+
+            <!-- Remove button only (estimate context — no amount column) -->
+            <td v-else class="px-5 py-4 text-right align-top">
+              <div class="flex items-center justify-end">
+                <BaseIcon
+                  v-if="showRemoveButton"
+                  class="h-5 text-body cursor-pointer"
+                  name="TrashIcon"
+                  @click="store.removeItem(index)"
+                />
               </div>
             </td>
           </tr>
@@ -240,12 +266,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { required, between, maxLength, helpers, minValue } from '@vuelidate/validators'
 import useVuelidate from '@vuelidate/core'
 import lodash from 'lodash'
 import { useCompanyStore } from '../../../stores/company.store'
+import { useItemStore } from '@/scripts/features/company/items/store'
 import { customFieldService } from '@/scripts/api/services/custom-field.service'
 import DocumentItemRowTax from './DocumentItemRowTax.vue'
 import DragIcon from '@/scripts/components/icons/DragIcon.vue'
@@ -253,6 +280,7 @@ import SingleField from '@/scripts/features/company/customers/components/CreateC
 import { generateClientId } from '../../../utils'
 import type { Currency } from '../../../types/domain/currency'
 import type { DocumentItem, DocumentFormData, DocumentTax } from './use-document-calculations'
+
 
 
 interface CustomFieldItem {
@@ -291,6 +319,7 @@ interface Props {
   currency: Currency | Record<string, unknown>
   invoiceItems: DocumentItem[]
   itemValidationScope?: string
+  isEstimateContext?: boolean
 }
 
 interface Emits {
@@ -387,6 +416,33 @@ const selectedCurrency = computed(() => {
   }
   return null
 })
+
+// --- Estimate context: truck weight (unit) selector ---
+const itemStore = useItemStore()
+const unitOptions = computed(() => itemStore.itemUnits)
+
+const selectedUnit = computed<{
+  id: number | null
+  name: string
+} | null>({
+  get: () => {
+    const unitName = props.itemData.unit_name as string | undefined
+    if (!unitName) return null
+    return unitOptions.value.find((u) => u.name === unitName) ?? null
+  },
+  set: (unit: { id: number; name: string } | null) => {
+    if (unit) {
+      updateItemAttribute('unit_name', unit.name)
+      updateItemAttribute('unit_id', unit.id)
+    }
+  },
+})
+
+function onUnitSelect(unit: { id: number; name: string }): void {
+  updateItemAttribute('unit_name', unit.name)
+  updateItemAttribute('unit_id', unit.id)
+}
+
 
 const showRemoveButton = computed<boolean>(() => {
   return formData.value.items.length > 1
@@ -503,6 +559,11 @@ function onSelectItem(itm: Record<string, unknown>): void {
 
     if (itm.unit) {
       item.unit_name = (itm.unit as Record<string, string>).name
+    }
+
+    // Auto-fill truck_type from the selected item (logistics quotation domain)
+    if (itm.truck_type) {
+      item.truck_type = itm.truck_type as string
     }
 
     if (form.tax_per_item === 'YES' && itm.taxes) {
@@ -628,7 +689,13 @@ function syncTransportAmountToStore(): void {
 
 onMounted(() => {
   loadItemCustomFields()
+
+  // Fetch item units (truck weights) for estimate context weight selector
+  if (props.isEstimateContext && itemStore.itemUnits.length === 0) {
+    itemStore.fetchItemUnits({ limit: 'all' })
+  }
 })
+
 
 watch(
   () => props.itemData.fields,

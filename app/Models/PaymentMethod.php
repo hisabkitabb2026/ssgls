@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PaymentMethod extends Model
 {
+    use HasCompanyScopes;
     use HasFactory;
 
     protected $guarded = [
@@ -47,16 +49,6 @@ class PaymentMethod extends Model
         return $this->belongsTo(Company::class);
     }
 
-    public function scopeWhereCompanyId($query, $id)
-    {
-        $query->where('company_id', $id);
-    }
-
-    public function scopeWhereCompany($query)
-    {
-        $query->where('company_id', request()->header('company'));
-    }
-
     public function scopeWherePaymentMethod($query, $payment_id)
     {
         $query->orWhere('id', $payment_id);
@@ -76,21 +68,12 @@ class PaymentMethod extends Model
         }
 
         if ($filters->get('company_id')) {
-            $query->whereCompany($filters->get('company_id'));
+            $query->whereCompanyId($filters->get('company_id'));
         }
 
         if ($filters->get('search')) {
             $query->whereSearch($filters->get('search'));
         }
-    }
-
-    public function scopePaginateData($query, $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
     }
 
     /**

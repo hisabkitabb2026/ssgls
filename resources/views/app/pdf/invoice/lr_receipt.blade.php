@@ -6,8 +6,9 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
     <style type="text/css">
+        /* ── Page setup: landscape A4 with comfortable print margins ── */
         @page {
-            margin: 5px;
+            margin: 10mm;
             size: 297mm 210mm;
         }
 
@@ -18,7 +19,7 @@
         body {
             color: #111;
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 11.2px;
+            font-size: 13px;
             margin: 0;
         }
 
@@ -27,10 +28,11 @@
             width: 100%;
         }
 
+        /* ── Cell borders: darker for better print contrast, wrapper keeps 2px ── */
         td,
         th {
-            border: 1.5px solid #000;
-            padding: 2px 5px;
+            border: 1px solid #444;
+            padding: 3px 6px;
             vertical-align: top;
         }
 
@@ -47,19 +49,34 @@
             border: 0;
         }
 
+        /* ── Print rules: repeat headers, avoid row splits across pages ── */
+        @media print {
+            thead {
+                display: table-header-group;
+            }
+            tr {
+                page-break-inside: avoid;
+            }
+        }
+
         .jurisdiction {
             font-size: 10px;
-            left: 190px;
-            line-height: 9px;
-            position: absolute;
-            text-align: center;
+            line-height: 12px;
+            margin-bottom: 4px;
+            text-align: right;
             text-decoration: underline;
-            top: 6px;
-            width: 190px;
+        }
+
+        .jurisdiction-top {
+            font-size: 10px;
+            line-height: 12px;
+            margin-bottom: 4px;
+            text-align: right;
+            text-decoration: underline;
         }
 
         .header-left {
-            border-right: 1.5px solid #000 !important;
+            border-right: 2px solid #444 !important;
             padding: 0;
             vertical-align: top;
             width: 61%;
@@ -71,67 +88,81 @@
             width: 39%;
         }
 
-        .company-panel {
-            border: 0;
-            height: 132px;
-            padding: 2px 7px !important;
-            position: relative;
+        /* ── Brand row: horizontal layout matching office_invoice ── */
+        .brand-row {
+            background-color: #f8f8f8;
+            border-bottom: 2px solid #000;
+            table-layout: fixed;
             width: 100%;
         }
 
+        .brand-row td {
+            border: 0;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            text-align: center;
+            width: 20%;
+        }
+
         .company-logo {
-            max-height: 88px;
-            max-width: 118px;
+            max-height: 72px;
+            max-width: 130px;
         }
 
         .brand-mark {
             color: #27324a;
-            font-size: 51px;
+            font-size: 42px;
             font-weight: bold;
-            letter-spacing: -5px;
-            line-height: 42px;
-            text-align: left;
-            width: 92px;
+            letter-spacing: -4px;
+            line-height: 44px;
+            text-align: center;
         }
 
         .brand-small {
             display: block;
             font-size: 9px;
             letter-spacing: 0;
-            line-height: 7px;
+            line-height: 11px;
             margin-top: 2px;
+        }
+
+        .company-cell {
+            text-align: left;
+            width: 80%;
         }
 
         .company-name {
             color: #111;
             font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 31px;
+            font-size: 26px;
             font-weight: bold;
             line-height: 28px;
-            margin-top: 3px;
+            margin-top: 1px;
         }
 
         .company-tagline {
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: bold;
-            line-height: 11px;
+            line-height: 15px;
         }
 
         .company-address {
             font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 11px;
-            line-height: 9.2px;
-            margin-top: 3px;
+            font-size: 15px;
+            line-height: 17px;
+            margin-top: 2px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
-        .header-contact {
-            font-size: 16px;
-            line-height: 14px;
-            position: absolute;
-            right: 7px;
-            text-align: right;
-            top: 2px;
-            white-space: nowrap;
+        .company-contact {
+            font-size: 13px;
+            font-weight: bold;
+            line-height: 16px;
+            margin-top: 2px;
         }
 
         .header-left table,
@@ -139,28 +170,24 @@
             border: 0;
         }
 
-        .brand-block {
-            height: auto;
-        }
-
-        .brand-block td {
-            border: 0;
-            padding: 2px 6px;
-            vertical-align: top;
+        .top-detail-table {
+            table-layout: fixed;
         }
 
         .top-detail-table td {
-            height: 20px;
-            padding: 2px 6px;
+            font-size: 13px;
+            min-height: 24px;
+            padding: 4px 7px;
             vertical-align: middle;
         }
 
         .top-detail-table .tax-line {
-            height: 24px;
+            font-size: 13px;
+            min-height: 28px;
         }
 
         .party-table {
-            border-top: 2.5px solid #000 !important;
+            border-top: 2px solid #000 !important;
         }
 
         .party-table td {
@@ -168,24 +195,33 @@
             border-top: 0;
         }
 
+        /* ── Party cells: min-height + overflow protection + light bg ── */
         .party-cell {
-            height: 132px;
-            padding: 4px 6px;
+            background-color: #fafafa;
+            border-left: 1px solid #ccc;
+            min-height: 132px;
+            padding: 6px 8px;
             width: 50%;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        /* First party cell: no left border (it's the leftmost) */
+        .party-cell:first-child {
+            border-left: 0;
         }
 
         .party-lines {
             border-bottom: 1px solid #ddd;
-            font-size: 11.5px;
-            height: 23px;
-            line-height: 21px;
+            font-size: 12.5px;
+            min-height: 24px;
+            line-height: 22px;
             margin-top: 0;
-            overflow: hidden;
         }
 
         .party-details {
-            height: 59px;
-            line-height: 13px;
+            min-height: 59px;
+            line-height: 16px;
             padding-top: 4px;
         }
 
@@ -195,15 +231,15 @@
         }
 
         .side-table td {
-            height: 20px;
+            min-height: 20px;
             padding: 2px 6px;
             vertical-align: middle;
         }
 
         .docket-no {
-            font-size: 11px;
+            font-size: 14px;
             font-weight: bold;
-            letter-spacing: 0;
+            letter-spacing: 0.5px;
             text-align: left;
         }
 
@@ -215,33 +251,37 @@
         .tax-line {
             font-size: 13.5px;
             font-weight: bold;
-            line-height: 13px;
+            line-height: 16px;
             overflow-wrap: anywhere;
         }
 
         .goods {
-            border-top: 2.5px solid #000;
+            border-top: 2px solid #000;
+            table-layout: fixed;
         }
 
         .goods td {
-            font-size: 11.8px;
-            height: 20px;
-            line-height: 11px;
+            font-size: 13px;
+            min-height: 22px;
+            line-height: 15px;
+            padding: 4px 6px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .goods .large {
-            height: 36px;
+            min-height: 36px;
         }
 
         .delivery-cell {
-            font-size: 12px;
-            line-height: 12px;
+            font-size: 13px;
+            line-height: 15px;
         }
 
         .eway-inline {
-            border-top: 1.5px solid #000;
-            margin: 15px -5px 0;
-            padding: 3px 5px 0;
+            border-top: 1px solid #444;
+            margin: 15px -6px 0;
+            padding: 4px 6px 0;
         }
 
         .left-panel {
@@ -256,25 +296,49 @@
             width: 100%;
         }
 
+        /* ── Charges table: fixed layout, header bg, zebra, net-row highlight ── */
+        .charges {
+            table-layout: fixed;
+        }
+
         .charges th {
-            font-size: 11px;
+            background-color: #e0e0e0;
+            border: 1px solid #000;
+            font-size: 12px;
             font-weight: bold;
-            height: 25px;
-            line-height: 10px;
+            min-height: 28px;
+            line-height: 14px;
             text-align: center;
             vertical-align: middle;
         }
 
         .charges td {
-            height: 17px;
-            line-height: 12px;
+            font-size: 13px;
+            min-height: 22px;
+            line-height: 15px;
+            padding: 4px 6px;
+        }
+
+        /* Zebra striping via class (dompdf :nth-child unreliable) */
+        .charges .alt-row {
+            background-color: #eef2f7;
+        }
+
+        /* Net Amount row: highlighted like grand total in office_invoice */
+        .charges .net-row td {
+            background-color: #d0d0d0;
+            border-top: 2px solid #000;
+            font-size: 15px;
+            font-weight: bold;
+            min-height: 28px;
+            padding: 6px;
         }
 
         .mode {
             background-color: #ffffff;
             font-size: 15px;
             font-weight: bold;
-            line-height: 12px;
+            line-height: 16px;
             text-align: center;
             vertical-align: middle;
         }
@@ -284,22 +348,26 @@
             text-decoration: line-through;
         }
 
+        /* display: inline (not inline-block) — dompdf renders this reliably */
         .mode-selected {
             border-bottom: 1px solid #111;
-            display: inline-block;
+            display: inline;
             padding-bottom: 1px;
         }
 
         .copy-label-box {
-            font-size: 15px;
-            height: 88px;
+            border: 1px solid #444;
+            background-color: #f8f8f8;
+            font-size: 12px;
+            font-weight: normal;
+            min-height: 60px;
             line-height: 16px;
-            padding: 8px 0 0 112px;
+            padding: 6px 8px;
             text-align: left;
         }
 
         .goods-fill {
-            height: 18px;
+            min-height: 18px;
         }
 
         .footer-left {
@@ -307,51 +375,55 @@
         }
 
         .footer-left td {
-            height: 88px;
+            min-height: 88px;
         }
 
+        /* ── Declaration: readable font, min-height, no overflow:hidden ── */
         .declaration {
             font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 8.2px;
-            line-height: 8.9px;
-            height: 51px;
-            overflow: hidden;
-            padding: 3px 5px;
+            font-size: 10.5px;
+            line-height: 12px;
+            min-height: 51px;
+            padding: 4px 6px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .agreement {
-            border-top: 1.5px solid #000;
-            font-size: 12.4px;
+            border-top: 1px solid #444;
+            font-size: 12.5px;
             font-weight: bold;
-            height: 36px;
-            line-height: 11px;
+            min-height: 36px;
+            line-height: 15px;
             padding-top: 7px;
             text-align: center;
         }
 
         .consignee-sign {
-            height: 88px;
-            line-height: 13px;
+            min-height: 88px;
+            line-height: 15px;
             padding: 4px 6px;
         }
 
         .gst-payable {
-            font-size: 13px;
+            border: 1px solid #444;
+            background-color: #f5f5f5;
+            font-size: 14px;
             font-weight: bold;
-            height: 39px;
-            line-height: 12px;
-            padding-top: 8px;
+            min-height: 42px;
+            line-height: 17px;
+            padding: 8px 6px;
             text-align: center;
             vertical-align: middle;
         }
 
         .for-company {
             border-bottom: 0 !important;
-            border-top: 1.5px solid #000 !important;
+            border-top: 2px solid #000 !important;
             font-size: 16px;
             font-weight: bold;
-            height: 49px;
-            line-height: 18px;
+            min-height: 49px;
+            line-height: 20px;
             padding-top: 12px;
             position: relative;
             text-align: center;
@@ -373,8 +445,19 @@
             display: none;
         }
 
+        /* ── Label styling: distinct from values for visual hierarchy ── */
         .label {
+            color: #555;
+            font-size: 11px;
             font-weight: bold;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        /* Party/section labels: slightly larger for key section headers */
+        .party-cell .label {
+            color: #333;
+            font-size: 12px;
         }
 
         .text-right {
@@ -383,6 +466,20 @@
 
         .text-center {
             text-align: center;
+        }
+
+        /* ── Value styling: distinct from labels — values in BOLD ── */
+        .value {
+            color: #111;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* ── Page-break protection for key sections ── */
+        .charges,
+        .party-table,
+        .goods {
+            page-break-inside: avoid;
         }
     </style>
 </head>
@@ -546,7 +643,8 @@
     $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Vapi Jurisdiction';
     $companyAddress = trim(strip_tags($company_address)) ? $company_address : '';
     $companyPhone = $invoice->company?->address?->phone;
-    $companyEmail = \App\Models\CompanySetting::getSetting('notification_email', $invoice->company_id);
+    // Use address email first (configured in Company Info settings), fall back to notification_email setting
+    $companyEmail = $invoice->company?->address?->email ?: ($invoice->company?->notification_email ?: \App\Models\CompanySetting::getSetting('notification_email', $invoice->company_id));
     $mobile = $companyPhone ?: ($invoiceField(['mobile', 'phone']) ?: '');
     $email = $invoiceField(['email']) ?: ($companyEmail ?: '');
     $displayCompanyAddress = preg_replace('/^\s*<h[1-6][^>]*>.*?<\/h[1-6]>\s*/is', '', (string) $companyAddress);
@@ -670,13 +768,60 @@
     // Consignor/Consignee name: after "Consignor" label + padding ≈ 420px usable.
     $consignorNameStyle = $getFontForWidth($consignorName, 420, 11.5, 6.5);
     $consigneeNameStyle = $getFontForWidth($consigneeName, 420, 11.5, 6.5);
-    // Company name: in company-panel, full width ≈ 480px usable.
-    $companyNameStyle = $getFontForWidth($companyName, 460, 31, 10);
+    // Company name: in brand-row company-cell (80% of 61% of page ≈ 548px, minus padding ≈ 500px usable).
+    $companyNameStyle = $getFontForWidth($companyName, 500, 26, 10);
     // GSTIN fields: after "GST No.:" label ≈ 380px usable.
     $consignorGstinStyle = $getFontForWidth($consignorGstin, 380, 11, 6.5);
     $consigneeGstinStyle = $getFontForWidth($consigneeGstin, 380, 11, 6.5);
     // Description of goods: in goods table, full width ≈ 700px usable.
     $descriptionOfGoodsStyle = $getFontForWidth($descriptionOfGoods, 700, 11.8, 6.5);
+
+    // Party address: party cell is ~540px, minus padding ≈ 500px usable.
+    $consignorAddrStyle = $getFontForWidth($consignorAddress, 500, 12, 7);
+    $consigneeAddrStyle = $getFontForWidth($consigneeAddress, 500, 12, 7);
+
+    // Top-detail-table fields: right column ≈ 300px usable after label.
+    $fromLocation = $invoiceField(['from']);
+    $toLocation = $invoiceField(['to']);
+    $truckNo = $invoiceField(['truck_no']);
+    $fromStyle = $getFontForWidth($fromLocation, 250, 12, 7);
+    $toStyle = $getFontForWidth($toLocation, 250, 12, 7);
+    $truckNoStyle = $getFontForWidth($truckNo, 400, 12, 7);
+
+    // Delivery At: in goods table left column ≈ 500px usable.
+    $deliveryAt = $invoiceField(['delivery_at']);
+    $deliveryAtStyle = $getFontForWidth($deliveryAt, 480, 12, 7);
+
+    // PAN No and tax identity: in tax-line, full width ≈ 400px usable.
+    $panNoStyle = $getFontForWidth($panNo, 200, 13.5, 7);
+    $taxIdentityStyle = $getFontForWidth($companyTaxIdentityValue, 200, 13.5, 7);
+
+    // Goods table secondary fields
+    $hsnCode = $invoiceField(['hsn_code']);
+    $hsnCodeStyle = $getFontForWidth($hsnCode, 480, 12, 7);
+    $invoiceNo = $invoiceField(['invoice_no']);
+    $invoiceNoStyle = $getFontForWidth($invoiceNo, 200, 12, 7);
+    $goodsValue = $invoiceField(['goods_value']);
+    $goodsValueStyle = $getFontForWidth($goodsValue, 200, 12, 7);
+    $ewayBillNo = $invoiceField(['e_way_bill_no']);
+    $ewayBillStyle = $getFontForWidth($ewayBillNo, 480, 12, 7);
+
+    // Charges table: description column ≈ 180px, amount column ≈ 140px.
+    $basicFreightStyle = $getFontForWidth($basicFreight, 140, 12, 7);
+    $localCollectionStyle = $getFontForWidth($localCollection, 140, 12, 7);
+    $doorDeliveryStyle = $getFontForWidth($doorDelivery, 140, 12, 7);
+    $hamaliStyle = $getFontForWidth($hamali, 140, 12, 7);
+    $otherChargeStyle = $getFontForWidth($otherCharge, 140, 12, 7);
+    $fovStyle = $getFontForWidth($fov, 140, 12, 7);
+
+    // GST payable by: right column ≈ 300px usable.
+    $gstPayableByStyle = $getFontForWidth($gstPayableBy, 280, 13, 8);
+
+    // Company address: use CSS font-size: 18px directly — no auto-fit override.
+    $companyAddrStyle = '';
+
+    // Docket number: right column ≈ 250px usable.
+    $docketNoStyle = $getFontForWidth($docketNumber, 220, 12, 7);
 
     $consignorData = [
         'name' => $consignorName,
@@ -743,18 +888,15 @@
 @endphp
 
 @foreach ($renderCopies as $index => $copy)
-    <div class="wrapper" style="background-color: {{ $copy['bg'] }}; @if(!$loop->last) page-break-after: always; margin-bottom: 20px; @endif">
+    <div style="background-color: {{ $copy['bg'] }}; @if(!$loop->last) page-break-after: always; @endif">
+    <div class="jurisdiction-top">{{ $companyTopHeading }}</div>
+    <div class="wrapper" style="background-color: {{ $copy['bg'] }}; @if(!$loop->last) margin-bottom: 20px; @endif">
         <table>
             <tr>
                 <td class="header-left">
-                    <table class="brand-block">
+                    <table class="brand-row">
                         <tr>
-                            <td class="company-panel">
-                                <div class="jurisdiction">{{ $companyTopHeading }}</div>
-                                <div class="header-contact">
-                                    Mob. {{ $mobile }}<br>
-                                    E-mail : {{ $email }}
-                                </div>
+                            <td class="logo-cell">
                                 @if ($logo)
                                     <img class="company-logo" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
                                 @else
@@ -762,9 +904,12 @@
                                         {{ $companyInitials }}
                                     </div>
                                 @endif
+                            </td>
+                            <td class="company-cell">
                                 <div class="company-name" style="{{ $companyNameStyle }}">{{ $companyName }}</div>
                                 <div class="company-tagline">{{ $companyTagline }}</div>
-                                <div class="company-address">{!! $displayCompanyAddress !!}</div>
+                                <div class="company-address" style="{{ $companyAddrStyle }}">{!! $displayCompanyAddress !!}</div>
+                                <div class="company-contact">Mob. {{ $mobile }} &nbsp;|&nbsp; E-mail : {{ $email }}</div>
                             </td>
                         </tr>
                     </table>
@@ -772,54 +917,52 @@
                     <table class="party-table">
                         <tr>
                             <td class="party-cell">
-                                <span class="label">Consignor</span> <span style="font-weight: bold; padding-left: 5px; {{ $consignorNameStyle }}">{{ $consignorData['name'] }}</span>
-                                <div class="party-lines party-details">{!! nl2br(e($consignorData['address'])) !!}</div>
-                                <div class="party-lines"><span class="label">Phone No.:</span> {{ $consignorPhone }}</div>
-                                <div class="party-lines" style="{{ $consignorGstinStyle }}"><span class="label">GST No.:</span> {{ $consignorGstin }}</div>
+                                <div style="margin-bottom: 4px;"><span class="label">Consignor</span></div>
+                                <div style="font-size: 14px; font-weight: bold; line-height: 18px; {{ $consignorNameStyle }}">{{ $consignorData['name'] }}</div>
+                                <div class="party-lines party-details" style="{{ $consignorAddrStyle }}">{!! nl2br(e($consignorData['address'])) !!}</div>
+                                <div class="party-lines"><span class="label">Phone No.:</span> <span class="value">{{ $consignorPhone }}</span></div>
+                                <div class="party-lines" style="{{ $consignorGstinStyle }}"><span class="label">GST No.:</span> <span class="value">{{ $consignorGstin }}</span></div>
                             </td>
                             <td class="party-cell">
-                                <span class="label">Consignee</span> <span style="font-weight: bold; padding-left: 5px; {{ $consigneeNameStyle }}">{{ $consigneeData['name'] }}</span>
-                                <div class="party-lines party-details">{!! nl2br(e($consigneeData['address'])) !!}</div>
-                                <div class="party-lines"><span class="label">Phone No.:</span> {{ $consigneePhone }}</div>
-                                <div class="party-lines" style="{{ $consigneeGstinStyle }}"><span class="label">GST No.:</span> {{ $consigneeGstin }}</div>
+                                <div style="margin-bottom: 4px;"><span class="label">Consignee</span></div>
+                                <div style="font-size: 14px; font-weight: bold; line-height: 18px; {{ $consigneeNameStyle }}">{{ $consigneeData['name'] }}</div>
+                                <div class="party-lines party-details" style="{{ $consigneeAddrStyle }}">{!! nl2br(e($consigneeData['address'])) !!}</div>
+                                <div class="party-lines"><span class="label">Phone No.:</span> <span class="value">{{ $consigneePhone }}</span></div>
+                                <div class="party-lines" style="{{ $consigneeGstinStyle }}"><span class="label">GST No.:</span> <span class="value">{{ $consigneeGstin }}</span></div>
                             </td>
                         </tr>
                     </table>
 
                     <table class="goods">
                         <tr>
-                            <td width="50%" class="large"><span class="label">Description of Goods</span><br><span style="{{ $descriptionOfGoodsStyle }}">{{ $descriptionOfGoods }}</span></td>
-                            <td width="24%"><span class="label">No. of Articles</span><br>{{ $noOfArticles }}</td>
-                            <td><span class="label">Packing</span><br>{{ $invoiceField(['packing']) }}</td>
+                            <td width="50%" class="large"><span class="label">Description of Goods</span><br><span class="value" style="{{ $descriptionOfGoodsStyle }}">{{ $descriptionOfGoods }}</span></td>
+                            <td width="24%"><span class="label">No. of Articles</span><br><span class="value">{{ $noOfArticles }}</span></td>
+                            <td><span class="label">Packing</span><br><span class="value">{{ $invoiceField(['packing']) }}</span></td>
                         </tr>
                         <tr>
-                            <td><span class="label">HSN CODE</span><br>{{ $invoiceField(['hsn_code']) }}</td>
+                            <td><span class="label">HSN CODE</span><br><span class="value" style="{{ $hsnCodeStyle }}">{{ $invoiceField(['hsn_code']) }}</span></td>
                             <td><span class="label">Actual Weight</span></td>
-                            <td>{{ $invoiceField(['actual_weight']) }}</td>
+                            <td><span class="value">{{ $invoiceField(['actual_weight']) }}</span></td>
                         </tr>
                         <tr>
-                            <td rowspan="4" class="delivery-cell">
+                            <td rowspan="3" class="delivery-cell">
                                 <span class="label">Delivery At.:</span><br>
-                                {{ $invoiceField(['delivery_at']) }}
+                                <span class="value" style="{{ $deliveryAtStyle }}">{{ $invoiceField(['delivery_at']) }}</span>
                                 <div class="eway-inline">
                                     <span class="label">E-way Bill No.:</span><br>
-                                    {{ $invoiceField(['e_way_bill_no']) }}
+                                    <span class="value" style="{{ $ewayBillStyle }}">{{ $invoiceField(['e_way_bill_no']) }}</span>
                                 </div>
                             </td>
                             <td><span class="label">Charged Weight</span></td>
-                            <td>{{ $invoiceField(['charged_weight']) }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="label">Invoice No. :</span></td>
-                            <td>{{ $invoiceField(['invoice_no']) }}</td>
+                            <td><span class="value">{{ $invoiceField(['charged_weight']) }}</span></td>
                         </tr>
                         <tr>
                             <td><span class="label">Goods Value</span></td>
-                            <td>{{ $invoiceField(['goods_value']) }}</td>
+                            <td><span class="value" style="{{ $goodsValueStyle }}">{{ $invoiceField(['goods_value']) }}</span></td>
                         </tr>
                         <tr>
                             <td class="goods-fill"><span class="label">POD Required</span></td>
-                            <td>{{ $invoiceField(['pod_required']) }}</td>
+                            <td><span class="value">{{ $invoiceField(['pod_required']) }}</span></td>
                         </tr>
                         <tr>
                             <td>&nbsp;</td>
@@ -868,19 +1011,19 @@
                     </div>
                     <table class="top-detail-table">
                         <tr>
-                            <td width="36%"><span class="label">Date :</span> {{ $invoice->formattedInvoiceDate }}</td>
-                            <td><span class="label">Docket No.:</span> <span class="docket-no">{{ $docketNumber }}</span></td>
+                            <td width="36%"><span class="label">Date :</span> <span class="value">{{ $invoice->formattedInvoiceDate }}</span></td>
+                            <td><span class="label">Docket No.:</span> <span class="docket-no" style="{{ $docketNoStyle }}">{{ $docketNumber }}</span></td>
                         </tr>
                         <tr>
-                            <td width="36%"><span class="label">Time :</span> {{ $invoiceField(['time']) }}</td>
-                            <td><span class="label">From :</span> {{ $invoiceField(['from']) }}</td>
+                            <td width="36%"><span class="label">Time :</span> <span class="value">{{ $invoiceField(['time']) }}</span></td>
+                            <td><span class="label">From :</span> <span class="value" style="{{ $fromStyle }}">{{ $invoiceField(['from']) }}</span></td>
                         </tr>
                         <tr>
                             <td width="36%" class="owner-risk">OWNER'S RISK</td>
-                            <td><span class="label">To :</span> {{ $invoiceField(['to']) }}</td>
+                            <td><span class="label">To :</span> <span class="value" style="{{ $toStyle }}">{{ $invoiceField(['to']) }}</span></td>
                         </tr>
-                        <tr><td colspan="2"><span class="label">Truck No.:</span> {{ $invoiceField(['truck_no']) }}</td></tr>
-                        <tr><td colspan="2" class="tax-line"><span class="label">PAN No.:</span> {{ $panNo }}<br><span class="label">{{ $companyTaxIdentityLabel }} :</span> {{ $companyTaxIdentityValue }}</td></tr>
+                        <tr><td colspan="2"><span class="label">Truck No.:</span> <span class="value" style="{{ $truckNoStyle }}">{{ $invoiceField(['truck_no']) }}</span></td></tr>
+                        <tr><td colspan="2" class="tax-line"><span class="label">PAN No.:</span> <span class="value" style="{{ $panNoStyle }}">{{ $panNo }}</span><br><span class="label">{{ $companyTaxIdentityLabel }} :</span> <span class="value" style="{{ $taxIdentityStyle }}">{{ $companyTaxIdentityValue }}</span></td></tr>
                     </table>
 
                     <table class="charges">
@@ -889,43 +1032,43 @@
                             <th width="34%">To Pay/Paid Rs.</th>
                             <th>Mode of<br>Payment</th>
                         </tr>
-                        <tr>
+                        <tr class="alt-row">
                             <td><span class="label">Basic Freight</span></td>
-                            <td class="text-right">{{ $basicFreight }}</td>
+                            <td class="text-right" style="{{ $basicFreightStyle }}">{{ $basicFreight }}</td>
                             <td class="mode">{!! $modeLabel('TO PAY') !!}</td>
                         </tr>
                         <tr>
                             <td><span class="label">Local Collection</span></td>
-                            <td class="text-right">{{ $localCollection }}</td>
+                            <td class="text-right" style="{{ $localCollectionStyle }}">{{ $localCollection }}</td>
                             <td class="mode"></td>
                         </tr>
-                        <tr>
+                        <tr class="alt-row">
                             <td><span class="label">Door Delivery</span></td>
-                            <td class="text-right">{{ $doorDelivery }}</td>
+                            <td class="text-right" style="{{ $doorDeliveryStyle }}">{{ $doorDelivery }}</td>
                             <td rowspan="3" class="mode">{!! $modeLabel('PAID') !!}</td>
                         </tr>
                         <tr>
                             <td><span class="label">Hamali</span></td>
-                            <td class="text-right">{{ $hamali }}</td>
+                            <td class="text-right" style="{{ $hamaliStyle }}">{{ $hamali }}</td>
                         </tr>
-                        <tr>
+                        <tr class="alt-row">
                             <td><span class="label">Docket Charge</span></td>
                             <td class="text-right">{{ $docketCharge ? $docketCharge.'/-' : '' }}</td>
                         </tr>
                         <tr>
                             <td><span class="label">Other Charge</span></td>
-                            <td class="text-right">{{ $otherCharge }}</td>
+                            <td class="text-right" style="{{ $otherChargeStyle }}">{{ $otherCharge }}</td>
                             <td rowspan="4" class="mode">{!! $modeLabel('TO BE BILLED AT') !!}</td>
                         </tr>
-                        <tr>
+                        <tr class="alt-row">
                             <td><span class="label">F.O.V.</span></td>
-                            <td class="text-right">{{ $fov }}</td>
+                            <td class="text-right" style="{{ $fovStyle }}">{{ $fov }}</td>
                         </tr>
                         <tr>
                             <td><span class="label">Sub Total</span></td>
                             <td class="text-right">{!! $moneyText($netAmount) !!}</td>
                         </tr>
-                        <tr>
+                        <tr class="net-row">
                             <td><span class="label">Net Amount</span></td>
                             <td class="text-right">{!! $moneyText($netAmount) !!}</td>
                         </tr>
@@ -933,7 +1076,7 @@
 
                     <table>
                         <tr>
-                            <td class="gst-payable">
+                            <td class="gst-payable" style="{{ $gstPayableByStyle }}">
                                 GST Tax Payable By<br>{{ $gstPayableBy }}
                             </td>
                         </tr>
@@ -949,6 +1092,7 @@
                 </td>
             </tr>
         </table>
+    </div>
     </div>
 @endforeach
 </body>

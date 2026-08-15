@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\CustomerMailResetPasswordNotification;
-use App\Support\SafeOrderBy;
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +20,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Customer extends Authenticatable implements HasMedia
 {
     use HasApiTokens;
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
     use HasRolesAndAbilities;
@@ -57,7 +58,7 @@ class Customer extends Authenticatable implements HasMedia
 
     public function getFormattedCreatedAtAttribute($value)
     {
-        $dateFormat = CompanySetting::getSetting('carbon_date_format', $this->company_id);
+        $dateFormat = CompanySetting::getSetting('carbon_date_format', $this->company_id) ?? 'd M Y';
 
         return Carbon::parse($this->created_at)->translatedFormat($dateFormat);
     }
@@ -140,20 +141,6 @@ class Customer extends Authenticatable implements HasMedia
         return 0;
     }
 
-    public function scopePaginateData($query, $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
-    }
-
-    public function scopeWhereCompany($query)
-    {
-        return $query->where('customers.company_id', request()->header('company'));
-    }
-
     public function scopeWhereContactName($query, $contactName)
     {
         return $query->where('contact_name', 'LIKE', '%'.$contactName.'%');
@@ -162,11 +149,6 @@ class Customer extends Authenticatable implements HasMedia
     public function scopeWhereDisplayName($query, $displayName)
     {
         return $query->where('name', 'LIKE', '%'.$displayName.'%');
-    }
-
-    public function scopeWhereOrder($query, $orderByField, $orderBy)
-    {
-        SafeOrderBy::apply($query, $orderByField, $orderBy);
     }
 
     public function scopeWhereSearch($query, $search)

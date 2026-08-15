@@ -19,9 +19,11 @@ export interface ItemForm {
   description: string
   price: number
   unit_id: string | number | null
+  truck_type: string
   unit: Unit | null
   taxes: Tax[]
   tax_per_item?: boolean | number | string
+  rate_card?: Record<string, number>  // { "unitId": rateInCents }
 }
 
 export interface ItemUnitForm {
@@ -35,9 +37,11 @@ function createItemStub(): ItemForm {
     description: '',
     price: 0,
     unit_id: '',
+    truck_type: null,
     unit: null,
     taxes: [],
     tax_per_item: false,
+    rate_card: {},
   }
 }
 

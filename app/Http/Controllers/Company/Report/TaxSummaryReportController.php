@@ -32,7 +32,7 @@ class TaxSummaryReportController extends Controller
         App::setLocale($locale);
 
         $taxTypes = Tax::with('taxType', 'invoice', 'invoiceItem')
-            ->whereCompany($company->id)
+            ->whereCompanyId($company->id)
             ->whereInvoicesFilters($request->only(['from_date', 'to_date']))
             ->taxAttributes()
             ->get();

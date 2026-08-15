@@ -7,6 +7,7 @@ use App\Support\Pdf\PdfHtmlSanitizer;
 use App\Support\Pdf\PdfTemplateUtils;
 use App\Support\SafeOrderBy;
 use App\Traits\GeneratesPdfTrait;
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +23,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Invoice extends Model implements HasMedia
 {
     use GeneratesPdfTrait;
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
     use InteractsWithMedia;
@@ -263,11 +265,6 @@ class Invoice extends Model implements HasMedia
         }
     }
 
-    public function scopeWhereOrder($query, $orderByField, $orderBy)
-    {
-        SafeOrderBy::apply($query, $orderByField, $orderBy);
-    }
-
     public function scopeApplyFilters($query, array $filters)
     {
         $filters = collect($filters)->filter()->all();
@@ -325,30 +322,6 @@ class Invoice extends Model implements HasMedia
         return $templateName;
     }
 
-    public function scopeWhereCompany($query)
-    {
-        $query->where('invoices.company_id', request()->header('company'));
-    }
-
-    public function scopeWhereCompanyId($query, $company)
-    {
-        $query->where('invoices.company_id', $company);
-    }
-
-    public function scopeWhereCustomer($query, $customer_id)
-    {
-        $query->where('invoices.customer_id', $customer_id);
-    }
-
-    public function scopePaginateData($query, $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
-    }
-
     /**
      * Eager-load all common relationships to prevent N+1 queries.
      *
@@ -379,62 +352,21 @@ class Invoice extends Model implements HasMedia
         return app(InvoiceService::class)->getPdfData($this);
     }
 
-    public function getEmailAttachmentSetting(): bool
+    /**
+     * Invoice uses 'invoice' as the CompanySetting key prefix.
+     */
+    protected function documentTypePrefix(): string
     {
-        $invoiceAsAttachment = CompanySetting::getSetting('invoice_email_attachment', $this->company_id);
-
-        if ($invoiceAsAttachment == 'NO') {
-            return false;
-        }
-
-        return true;
+        return 'invoice';
     }
 
-    public function getCompanyAddress(): string|false
-    {
-        if ($this->company && (! $this->company->address()->exists())) {
-            return false;
-        }
-
-        $format = CompanySetting::getSetting('invoice_company_address_format', $this->company_id);
-
-        return $this->getFormattedString($format);
-    }
-
-    public function getCustomerShippingAddress(): string|false
-    {
-        if ($this->customer && (! $this->customer->shippingAddress()->exists())) {
-            return false;
-        }
-
-        $format = CompanySetting::getSetting('invoice_shipping_address_format', $this->company_id);
-
-        return $this->getFormattedString($format);
-    }
-
-    public function getCustomerBillingAddress(): string|false
-    {
-        if ($this->customer && (! $this->customer->billingAddress()->exists())) {
-            return false;
-        }
-
-        $format = CompanySetting::getSetting('invoice_billing_address_format', $this->company_id);
-
-        return $this->getFormattedString($format);
-    }
-
-    public function getNotes(): string
-    {
-        return PdfHtmlSanitizer::sanitize($this->getFormattedString($this->notes));
-    }
-
+    /**
+     * Alias for getEmailBody() — Invoice historically used getEmailString.
+     * Kept for backward compatibility with InvoiceService::sendInvoiceData().
+     */
     public function getEmailString(string $body): string
     {
-        $values = array_merge($this->getFieldsArray(), $this->getExtraFields());
-
-        $body = strtr($body, $values);
-
-        return preg_replace('/{(.*?)}/', '', $body);
+        return $this->getEmailBody($body);
     }
 
     public function getExtraFields(): array
@@ -516,14 +448,4 @@ class Invoice extends Model implements HasMedia
         }
     }
 
-    public function resolveRouteBinding($value, $field = null)
-    {
-        if (request()->header('company')) {
-            return $this->where('company_id', request()->header('company'))
-                ->where($field ?? $this->getKeyName(), $value)
-                ->firstOrFail();
-        }
-
-        return parent::resolveRouteBinding($value, $field);
-    }
 }

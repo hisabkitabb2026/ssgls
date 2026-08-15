@@ -433,13 +433,30 @@ async function submitCustomerData(): Promise<void> {
               :label="$t('customers.name')"
               :content-loading="isFetchingInitialData"
             >
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.billing.name"
-                :content-loading="isFetchingInitialData"
-                type="text"
-                class="w-full"
-                name="address_name"
-              />
+              <div class="flex items-center gap-1">
+                <BaseInput
+                  v-model.trim="customerStore.currentCustomer.billing.name"
+                  :content-loading="isFetchingInitialData"
+                  type="text"
+                  class="w-full"
+                  name="address_name"
+                />
+                <BaseButton
+                  type="button"
+                  variant="primary-outline"
+                  size="sm"
+                  :content-loading="isFetchingInitialData"
+                  :title="$t('customers.copy_display_name')"
+                  @click="customerStore.copyDisplayNameToBilling()"
+                >
+                  <template #left="slotProps">
+                    <BaseIcon
+                      name="DocumentDuplicateIcon"
+                      :class="slotProps.class"
+                    />
+                  </template>
+                </BaseButton>
+              </div>
             </BaseInputGroup>
 
             <BaseInputGroup
@@ -528,12 +545,30 @@ async function submitCustomerData(): Promise<void> {
                 :label="$t('customers.phone')"
                 class="text-left"
               >
-                <BaseInput
-                  v-model.trim="customerStore.currentCustomer.billing.phone"
-                  :content-loading="isFetchingInitialData"
-                  type="text"
-                  name="phone"
-                />
+                <div class="flex items-center gap-1">
+                  <BaseInput
+                    v-model.trim="customerStore.currentCustomer.billing.phone"
+                    :content-loading="isFetchingInitialData"
+                    type="text"
+                    name="phone"
+                    class="w-full"
+                  />
+                  <BaseButton
+                    type="button"
+                    variant="primary-outline"
+                    size="sm"
+                    :content-loading="isFetchingInitialData"
+                    :title="$t('customers.copy_phone')"
+                    @click="customerStore.copyPhoneToBilling()"
+                  >
+                    <template #left="slotProps">
+                      <BaseIcon
+                        name="DocumentDuplicateIcon"
+                        :class="slotProps.class"
+                      />
+                    </template>
+                  </BaseButton>
+                </div>
               </BaseInputGroup>
 
               <BaseInputGroup

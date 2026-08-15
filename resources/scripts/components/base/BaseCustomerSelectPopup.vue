@@ -202,7 +202,21 @@ function selectNewCustomer(id: number, close: () => void): void {
   if (route.params.id) params.model_id = route.params.id
 
   if (props.type === 'invoice') {
-    invoiceStore.getNextNumber(params, true)
+    // Transport receipt templates (lr_receipt, lorry_receipt, office_invoice)
+    // have their own per-template number format (e.g. lr_receipt_number_format).
+    // Their document numbers don't depend on the customer, so we skip the
+    // getNextNumber call — otherwise the backend falls back to the default
+    // invoice_number_format (→ "INV-000001") and overwrites the correct
+    // number that was already generated on page load.
+    const templateName = invoiceStore.newInvoice.template_name
+    const isTransportTemplate =
+      templateName === 'lr_receipt' ||
+      templateName === 'lorry_receipt' ||
+      templateName === 'office_invoice'
+
+    if (!isTransportTemplate) {
+      invoiceStore.getNextNumber(params, true)
+    }
     invoiceStore.selectCustomer(id)
   } else if (props.type === 'estimate') {
     estimateStore.getNextNumber(params, true)

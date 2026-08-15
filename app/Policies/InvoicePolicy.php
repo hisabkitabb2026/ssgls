@@ -3,137 +3,28 @@
 namespace App\Policies;
 
 use App\Models\Invoice;
-use App\Models\Payment;
 use App\Models\User;
-use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Database\Eloquent\Model;
 use Silber\Bouncer\BouncerFacade;
 
-class InvoicePolicy
+class InvoicePolicy extends BaseCompanyPolicy
 {
-    use HandlesAuthorization;
+    protected string $abilityPrefix = 'invoice';
+
+    protected string $modelClass = Invoice::class;
 
     /**
-     * Determine whether the user can view any models.
+     * Override update to check allow_edit (retrospective edit settings).
      *
-     * @return mixed
+     * Must use Model $model (not Invoice $invoice) to match the parent's
+     * BaseCompanyPolicy::update(User, Model) signature — PHP 8.4 enforces
+     * contravariant parameter compatibility on overrides.
      */
-    public function viewAny(User $user): bool
+    public function update(User $user, Model $model): bool
     {
-        if (BouncerFacade::can('view-invoice', Invoice::class)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can view the model.
-     *
-     * @return mixed
-     */
-    public function view(User $user, Invoice $invoice): bool
-    {
-        if (BouncerFacade::can('view-invoice', $invoice) && $user->hasCompany($invoice->company_id)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can create models.
-     *
-     * @return mixed
-     */
-    public function create(User $user): bool
-    {
-        if (BouncerFacade::can('create-invoice', Invoice::class)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     *
-     * @return mixed
-     */
-    public function update(User $user, Invoice $invoice): bool
-    {
-        if (BouncerFacade::can('edit-invoice', $invoice) && $user->hasCompany($invoice->company_id)) {
-            return $invoice->allow_edit;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can delete the model.
-     *
-     * @return mixed
-     */
-    public function delete(User $user, Invoice $invoice): bool
-    {
-        if (BouncerFacade::can('delete-invoice', $invoice) && $user->hasCompany($invoice->company_id)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     *
-     * @return mixed
-     */
-    public function restore(User $user, Invoice $invoice): bool
-    {
-        if (BouncerFacade::can('delete-invoice', $invoice) && $user->hasCompany($invoice->company_id)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     *
-     * @return mixed
-     */
-    public function forceDelete(User $user, Invoice $invoice): bool
-    {
-        if (BouncerFacade::can('delete-invoice', $invoice) && $user->hasCompany($invoice->company_id)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can send email of the model.
-     *
-     * @param  Payment  $payment
-     * @return mixed
-     */
-    public function send(User $user, Invoice $invoice)
-    {
-        if (BouncerFacade::can('send-invoice', $invoice) && $user->hasCompany($invoice->company_id)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can delete models.
-     *
-     * @return mixed
-     */
-    public function deleteMultiple(User $user)
-    {
-        if (BouncerFacade::can('delete-invoice', Invoice::class)) {
-            return true;
+        if (BouncerFacade::can('edit-invoice', $model) && $user->hasCompany($model->company_id)) {
+            /** @var Invoice $model */
+            return $model->allow_edit;
         }
 
         return false;

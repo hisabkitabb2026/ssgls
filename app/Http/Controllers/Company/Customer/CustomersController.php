@@ -105,8 +105,6 @@ class CustomersController extends Controller
 
         $this->customerService->delete($ids);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 }

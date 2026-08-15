@@ -2,6 +2,10 @@
 
 namespace App\Support\Ai;
 
+use InvoiceShelf\Modules\Ai\Contracts\AiDriver as ModuleAiDriver;
+use InvoiceShelf\Modules\Ai\Data\AiChatResponse as ModuleAiChatResponse;
+use InvoiceShelf\Modules\Ai\Exceptions\AiException as ModuleAiException;
+
 /**
  * Abstract base for AI drivers.
  *
@@ -20,12 +24,13 @@ namespace App\Support\Ai;
  * App\Providers\DriverRegistryProvider for built-ins and
  * InvoiceShelf\Modules\Registry::registerAiDriver() for module-contributed ones).
  */
-abstract class AiDriver
+abstract class AiDriver extends ModuleAiDriver
 {
-    public function __construct(
-        protected string $apiKey,
-        protected array $config = [],
-    ) {}
+    // Inherits constructor, listModels() from the module contract.
+    // Re-declare chatCompletion/textCompletion/validateConnection with the
+    // app-local return types so existing callers using App\Support\Ai\*
+    // continue to work. The app-local AiChatResponse and AiException are
+    // compatible subclasses of the module's equivalents.
 
     /**
      * Perform a chat completion.
@@ -69,17 +74,4 @@ abstract class AiDriver
      * @throws AiException
      */
     abstract public function validateConnection(): array;
-
-    /**
-     * Optional: return the list of available model identifiers from the provider.
-     *
-     * Drivers that don't expose a models endpoint can leave this as an empty array.
-     * The UI falls back to the `suggested_models` declared in driver metadata.
-     *
-     * @return array<int, array{value: string, label: string}>
-     */
-    public function listModels(): array
-    {
-        return [];
-    }
 }

@@ -192,7 +192,40 @@ function handleProfileSaved({ type, profile }: { type: LorryPartyProfileType; pr
   fillProfileFields(type, profile)
 }
 
+/**
+ * Mapping from LorryPartyProfile fields to native transport properties
+ * on invoiceStore.newInvoice (used by TransportCustomFields sections).
+ * This ensures that selecting a profile from the dropdown also fills in
+ * the bottom "Owner Details", "Driver Details", "Broker Details" sections.
+ */
+const nativePropertyMappings: Record<LorryPartyProfileType, Array<[string, keyof LorryPartyProfile]>> = {
+  OWNER: [
+    ['owner_name', 'name'],
+    ['owner_address', 'address'],
+    ['owner_phone', 'phone'],
+    ['owner_bank_account_no', 'bank_account_no'],
+    ['owner_pan_no', 'financer_name'],
+  ],
+  DRIVER: [
+    ['driver_name', 'name'],
+    ['driver_address', 'address'],
+    ['driver_licence_no', 'licence_no'],
+    ['driver_licence_date', 'licence_date'],
+    ['driver_rto_address', 'rto_address'],
+    ['driver_valid_up_to', 'valid_up_to'],
+    ['driver_bank_account_no', 'bank_account_no'],
+  ],
+  BROKER: [
+    ['broker_name', 'name'],
+    ['broker_address', 'address'],
+    ['broker_pan_no', 'advice_no'],
+    ['broker_phone_no', 'phone'],
+    ['broker_bank_account_no', 'bank_account_no'],
+  ],
+}
+
 function fillProfileFields(type: LorryPartyProfileType, profile: LorryPartyProfile | null): void {
+  // 1. Fill custom fields by label (for backward compat / PDF templates)
   const mappings = fieldMappingsByType[type]
   if (mappings) {
     mappings.forEach((mapping) => {
@@ -201,9 +234,21 @@ function fillProfileFields(type: LorryPartyProfileType, profile: LorryPartyProfi
     })
   }
 
+  // 2. Fill native transport properties (for TransportCustomFields sections)
+  const nativeMappings = nativePropertyMappings[type]
+  if (nativeMappings) {
+    nativeMappings.forEach(([prop, key]) => {
+      ;(invoiceStore.newInvoice as Record<string, unknown>)[prop] =
+        (profile?.[key as keyof LorryPartyProfile] as string) || ''
+    })
+  }
+
   if (type === 'OWNER') {
     setField('Paid To', profile?.name)
     setField('Final Paid To', profile?.name)
+    // Also set native properties for Paid To / Final Paid To
+    invoiceStore.newInvoice.paid_to = profile?.name || ''
+    invoiceStore.newInvoice.final_paid_to = profile?.name || ''
   }
 }
 

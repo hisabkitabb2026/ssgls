@@ -111,6 +111,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  templateType: undefined,
   modelValue: () => ({})
 })
 

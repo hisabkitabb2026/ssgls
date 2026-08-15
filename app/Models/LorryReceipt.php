@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,7 @@ use Illuminate\Support\Str;
 
 class LorryReceipt extends Model
 {
+    use HasCompanyScopes;
     use HasFactory;
 
     protected $guarded = ['id'];
@@ -40,6 +42,15 @@ class LorryReceipt extends Model
         return $this->belongsTo(Customer::class, 'broker_customer_id');
     }
 
+    /**
+     * Party profile (LorryPartyProfile) — the "Party" field on Lorry Receipts.
+     * Replaces the Customer-based Party selector.
+     */
+    public function partyProfile(): BelongsTo
+    {
+        return $this->belongsTo(LorryPartyProfile::class, 'party_profile_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creator_id');
@@ -48,11 +59,6 @@ class LorryReceipt extends Model
     public function getLorryReceiptPdfUrlAttribute(): string
     {
         return url('/lorry-receipts/pdf/'.$this->unique_hash);
-    }
-
-    public function scopeWhereCompany($query)
-    {
-        $query->where('lorry_receipts.company_id', request()->header('company'));
     }
 
     public function scopeWhereSearch($query, $search)
@@ -112,11 +118,15 @@ class LorryReceipt extends Model
      * Section C advance_amount + Section E net_amount_payable (if filled).
      * If only Section C is filled, return advance_amount.
      * If both Section C and E are filled, return advance_amount + net_amount_payable.
+     *
+     * Money columns are now stored as integer cents (consistent with
+     * Invoice, Estimate, Payment models) after the migration
+     * `2026_08_10_000000_convert_lorry_receipt_money_columns_to_integer`.
      */
-    public function getDisplayAmountDueAttribute(): ?float
+    public function getDisplayAmountDueAttribute(): ?int
     {
-        $advanceAmount = $this->numericAmount($this->advance_amount);
-        $netAmountPayable = $this->numericAmount($this->net_amount_payable);
+        $advanceAmount = $this->advance_amount;
+        $netAmountPayable = $this->net_amount_payable;
 
         // If Section E is filled (has final payment data), add both
         $hasSectionE = $this->hasFinalPaymentOperation();
@@ -167,6 +177,9 @@ class LorryReceipt extends Model
 
     /**
      * Check if Section E (final payment) has been filled.
+     *
+     * Money columns are now integers (cents), so we check for non-null
+     * and non-zero values directly.
      */
     private function hasFinalPaymentOperation(): bool
     {
@@ -179,30 +192,12 @@ class LorryReceipt extends Model
         ];
 
         foreach ($finalFields as $field) {
-            if ($this->numericAmount($field) !== null) {
+            if ($field !== null && $field !== 0) {
                 return true;
             }
         }
 
         return false;
-    }
-
-    /**
-     * Convert a string amount to a numeric value.
-     */
-    private function numericAmount(?string $value): ?float
-    {
-        if ($value === null || trim($value) === '') {
-            return null;
-        }
-
-        $number = str_replace(',', '', $value);
-
-        if (! is_numeric($number)) {
-            return null;
-        }
-
-        return (float) $number;
     }
 
     protected static function booted(): void

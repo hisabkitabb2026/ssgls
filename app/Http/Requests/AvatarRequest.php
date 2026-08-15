@@ -31,6 +31,16 @@ class AvatarRequest extends FormRequest
                 'nullable',
                 new Base64Mime(['gif', 'jpg', 'png']),
             ],
+            'admin_signature' => [
+                'nullable',
+                'file',
+                'mimes:gif,jpg,png',
+                'max:20000',
+            ],
+            'signature' => [
+                'nullable',
+                new Base64Mime(['gif', 'jpg', 'png']),
+            ],
         ];
     }
 }

@@ -31,16 +31,13 @@ class UserResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'avatar' => $this->avatar,
+            'signature' => $this->signature,
             'is_owner' => $this->isOwner(),
             'is_super_admin' => $this->isSuperAdmin(),
             'roles' => $this->roles,
             'formatted_created_at' => $this->formattedCreatedAt,
-            'currency' => $this->when($this->currency()->exists(), function () {
-                return new CurrencyResource($this->currency);
-            }),
-            'companies' => $this->when($this->companies()->exists(), function () {
-                return CompanyResource::collection($this->companies);
-            }),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
+            'companies' => $this->whenLoaded('companies', fn () => CompanyResource::collection($this->companies)),
         ];
     }
 }

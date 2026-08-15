@@ -84,12 +84,12 @@ const itemColumns = computed<TableColumn[]>(() => [
   },
   {
     key: 'name',
-    label: t('items.name'),
+    label: t('items.station_name'),
     thClass: 'extra',
     tdClass: 'font-medium text-heading',
   },
-  { key: 'unit_name', label: t('items.unit') },
-  { key: 'price', label: t('items.price') },
+  { key: 'unit_name', label: t('items.weight') },
+  { key: 'price', label: t('items.rate') },
   { key: 'created_at', label: t('items.added_on') },
   {
     key: 'actions',

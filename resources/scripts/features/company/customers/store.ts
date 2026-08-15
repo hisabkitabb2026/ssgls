@@ -111,6 +111,14 @@ export const useCustomerStore = defineStore('customer', () => {
     }
   }
 
+  function copyDisplayNameToBilling(): void {
+    currentCustomer.value.billing.name = currentCustomer.value.name
+  }
+
+  function copyPhoneToBilling(): void {
+    currentCustomer.value.billing.phone = currentCustomer.value.phone
+  }
+
   async function fetchCustomerInitialSettings(isEditMode: boolean): Promise<void> {
     const route = useRoute()
     const globalStore = useGlobalStore()
@@ -319,6 +327,8 @@ export const useCustomerStore = defineStore('customer', () => {
     isEdit,
     resetCurrentCustomer,
     copyAddress,
+    copyDisplayNameToBilling,
+    copyPhoneToBilling,
     fetchCustomerInitialSettings,
     fetchCustomers,
     fetchViewCustomer,

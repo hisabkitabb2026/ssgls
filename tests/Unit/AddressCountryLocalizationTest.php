@@ -11,6 +11,10 @@ beforeEach(function () {
 });
 
 it('returns localized country name for German locale', function () {
+    if (! extension_loaded('intl')) {
+        test()->markTestSkipped('The intl extension is not installed — localized country names require it.');
+    }
+
     App::setLocale('de');
 
     $address = Address::factory()->create([
@@ -21,6 +25,10 @@ it('returns localized country name for German locale', function () {
 });
 
 it('returns localized country name for French locale', function () {
+    if (! extension_loaded('intl')) {
+        test()->markTestSkipped('The intl extension is not installed — localized country names require it.');
+    }
+
     App::setLocale('fr');
 
     $address = Address::factory()->create([

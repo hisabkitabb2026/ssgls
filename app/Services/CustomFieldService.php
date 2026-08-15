@@ -17,10 +17,27 @@ class CustomFieldService
         return CustomField::create($data);
     }
 
+    public function createCustomField(array $data): CustomField
+    {
+        $data[getCustomFieldValueKey($data['type'] ?? '')] = $data['default_answer'] ?? null;
+        $data['company_id'] = request()->header('company');
+        $data['slug'] = clean_slug($data['model_type'] ?? '', $data['name'] ?? '');
+
+        return CustomField::create($data);
+    }
+
     public function update(CustomField $customField, Request $request): CustomField
     {
         $data = $request->validated();
         $data[getCustomFieldValueKey($request->type)] = $request->default_answer;
+        $customField->update($data);
+
+        return $customField;
+    }
+
+    public function updateCustomField(CustomField $customField, array $data): CustomField
+    {
+        $data[getCustomFieldValueKey($data['type'] ?? '')] = $data['default_answer'] ?? null;
         $customField->update($data);
 
         return $customField;

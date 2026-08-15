@@ -8,7 +8,7 @@ use App\Http\Requests\EstimatesRequest;
 use App\Http\Requests\SendEstimatesRequest;
 use App\Http\Resources\EstimateResource;
 use App\Http\Resources\InvoiceResource;
-use App\Jobs\GenerateEstimatePdfJob;
+use App\Jobs\GenerateDocumentPdfJob;
 use App\Models\Estimate;
 use App\Models\Invoice;
 use App\Services\Document\EstimateService;
@@ -51,7 +51,7 @@ class EstimatesController extends Controller
             $this->estimateService->send($estimate, $request->only(['title', 'body']));
         }
 
-        GenerateEstimatePdfJob::dispatch($estimate);
+        GenerateDocumentPdfJob::dispatch($estimate, 'estimate', 'estimate_number');
 
         $estimate->load(['customer', 'currency', 'items.fields.customField', 'taxes', 'fields.customField', 'company']);
 
@@ -73,7 +73,7 @@ class EstimatesController extends Controller
 
         $estimate = $this->estimateService->update($estimate, $request);
 
-        GenerateEstimatePdfJob::dispatch($estimate, true);
+        GenerateDocumentPdfJob::dispatch($estimate, 'estimate', 'estimate_number', true);
 
         $estimate->load(['customer', 'currency', 'items.fields.customField', 'taxes', 'fields.customField', 'company']);
 
@@ -90,9 +90,7 @@ class EstimatesController extends Controller
 
         Estimate::destroy($ids);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 
     public function send(SendEstimatesRequest $request, Estimate $estimate)
@@ -101,7 +99,7 @@ class EstimatesController extends Controller
 
         $response = $this->estimateService->send($estimate, $request->all());
 
-        return response()->json($response);
+        return $this->successResponse(null, 200, $response);
     }
 
     public function sendPreview(SendEstimatesRequest $request, Estimate $estimate)
@@ -110,7 +108,7 @@ class EstimatesController extends Controller
 
         $markdown = new Markdown(view(), config('mail.markdown'));
 
-        $data = $this->estimateService->sendEstimateData($estimate, $request->all());
+        $data = $this->estimateService->getSendData($estimate, $request->all());
         $data['url'] = $estimate->estimatePdfUrl;
 
         return $markdown->render('emails.send.estimate', ['data' => $data]);
@@ -144,8 +142,6 @@ class EstimatesController extends Controller
 
         $this->estimateService->changeStatus($estimate, $request->status);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return $this->successResponse();
     }
 }

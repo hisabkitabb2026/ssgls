@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LorryPartyProfile extends Model
 {
+    use HasCompanyScopes;
     public const TYPE_OWNER = 'OWNER';
 
     public const TYPE_DRIVER = 'DRIVER';
@@ -23,11 +25,6 @@ class LorryPartyProfile extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
-    }
-
-    public function scopeWhereCompany($query)
-    {
-        $query->where('lorry_party_profiles.company_id', request()->header('company'));
     }
 
     public function scopeApplyFilters($query, array $filters)

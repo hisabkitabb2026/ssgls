@@ -8,466 +8,484 @@
 @include("app.pdf.partials.fonts")
 
     <style type="text/css">
-        /* -- Base -- */
-        body {
+        @page {
+            margin: 10mm;
+            size: 297mm 210mm;
         }
 
-        html {
-            margin: 0px;
-            padding: 0px;
-            margin-top: 50px;
+        * {
+            box-sizing: border-box;
+        }
+
+        @media print {
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+        }
+
+        body {
+            color: #111;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            margin: 0;
         }
 
         table {
             border-collapse: collapse;
-        }
-
-        hr {
-            margin: 0 30px 0 30px;
-            color: rgba(0, 0, 0, 0.2);
-            border: 0.5px solid #EAF1FB;
-        }
-
-        /* -- Header -- */
-
-        .header-container {
-            position: absolute;
-            width: 100%;
-            height: 90px;
-            left: 0px;
-            top: -50px;
-        }
-
-        .header-bottom-divider {
-            color: rgba(0, 0, 0, 0.2);
-            position: absolute;
-            top: 90px;
-            left: 0px;
             width: 100%;
         }
 
-        .header-logo {
-
-            margin-top: 20px;
-            text-transform: capitalize;
-            color: #817AE3;
+        td,
+        th {
+            border: 1px solid #666;
+            padding: 4px 6px;
+            vertical-align: top;
         }
 
-        .header {
-            font-size: 20px;
-            color: rgba(0, 0, 0, 0.7);
+        .no-border {
+            border: 0 !important;
         }
 
-        .wrapper {
+        /* -- Jurisdiction -- */
+        .jurisdiction {
+            font-size: 11px;
+            line-height: 13px;
+            margin-bottom: 2px;
+            text-align: right;
+            text-decoration: underline;
+        }
+
+        /* -- Master shell -- */
+        .estimate-shell {
+            width: 100%;
+        }
+
+        .estimate-shell > .master {
+            border: 2px solid #000;
+        }
+
+        .master {
+            border: 0;
+            table-layout: fixed;
+        }
+
+        .master > tbody > tr > td,
+        .master > tbody > tr > th {
+            padding: 0;
+        }
+
+        .left-zone {
+            width: 60%;
+        }
+
+        .right-zone {
+            width: 40%;
+        }
+
+        .right-zone table td:first-child,
+        .right-zone table th:first-child {
+            border-left: 0;
+        }
+
+        /* -- Brand Row -- */
+        .brand-row {
+            background: #f8f8f8;
+            border-bottom: 2px solid #000;
+            min-height: 104px;
+            table-layout: fixed;
+        }
+
+        .brand-row td {
+            border-left: 0;
+            border-right: 0;
+            border-top: 0;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            text-align: center;
+            width: 20%;
+        }
+
+        .company-logo {
+            max-height: 100px;
+            max-width: 150px;
+        }
+
+        .brand-fallback {
+            color: #111;
+            font-size: 34px;
+            font-weight: bold;
+            line-height: 34px;
+            padding-top: 8px;
+        }
+
+        .brand-fallback span {
             display: block;
-            margin-top: 0px;
-            padding-top: 16px;
-            padding-bottom: 20px;
+            font-size: 11px;
+            letter-spacing: 0;
+            line-height: 13px;
         }
 
-        /* -- Company Details -- */
-
-        .company-details-container {
-            padding-top: 30px;
+        .company-cell {
+            text-align: center;
+            width: 80%;
         }
 
-        .company-address-container {
-            padding-top: 15px;
-            float: left;
-            padding-left: 30px;
-            width: 30%;
-            text-transform: capitalize;
-            margin-bottom: 2px;
+        .company-name {
+            font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
+            font-size: 28px;
+            font-weight: bold;
+            line-height: 30px;
+            margin-top: 1px;
         }
 
-        .company-address-container {
-            padding-left: 30px;
-            float: left;
-            width: 30%;
-            text-transform: capitalize;
-            margin-bottom: 2px;
-        }
-
-        .company-address-container h1 {
-            font-size: 15px;
-            line-height: 22px;
-            letter-spacing: 0.05em;
-            margin-bottom: 0px;
-            margin-top: 10px;
+        .company-tagline {
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 16px;
         }
 
         .company-address {
-            margin-top: 2px;
-            text-align: left;
             font-size: 12px;
             line-height: 15px;
-            color: #595959;
-            width: 280px;
-            word-wrap: break-word;
-        }
-
-        .estimate-details-container {
-            float: right;
-            padding: 10px 30px 0 0;
-        }
-
-        .attribute-label {
-            font-size: 12px;
-            line-height: 18px;
-            padding-right: 40px;
-            text-align: left;
-            color: #55547A
-        }
-
-        .attribute-value {
-            font-size: 12px;
-            line-height: 18px;
-            text-align: right;
-        }
-
-        /* -- Customer Address -- */
-
-        .customer-address-container {
-            width: 45%;
-            padding: 0px 0 0 0px;
-        }
-
-        /* -- Shipping -- */
-
-        .shipping-address-container {
-            float: right;
-            padding-left: 40px;
-            width: 160px;
-        }
-
-        .shipping-address-container--left {
-            float: left;
-            padding-left: 0px;
-        }
-
-        .shipping-address-label {
-            font-size: 12px;
-            line-height: 18px;
-            padding: 0px;
-            margin-top: 27px;
-            margin-bottom: 0px;
-        }
-
-        .shipping-address-name {
-            max-width: 160px;
-            font-size: 15px;
-            line-height: 22px;
-            padding: 0px;
-            margin: 0px;
-        }
-
-        .shipping-address {
-            font-size: 12px;
-            line-height: 15px;
-            color: #595959;
-            padding-top: 45px;
-            padding-left: 40px;
-            margin: 0px;
-            width: 160px;
-            word-wrap: break-word;
-        }
-
-        /* -- Billing -- */
-
-        .billing-address-container {
-            padding-top: 50px;
-            float: left;
-            padding-left: 30px;
-        }
-
-        .billing-address-label {
-            font-size: 12px;
-            line-height: 18px;
-            padding: 0px;
-            margin-top: 27px;
-            margin-bottom: 0px;
-        }
-
-        .billing-address-name {
-            max-width: 160px;
-            font-size: 15px;
-            line-height: 22px;
-            padding: 0px;
-            margin: 0px;
-        }
-
-        .billing-address {
-            font-size: 12px;
-            line-height: 15px;
-            color: #595959;
-            padding: 45px 0px 0px 30px;
-            margin: 0px;
-            width: 160px;
-            word-wrap: break-word;
-        }
-
-        /* -- Items Table -- */
-
-        .items-table {
-            margin-top: 35px;
-            padding: 0px 30px 10px 30px;
-            page-break-before: avoid;
-            page-break-after: auto;
-        }
-
-        .items-table hr {
-            height: 0.1px;
-        }
-
-        .item-table-heading {
-            font-size: 13.5;
+            margin-top: 4px;
             text-align: center;
-            color: rgba(0, 0, 0, 0.85);
-            padding: 5px;
-            padding-bottom: 10px;
         }
 
-        tr.item-table-heading-row th {
-            border-bottom: 0.620315px solid #E8E8E8;
+        .company-contact {
             font-size: 12px;
-            line-height: 18px;
-        }
-
-        .item-table-heading-row {
-            margin-bottom: 10px;
-        }
-
-        tr.item-row td {
-            font-size: 12px;
-            line-height: 18px;
-        }
-
-        .item-cell {
-            font-size: 13;
-            color: #040405;
-            text-align: center;
-            padding: 5px;
-            padding-top: 10px;
-            border-color: #d9d9d9;
-        }
-
-        .item-description {
-            color: #595959;
-            font-size: 9px;
-            line-height: 12px;
-        }
-
-        /* -- Total Display Table -- */
-
-        .total-display-container {
-            padding: 0 25px;
-
-        }
-
-        .total-display-table {
-            border-top: none;
-            box-sizing: border-box;
-            page-break-inside: avoid;
-            page-break-before: auto;
-            page-break-after: auto;
-            margin-top: 20px;
-            float: right;
-            width: auto;
-
-        }
-
-        .total-table-attribute-label {
-            font-size: 12px;
-            color: #55547A;
-            text-align: left;
-            padding-left: 10px;
-        }
-
-        .total-table-attribute-value {
             font-weight: bold;
-            text-align: right;
+            line-height: 15px;
+            margin-top: 2px;
+            text-align: center;
+        }
+
+        /* -- Party Box -- */
+        .party-box {
+            border-top: 0 !important;
+            min-height: 130px;
+            padding: 0 !important;
+        }
+
+        .party-head {
+            table-layout: fixed;
+        }
+
+        .party-head td {
+            border-bottom: 0;
+            border-left: 0;
+            border-right: 0;
+            border-top: 0;
+            font-size: 16px;
+            min-height: 18px;
+            padding: 3px 8px;
+        }
+
+        .party-address-lines {
+            font-size: 14px;
+            line-height: 18px;
+            overflow: hidden;
+            padding: 3px 8px 20px;
+        }
+
+        .party-display-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .party-gstin {
+            border-top: 1px solid #111;
+            bottom: 0;
+            font-size: 14px;
+            line-height: 18px;
+            overflow: hidden;
+            padding: 4px 8px;
+            text-overflow: clip;
+            white-space: nowrap;
+        }
+
+        .party-gstin b {
+            font-size: 16px;
+        }
+
+        /* -- Tax Box -- */
+        .tax-box {
+            min-height: 26px;
+            padding: 5px 6px !important;
+        }
+
+        .tax-box div {
+            font-size: 13px;
+            font-weight: bold;
+            line-height: 16px;
+            overflow: hidden;
+            overflow-wrap: anywhere;
+            white-space: normal;
+            word-break: break-all;
+        }
+
+        /* -- Estimate Details -- */
+        .estimate-details td {
+            font-size: 13px;
+            min-height: 16px;
+            padding: 3px 6px;
+            vertical-align: middle;
+        }
+
+        .highlight-value {
+            background: #f0f0f0;
+            display: inline;
+            font-weight: bold;
+            line-height: 1.4;
+            padding: 2px 8px;
+        }
+
+        /* -- Items Table (Rate Card Matrix) -- */
+        .items thead tr:first-child th {
+            border-top: 2px solid #000;
+        }
+
+        .items th {
+            background-color: #e8e8e8;
+            border: 1px solid #000;
             font-size: 12px;
-            color: #040405;
-            padding-right: 10px;
-            padding-top: 2px;
-            padding-bottom: 2px;
+            font-weight: bold;
+            letter-spacing: 0.3px;
+            line-height: 14px;
+            padding: 5px 3px;
+            text-align: center;
+            text-transform: uppercase;
+            vertical-align: middle;
         }
 
-        .total-border-left {
-            border: 1px solid #E8E8E8 !important;
-            border-right: 0px !important;
-            padding-top: 0px;
-            padding: 8px !important;
+        .items {
+            table-layout: fixed;
         }
 
-        .total-border-right {
-            border: 1px solid #E8E8E8 !important;
-            border-left: 0px !important;
-            padding-top: 0px;
-            padding: 8px !important;
+        .items td {
+            border: 0;
+            border-bottom: 1px solid #999;
+            font-size: 12px;
+            padding: 4px 3px;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .items tbody tr.alt-row td {
+            background-color: #f7f7f7;
+        }
+
+        .items tbody tr:last-child td {
+            border-bottom: 1px solid #000;
         }
 
         /* -- Notes -- */
-
         .notes {
             font-size: 12px;
-            color: #595959;
-            margin-top: 80px;
-            margin-left: 30px;
-            width: 442px;
+            color: #555;
+            margin-top: 20px;
+            padding: 0 8px;
             text-align: left;
             page-break-inside: avoid;
         }
 
         .notes-label {
-            font-size: 15px;
-            line-height: 22px;
-            letter-spacing: 0.05em;
-            color: #040405;
-            width: 108px;
-            white-space: nowrap;
-            height: 19.87px;
-            padding-bottom: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 6px;
         }
 
         /* -- Helpers -- */
+        .bold {
+            font-weight: bold;
+        }
 
-        .text-primary {
-            color: #5851DB;
+        .text-left {
+            text-align: left !important;
+        }
+
+        .text-right {
+            text-align: right !important;
         }
 
         .text-center {
-            text-align: center
+            text-align: center !important;
         }
-
-        table .text-left {
-            text-align: left;
-        }
-
-        table .text-right {
-            text-align: right;
-        }
-
-        .border-0 {
-            border: none;
-        }
-
-        .py-2 {
-            padding-top: 2px;
-            padding-bottom: 2px;
-        }
-
-        .py-8 {
-            padding-top: 8px;
-            padding-bottom: 8px;
-        }
-
-        .py-3 {
-            padding: 3px 0;
-        }
-
-        .pr-20 {
-            padding-right: 20px;
-        }
-
-        .pr-10 {
-            padding-right: 10px;
-        }
-
-        .pl-20 {
-            padding-left: 20px;
-        }
-
-        .pl-10 {
-            padding-left: 10px;
-        }
-
-        .pl-0 {
-            padding-left: 0;
-        }
-
     </style>
-
 </head>
 
 <body>
-    <div class="header-container">
-        <table width="100%">
+@php
+    // ── Company field extraction (mirrors office_invoice.blade.php) ──
+    $companyName = $estimate->company?->name ?: '';
+    $companyInitials = collect(preg_split('/\s+/', trim($companyName)))
+        ->filter()
+        ->map(fn ($word) => mb_substr($word, 0, 1))
+        ->take(2)
+        ->implode('');
+    $companyTagline = $estimate->company?->tagline ?: '';
+    $companyTopHeading = $estimate->company?->top_heading ?: 'Subject to Vapi Jurisdiction';
+    $companyGstin = $estimate->company?->gstin ?: '';
+    $companyEnrollmentNo = $estimate->company?->enrollment_no ?: '';
+    $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
+    $companyTaxIdentityValue = $companyEnrollmentNo ?: $companyGstin;
+    $panNo = $estimate->company?->pan_no ?: '';
+
+    $companyPhone = $estimate->company?->address?->phone;
+    $companyEmail = $estimate->company?->address?->email
+        ?: ($estimate->company?->notification_email
+            ?: \App\Models\CompanySetting::getSetting('notification_email', $estimate->company_id));
+    $mobile = $companyPhone ?: '';
+    $email = $companyEmail ?: '';
+
+    // Clean the company address HTML — strip duplicate name/phone/email
+    $displayCompanyAddress = preg_replace('/^\s*<h[1-6][^>]*>.*?<\/h[1-6]>\s*/is', '', (string) $company_address);
+    if ($companyName) {
+        $cleanNamePattern = '/^\s*(?:<[^>]+>)*\s*' . preg_quote($companyName, '/') . '\s*(?:<\/[^>]+>)*\s*(?:<br\s*\/?>)?/i';
+        $displayCompanyAddress = preg_replace($cleanNamePattern, '', $displayCompanyAddress);
+    }
+    $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*E-?mail\s*:?\s*[^<\r\n]+/i', '', $displayCompanyAddress);
+    $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*Mob(?:ile)?\.?\s*:?\s*[^<\r\n]+/i', '', $displayCompanyAddress);
+    if ($companyPhone) {
+        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*' . preg_quote($companyPhone, '/') . '\s*/i', '', $displayCompanyAddress);
+    }
+    if ($companyEmail) {
+        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*' . preg_quote($companyEmail, '/') . '\s*/i', '', $displayCompanyAddress);
+    }
+
+    // ── Party (customer) field extraction ──
+    $billingAddress = $estimate->customer?->billingAddress;
+    $partyDisplayName = $billingAddress?->name ?: $estimate->customer?->display_name ?: $estimate->customer?->name;
+    $partyAddressLines = collect();
+
+    if ($billingAddress) {
+        $cityState = collect([$billingAddress->city, $billingAddress->state])->filter()->implode(', ');
+        $cityStateZip = collect([$cityState, $billingAddress->zip])->filter()->implode(' ');
+        $phone = $billingAddress->phone ?: ($estimate->customer?->phone ?? null);
+
+        $partyAddressLines = collect([
+            $billingAddress->address_street_1,
+            $billingAddress->address_street_2,
+            $cityStateZip,
+            $billingAddress->country?->name,
+            $phone ? 'Phone: ' . $phone : null,
+        ])->filter()->values();
+    }
+
+    if ($partyAddressLines->isEmpty()) {
+        $partyAddressHtml = preg_replace('/<br\s*\/?>/i', "\n", (string) $billing_address);
+        $partyAddressHtml = preg_replace('/<\/p>\s*<p[^>]*>/i', "\n", $partyAddressHtml);
+        $partyAddressHtml = preg_replace('/<\/?p[^>]*>/i', "\n", $partyAddressHtml);
+        $partyAddressText = html_entity_decode(strip_tags($partyAddressHtml), ENT_QUOTES, 'UTF-8');
+        $partyAddressLines = collect(preg_split('/\r\n|\r|\n/', $partyAddressText))
+            ->map(fn ($line) => trim(preg_replace('/\s+/', ' ', $line)))
+            ->reject(fn ($line) => $partyDisplayName && strcasecmp($line, $partyDisplayName) === 0)
+            ->filter()
+            ->values();
+
+        if (! $partyDisplayName && $partyAddressLines->isNotEmpty()) {
+            $partyDisplayName = $partyAddressLines->shift();
+        }
+    }
+
+    $partyGstin = $estimate->customer?->tax_id ?: '';
+
+    // ── Auto-fit font sizing ──
+    $getFontForWidth = function ($value, $widthLimit, $baseSize = 11.5, $minSize = 6.5) {
+        $length = strlen((string) $value);
+        if ($length === 0) {
+            return '';
+        }
+        $estimatedWidth = $length * ($baseSize * 0.55);
+        if ($estimatedWidth > $widthLimit) {
+            $shrunkSize = ($widthLimit / $length) / 0.55;
+            return 'font-size: ' . number_format(max($minSize, min($baseSize, $shrunkSize)), 1) . 'px;';
+        }
+        return '';
+    };
+
+    $partyDisplayNameStyle = $getFontForWidth($partyDisplayName, 330, 11.5, 6.5);
+    $partyGstinStyle = $getFontForWidth($partyGstin, 170, 16, 6.5);
+    $companyNameStyle = $getFontForWidth($companyName, 430, 27, 10);
+@endphp
+
+    <div class="jurisdiction">{{ $companyTopHeading }}</div>
+    <div class="estimate-shell">
+        <table class="master">
+            {{-- ── Brand Row: Logo + Company Name/Tagline/Address/Contact ── --}}
             <tr>
-                <td class="text-center">
-                    @if ($logo)
-                        <img class="header-logo" style="height:50px" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
-                    @else
-                        @if ($estimate->customer->company)
-                            <h2 class="header-logo"> {{ $estimate->customer->company->name }} </h2>
-                        @endif
+                <td colspan="2">
+                    <table class="brand-row">
+                        <tr>
+                            <td class="logo-cell">
+                                @if ($logo)
+                                    <img class="company-logo" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
+                                @else
+                                    <div class="brand-fallback">{{ $companyInitials }}</div>
+                                @endif
+                            </td>
+                            <td class="company-cell">
+                                <div class="company-name" style="{{ $companyNameStyle }}">{{ $companyName }}</div>
+                                <div class="company-tagline">{{ $companyTagline }}</div>
+                                <div class="company-address">{!! $displayCompanyAddress !!}</div>
+                                <div class="company-contact">
+                                    @if ($mobile)Mob. {{ $mobile }}@endif
+                                    @if ($email)@if ($mobile)&nbsp;|&nbsp;@endif E-mail : {{ $email }}@endif
+                                    @if ($panNo)@if ($mobile || $email)&nbsp;|&nbsp;@endif PAN : {{ $panNo }}@endif
+                                    @if ($companyTaxIdentityValue)@if ($mobile || $email || $panNo)&nbsp;|&nbsp;@endif {{ $companyTaxIdentityLabel }} : {{ $companyTaxIdentityValue }}@endif
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            {{-- ── Two-Column: Party (left) + Estimate Details (right) ── --}}
+            <tr>
+                <td class="left-zone party-box">
+                    <table class="party-head">
+                        <tr>
+                            <td><b>Party Name & Address :</b></td>
+                        </tr>
+                    </table>
+                    <div class="party-address-lines">
+                        <div class="party-display-name" style="{{ $partyDisplayNameStyle }}">{{ $partyDisplayName }}</div>
+                        {!! nl2br(e($partyAddressLines->implode("\n"))) ?: "\u{00A0}" !!}
+                    </div>
+                    @if ($partyGstin)
+                        <div class="party-gstin" style="{{ $partyGstinStyle }}"><b>GSTIN :</b> {{ $partyGstin }}</div>
                     @endif
+                </td>
+                <td class="right-zone">
+                    <table class="estimate-details">
+                        <tr>
+                            <td><b>Estimate No.:</b> <span class="highlight-value">{{ $estimate->estimate_number }}</span></td>
+                        </tr>
+                        <tr>
+                            <td><b>Date :</b> <span class="highlight-value">{{ $estimate->formattedEstimateDate }}</span></td>
+                        </tr>
+                        <tr>
+                            <td><b>Expiry :</b> <span class="highlight-value">{{ $estimate->formattedExpiryDate }}</span></td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
         </table>
-        <hr class="header-bottom-divider" />
-    </div>
 
-    <div class="wrapper">
-        <div class="company-details-container">
-            <div class="company-address-container company-address">
-                {!! $company_address !!}
-            </div>
-
-            <div class="estimate-details-container">
-                <table class="estimate-details-table">
-                    <tr>
-                        <td class="attribute-label">@lang('pdf_estimate_number')</td>
-                        <td class="attribute-value"> &nbsp;{{ $estimate->estimate_number }}</td>
-                    </tr>
-                    <tr>
-                        <td class="attribute-label">@lang('pdf_estimate_date')</td>
-                        <td class="attribute-value"> &nbsp;{{ $estimate->formattedEstimateDate }}</td>
-                    </tr>
-                    <tr>
-                        <td class="attribute-label">@lang('pdf_estimate_expire_date')</td>
-                        <td class="attribute-value"> &nbsp;{{ $estimate->formattedExpiryDate }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div style="clear: both;"></div>
-        </div>
-
-        <div class="customer-address-container">
-            @if ($billing_address !== '<br />')
-                <div class="billing-address-container billing-address">
-                    @if ($billing_address)
-                        <b>@lang('pdf_bill_to')</b> <br>
-                        {!! $billing_address !!}
-                    @endif
-                </div>
-            @endif
-
-
-            <div @if ($billing_address !== '<br />') class="shipping-address-container shipping-address" @else class="shipping-address-container--left shipping-address" style="padding-left:30px;" @endif>
-
-                @if ($shipping_address)
-                    <b>@lang('pdf_ship_to') </b> <br>
-                    {!! $shipping_address !!}
-                @endif
-            </div>
-
-            <div style="clear: both;"></div>
-        </div>
-
-        <div style="position:relative">
+        {{-- ── Rate Card Matrix Table ── --}}
+        <div style="position:relative; margin-top: 10px;">
             @include('app.pdf.estimate.partials.table')
         </div>
 
-        <div class="notes">
-            @if ($notes)
-                <div class="notes-label">
-                    @lang('pdf_notes')
-                </div>
-
+        {{-- ── Notes ── --}}
+        @if ($notes)
+            <div class="notes">
+                <div class="notes-label">@lang('pdf_notes')</div>
                 {!! $notes !!}
-            @endif
-        </div>
+            </div>
+        @endif
     </div>
 </body>
 

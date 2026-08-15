@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Support\SafeOrderBy;
+use App\Traits\HasCompanyScopes;
 use App\Traits\HasCustomFieldsTrait;
 use Carbon\Carbon;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +16,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class Expense extends Model implements HasMedia
 {
+    use HasCompanyScopes;
     use HasCustomFieldsTrait;
     use HasFactory;
     use InteractsWithMedia;
@@ -209,33 +208,6 @@ class Expense extends Model implements HasMedia
             })
                 ->orWhere('notes', 'LIKE', '%'.$term.'%');
         }
-    }
-
-    public function scopeWhereOrder(Builder $query, string $orderByField, string $orderBy): void
-    {
-        SafeOrderBy::apply($query, $orderByField, $orderBy);
-    }
-
-    public function scopeWhereCompany(Builder $query): void
-    {
-        $query->where('expenses.company_id', request()->header('company'));
-    }
-
-    public function scopeWhereCompanyId(Builder $query, int $company): void
-    {
-        $query->where('expenses.company_id', $company);
-    }
-
-    /**
-     * @return LengthAwarePaginator|Collection
-     */
-    public function scopePaginateData(Builder $query, string $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
     }
 
     public function scopeExpensesAttributes(Builder $query): void

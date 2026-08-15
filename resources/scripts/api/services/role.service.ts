@@ -1,5 +1,6 @@
 import { client } from '../client'
 import { API } from '../endpoints'
+import { createBasicCrudService } from './crud-service.factory'
 import type { Role, Ability } from '@/scripts/types/domain/role'
 import type { ApiResponse, ListParams } from '@/scripts/types/api'
 
@@ -15,29 +16,21 @@ export interface AbilitiesResponse {
   abilities: Ability[]
 }
 
+const baseRoleService = createBasicCrudService<Role, ApiResponse<Role[]>, CreateRolePayload>({
+  basePath: API.ROLES,
+  usePostDelete: false,
+})
+
 export const roleService = {
+  ...baseRoleService,
+
   async list(params?: ListParams): Promise<ApiResponse<Role[]>> {
-    const { data } = await client.get(API.ROLES, { params })
-    return data
+    return baseRoleService.list(params) as Promise<ApiResponse<Role[]>>
   },
 
-  async get(id: number): Promise<ApiResponse<Role>> {
-    const { data } = await client.get(`${API.ROLES}/${id}`)
-    return data
-  },
-
+  // Override create because the API returns { role: Role }, not ApiResponse<Role>
   async create(payload: CreateRolePayload): Promise<{ role: Role }> {
     const { data } = await client.post(API.ROLES, payload)
-    return data
-  },
-
-  async update(id: number, payload: Partial<CreateRolePayload>): Promise<ApiResponse<Role>> {
-    const { data } = await client.put(`${API.ROLES}/${id}`, payload)
-    return data
-  },
-
-  async delete(id: number): Promise<{ success: boolean }> {
-    const { data } = await client.delete(`${API.ROLES}/${id}`)
     return data
   },
 

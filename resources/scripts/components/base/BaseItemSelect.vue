@@ -78,7 +78,12 @@ const description = computed<string | null>({
 })
 
 function openItemModal(): void {
-  // Close the multiselect dropdown before opening the modal
+  // Close the multiselect dropdown before opening the modal.
+  // Dispatch a synthetic mousedown on document.body so the BaseMultiselect's
+  // own handleDocumentMousedown handler fires and closes the dropdown
+  // (clicking the action button is inside the dropdown root, so the handler
+  // doesn't fire naturally).
+  document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
   ;(document.activeElement as HTMLElement)?.blur()
 
   nextTick(() => {
@@ -93,6 +98,8 @@ function openItemModal(): void {
     })
   })
 }
+
+
 
 function deselectItem(index: number): void {
   if (props.store) {

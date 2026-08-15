@@ -46,30 +46,14 @@ class RecurringInvoiceResource extends JsonResource
             'template_name' => $this->template_name,
             'sales_tax_type' => $this->sales_tax_type,
             'sales_tax_address_type' => $this->sales_tax_address_type,
-            'fields' => $this->when($this->fields()->exists(), function () {
-                return CustomFieldValueResource::collection($this->fields);
-            }),
-            'items' => $this->when($this->items()->exists(), function () {
-                return InvoiceItemResource::collection($this->items);
-            }),
-            'customer' => $this->when($this->customer()->exists(), function () {
-                return new CustomerResource($this->customer);
-            }),
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
-            'invoices' => $this->when($this->invoices()->exists(), function () {
-                return InvoiceResource::collection($this->invoices);
-            }),
-            'taxes' => $this->when($this->taxes()->exists(), function () {
-                return TaxResource::collection($this->taxes);
-            }),
-            'creator' => $this->when($this->creator()->exists(), function () {
-                return new UserResource($this->creator);
-            }),
-            'currency' => $this->when($this->currency()->exists(), function () {
-                return new CurrencyResource($this->currency);
-            }),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
+            'items' => $this->whenLoaded('items', fn () => InvoiceItemResource::collection($this->items)),
+            'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'invoices' => $this->whenLoaded('invoices', fn () => InvoiceResource::collection($this->invoices)),
+            'taxes' => $this->whenLoaded('taxes', fn () => TaxResource::collection($this->taxes)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
         ];
     }
 }

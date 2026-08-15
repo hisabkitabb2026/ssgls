@@ -24,17 +24,14 @@ class AddressResource extends JsonResource
             'country_id' => $this->country_id,
             'zip' => $this->zip,
             'phone' => $this->phone,
+            'email' => $this->email,
             'fax' => $this->fax,
             'type' => $this->type,
             'user_id' => $this->user_id,
             'company_id' => $this->company_id,
             'customer_id' => $this->customer_id,
-            'country' => $this->when($this->country()->exists(), function () {
-                return new CountryResource($this->country);
-            }),
-            'user' => $this->when($this->user()->exists(), function () {
-                return new UserResource($this->user);
-            }),
+            'country' => $this->whenLoaded('country', fn () => new CountryResource($this->country)),
+            'user' => $this->whenLoaded('user', fn () => new UserResource($this->user)),
         ];
     }
 }

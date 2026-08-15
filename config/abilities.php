@@ -1,16 +1,23 @@
 <?php
 
+use App\Models\ConsolidationGroup;
 use App\Models\Customer;
 use App\Models\CustomField;
 use App\Models\Estimate;
 use App\Models\ExchangeRateProvider;
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Invoice;
 use App\Models\Item;
+use App\Models\LoadTrip;
+use App\Models\LorryPartyProfile;
+use App\Models\LorryReceipt;
 use App\Models\Note;
 use App\Models\Payment;
+use App\Models\PaymentMethod;
 use App\Models\RecurringInvoice;
 use App\Models\TaxType;
+use App\Models\Unit;
 use App\Models\WarehouseItem;
 
 return [
@@ -91,6 +98,37 @@ return [
             'model' => Item::class,
             'depends_on' => [
                 'view-item',
+            ],
+        ],
+
+        // Unit
+        [
+            'name' => 'view unit',
+            'ability' => 'view-unit',
+            'model' => Unit::class,
+        ],
+        [
+            'name' => 'create unit',
+            'ability' => 'create-unit',
+            'model' => Unit::class,
+            'depends_on' => [
+                'view-unit',
+            ],
+        ],
+        [
+            'name' => 'edit unit',
+            'ability' => 'edit-unit',
+            'model' => Unit::class,
+            'depends_on' => [
+                'view-unit',
+            ],
+        ],
+        [
+            'name' => 'delete unit',
+            'ability' => 'delete-unit',
+            'model' => Unit::class,
+            'depends_on' => [
+                'view-unit',
             ],
         ],
 
@@ -326,13 +364,13 @@ return [
         [
             'name' => 'view lorry receipt',
             'ability' => 'view-lorry-receipt',
-            'model' => Invoice::class,
+            'model' => LorryReceipt::class,
             'group' => 'Lorry Receipt',
         ],
         [
             'name' => 'create lorry receipt',
             'ability' => 'create-lorry-receipt',
-            'model' => Invoice::class,
+            'model' => LorryReceipt::class,
             'group' => 'Lorry Receipt',
             'owner_only' => false,
             'depends_on' => [
@@ -347,7 +385,7 @@ return [
         [
             'name' => 'edit lorry receipt',
             'ability' => 'edit-lorry-receipt',
-            'model' => Invoice::class,
+            'model' => LorryReceipt::class,
             'group' => 'Lorry Receipt',
             'depends_on' => [
                 'view-item',
@@ -361,7 +399,7 @@ return [
         [
             'name' => 'delete lorry receipt',
             'ability' => 'delete-lorry-receipt',
-            'model' => Invoice::class,
+            'model' => LorryReceipt::class,
             'group' => 'Lorry Receipt',
             'depends_on' => [
                 'view-lorry-receipt',
@@ -370,7 +408,7 @@ return [
         [
             'name' => 'send lorry receipt',
             'ability' => 'send-lorry-receipt',
-            'model' => Invoice::class,
+            'model' => LorryReceipt::class,
             'group' => 'Lorry Receipt',
         ],
 
@@ -495,6 +533,101 @@ return [
             ],
         ],
 
+        // Payment Method
+        [
+            'name' => 'view payment method',
+            'ability' => 'view-payment_method',
+            'model' => PaymentMethod::class,
+        ],
+        [
+            'name' => 'create payment method',
+            'ability' => 'create-payment_method',
+            'model' => PaymentMethod::class,
+            'depends_on' => [
+                'view-payment_method',
+            ],
+        ],
+        [
+            'name' => 'edit payment method',
+            'ability' => 'edit-payment_method',
+            'model' => PaymentMethod::class,
+            'depends_on' => [
+                'view-payment_method',
+            ],
+        ],
+        [
+            'name' => 'delete payment method',
+            'ability' => 'delete-payment_method',
+            'model' => PaymentMethod::class,
+            'depends_on' => [
+                'view-payment_method',
+            ],
+        ],
+
+        // Expense Category
+        [
+            'name' => 'view expense category',
+            'ability' => 'view-expense_category',
+            'model' => ExpenseCategory::class,
+        ],
+        [
+            'name' => 'create expense category',
+            'ability' => 'create-expense_category',
+            'model' => ExpenseCategory::class,
+            'depends_on' => [
+                'view-expense_category',
+            ],
+        ],
+        [
+            'name' => 'edit expense category',
+            'ability' => 'edit-expense_category',
+            'model' => ExpenseCategory::class,
+            'depends_on' => [
+                'view-expense_category',
+            ],
+        ],
+        [
+            'name' => 'delete expense category',
+            'ability' => 'delete-expense_category',
+            'model' => ExpenseCategory::class,
+            'depends_on' => [
+                'view-expense_category',
+            ],
+        ],
+
+        // Lorry Party Profile
+        [
+            'name' => 'view lorry party profile',
+            'ability' => 'view-lorry_party_profile',
+            'model' => LorryPartyProfile::class,
+        ],
+        [
+            'name' => 'create lorry party profile',
+            'ability' => 'create-lorry_party_profile',
+            'model' => LorryPartyProfile::class,
+            'depends_on' => [
+                'view-lorry_party_profile',
+                'view-customer',
+            ],
+        ],
+        [
+            'name' => 'edit lorry party profile',
+            'ability' => 'edit-lorry_party_profile',
+            'model' => LorryPartyProfile::class,
+            'depends_on' => [
+                'view-lorry_party_profile',
+                'view-customer',
+            ],
+        ],
+        [
+            'name' => 'delete lorry party profile',
+            'ability' => 'delete-lorry_party_profile',
+            'model' => LorryPartyProfile::class,
+            'depends_on' => [
+                'view-lorry_party_profile',
+            ],
+        ],
+
         // Warehouse Item
         [
             'name' => 'view warehouse item',
@@ -524,6 +657,68 @@ return [
             'model' => WarehouseItem::class,
             'depends_on' => [
                 'view-warehouse-item',
+            ],
+        ],
+
+        // Consolidation Group
+        [
+            'name' => 'view consolidation group',
+            'ability' => 'view-consolidation-group',
+            'model' => ConsolidationGroup::class,
+        ],
+        [
+            'name' => 'create consolidation group',
+            'ability' => 'create-consolidation-group',
+            'model' => ConsolidationGroup::class,
+            'depends_on' => [
+                'view-consolidation-group',
+            ],
+        ],
+        [
+            'name' => 'edit consolidation group',
+            'ability' => 'edit-consolidation-group',
+            'model' => ConsolidationGroup::class,
+            'depends_on' => [
+                'view-consolidation-group',
+            ],
+        ],
+        [
+            'name' => 'delete consolidation group',
+            'ability' => 'delete-consolidation-group',
+            'model' => ConsolidationGroup::class,
+            'depends_on' => [
+                'view-consolidation-group',
+            ],
+        ],
+
+        // Load Trip
+        [
+            'name' => 'view load trip',
+            'ability' => 'view-load-trip',
+            'model' => LoadTrip::class,
+        ],
+        [
+            'name' => 'create load trip',
+            'ability' => 'create-load-trip',
+            'model' => LoadTrip::class,
+            'depends_on' => [
+                'view-load-trip',
+            ],
+        ],
+        [
+            'name' => 'edit load trip',
+            'ability' => 'edit-load-trip',
+            'model' => LoadTrip::class,
+            'depends_on' => [
+                'view-load-trip',
+            ],
+        ],
+        [
+            'name' => 'delete load trip',
+            'ability' => 'delete-load-trip',
+            'model' => LoadTrip::class,
+            'depends_on' => [
+                'view-load-trip',
             ],
         ],
 

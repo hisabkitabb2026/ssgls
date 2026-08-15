@@ -1,14 +1,23 @@
 <template>
   <div class="grid grid-cols-12 gap-8 mt-6 mb-8">
+    <!-- Lorry Receipt: Party selector uses LorryPartyProfile (OWNER/BROKER) -->
+    <LorryPartySelectPopup
+      v-if="isLorryReceipt"
+      :class="showConsignee ? 'order-1 col-span-12 lg:col-span-4 pr-0' : 'col-span-12 lg:col-span-6 pr-0'"
+    />
+
+    <!-- All other templates: Customer-based selector -->
     <BaseCustomerSelectPopup
+      v-else
       :valid="v.customer_id"
       :content-loading="isLoading"
       type="invoice"
       :label="isTransportReceipt ? customerLabel : ''"
       :customer-type="null"
-      :show-lorry-profiles="isLorryReceipt"
+      :show-lorry-profiles="false"
       :class="showConsignee ? 'order-1 col-span-12 lg:col-span-4 pr-0' : 'col-span-12 lg:col-span-6 pr-0'"
     />
+
 
     <!-- Consignee Selector (LR Receipt only) -->
     <div
@@ -381,9 +390,13 @@ import { useModalStore } from '@/scripts/stores/modal.store'
 import { useCustomerStore } from '@/scripts/features/company/customers/store'
 import { useGlobalStore } from '@/scripts/stores/global.store'
 import { customerService } from '../../../../api/services/customer.service'
+import { invoiceService } from '@/scripts/api/services/invoice.service'
+import { useNotificationStore } from '@/scripts/stores/notification.store'
 import { useUserStore } from '@/scripts/stores/user.store'
 import { ABILITIES } from '@/scripts/config/abilities'
 import RecurringFields from './RecurringFields.vue'
+import LorryPartySelectPopup from './LorryPartySelectPopup.vue'
+
 
 interface ValidationField {
   $error: boolean
@@ -447,6 +460,7 @@ const modalStore = useModalStore()
 const customerStore = useCustomerStore()
 const globalStore = useGlobalStore()
 const userStore = useUserStore()
+const notificationStore = useNotificationStore()
 
 const consigneeSearch = ref('')
 const consigneeResults = ref<Customer[]>([])
@@ -489,7 +503,61 @@ const receivedBiltiesField = computed<CustomFieldItem | undefined>(() => {
 function onBiltiesInput(): void {
   const raw = String(invoiceStore.newInvoice.received_no_bilties ?? '')
   invoiceStore.newInvoice.received_no_bilties = raw.replace(/[^0-9,]/g, '')
+
+  // Trigger debounced auto-fill check — only fires when a single bilty
+  // number is entered (no comma). If the entry matches an LR Receipt
+  // docket number, the Lorry Receipt fields are auto-filled from it.
+  debouncedAutoFillFromBilty()
 }
+
+/**
+ * When the user enters a single bilty number (no comma), look it up as an
+ * LR Receipt docket number. If found, auto-fill the Lorry Receipt's
+ * transport fields from the matching LR Receipt.
+ *
+ * Field mapping (LR Receipt → Lorry Receipt):
+ *   from_code       → from_code        (From → From)
+ *   to_code         → to_code          (To → To)
+ *   no_of_articles  → no_of_packages   (No of Articles → No Of Packages)
+ *   actual_weight   → actual_weight    (Actual Weight → Actual Weight)
+ *   charged_weight  → charged_weight   (Charged Weight → Charge Weight)
+ *   truck_no        → truck_no         (Truck No → Lorry No)
+ */
+async function tryAutoFillFromBilty(): Promise<void> {
+  // Skip in edit mode — user is editing an existing receipt
+  if (props.isEdit) return
+
+  const raw = String(invoiceStore.newInvoice.received_no_bilties ?? '').trim()
+
+  // Only auto-fill for a single entry (no comma)
+  if (!raw || raw.includes(',')) return
+
+  try {
+    const response = await invoiceService.findByInvoiceNumber(raw, 'lr_receipt')
+    if (!response?.data) return
+
+    const lr = response.data as Record<string, unknown>
+
+    // Auto-fill Lorry Receipt fields from the matching LR Receipt
+    if (lr.from_code) invoiceStore.newInvoice.from_code = lr.from_code as string
+    if (lr.to_code) invoiceStore.newInvoice.to_code = lr.to_code as string
+    if (lr.no_of_articles) invoiceStore.newInvoice.no_of_packages = lr.no_of_articles as string
+    if (lr.actual_weight) invoiceStore.newInvoice.actual_weight = lr.actual_weight as string
+    if (lr.charged_weight) invoiceStore.newInvoice.charged_weight = lr.charged_weight as string
+    if (lr.truck_no) invoiceStore.newInvoice.truck_no = lr.truck_no as string
+
+    notificationStore.showNotification({
+      type: 'success',
+      message: `Auto-filled from LR Receipt: ${lr.invoice_number ?? raw}`,
+    })
+  } catch {
+    // No match found — silently do nothing
+  }
+}
+
+const debouncedAutoFillFromBilty = useDebounceFn(() => {
+  tryAutoFillFromBilty()
+}, 600)
 
 const customerLabel = computed<string>(() => {
   const templateName = invoiceStore.newInvoice.template_name

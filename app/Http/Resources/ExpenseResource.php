@@ -33,27 +33,13 @@ class ExpenseResource extends JsonResource
             'currency_id' => $this->currency_id,
             'base_amount' => $this->base_amount,
             'payment_method_id' => $this->payment_method_id,
-            'customer' => $this->when($this->customer()->exists(), function () {
-                return new CustomerResource($this->customer);
-            }),
-            'expense_category' => $this->when($this->category()->exists(), function () {
-                return new ExpenseCategoryResource($this->category);
-            }),
-            'creator' => $this->when($this->creator()->exists(), function () {
-                return new UserResource($this->creator);
-            }),
-            'fields' => $this->when($this->fields()->exists(), function () {
-                return CustomFieldValueResource::collection($this->fields);
-            }),
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
-            'currency' => $this->when($this->currency()->exists(), function () {
-                return new CurrencyResource($this->currency);
-            }),
-            'payment_method' => $this->when($this->paymentMethod()->exists(), function () {
-                return new PaymentMethodResource($this->paymentMethod);
-            }),
+            'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
+            'expense_category' => $this->whenLoaded('category', fn () => new ExpenseCategoryResource($this->category)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
+            'payment_method' => $this->whenLoaded('paymentMethod', fn () => new PaymentMethodResource($this->paymentMethod)),
         ];
     }
 }

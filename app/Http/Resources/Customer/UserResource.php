@@ -34,12 +34,8 @@ class UserResource extends JsonResource
             'is_owner' => $this->isOwner(),
             'roles' => $this->roles,
             'formatted_created_at' => $this->formattedCreatedAt,
-            'currency' => $this->when($this->currency()->exists(), function () {
-                return new CurrencyResource($this->currency);
-            }),
-            'companies' => $this->when($this->companies()->exists(), function () {
-                return CompanyResource::collection($this->companies);
-            }),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
+            'companies' => $this->whenLoaded('companies', fn () => CompanyResource::collection($this->companies)),
         ];
     }
 }

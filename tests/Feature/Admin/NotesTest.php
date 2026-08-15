@@ -70,7 +70,7 @@ test('delete note', function () {
 test('cannot retrieve a note belonging to another company', function () {
     $note = Note::factory()->create(['company_id' => Company::factory()->create()->id]);
 
-    getJson("/api/v1/notes/{$note->id}")->assertStatus(403);
+    getJson("/api/v1/notes/{$note->id}")->assertNotFound();
 });
 
 test('cannot update a note belonging to another company', function () {
@@ -79,7 +79,7 @@ test('cannot update a note belonging to another company', function () {
         'name' => 'original-name',
     ]);
 
-    putJson("/api/v1/notes/{$note->id}", Note::factory()->raw())->assertStatus(403);
+    putJson("/api/v1/notes/{$note->id}", Note::factory()->raw())->assertNotFound();
 
     $this->assertDatabaseHas('notes', ['id' => $note->id, 'name' => 'original-name']);
 });
@@ -87,7 +87,7 @@ test('cannot update a note belonging to another company', function () {
 test('cannot delete a note belonging to another company', function () {
     $note = Note::factory()->create(['company_id' => Company::factory()->create()->id]);
 
-    deleteJson("/api/v1/notes/{$note->id}")->assertStatus(403);
+    deleteJson("/api/v1/notes/{$note->id}")->assertNotFound();
 
     $this->assertModelExists($note);
 });

@@ -5,7 +5,9 @@ export interface ApiError {
 message: string
 errors?: Record<string, string[]>
 status: number
-} + +export function useApiError() {
+}
+
+export function useApiError() {
 const error = ref<ApiError | null>(null)
 const isLoading = ref(false)
 

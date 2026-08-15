@@ -31,8 +31,12 @@ class ProfitLossCalculationService
                 ->first();
 
             if ($lrReceipt) {
-                // Update the LR Receipt with the amount_credit from this item
-                $lrReceipt->amount_credit = $item->total; // Already in cents
+                // Update the LR Receipt with the amount_credit from this item.
+                // The "amount" field on Office Invoice items stores the billing
+                // amount in rupees (e.g. 16000), while "total" is the standard
+                // invoice item total (which is 0 for transport templates).
+                // Convert to cents to match amount_credit's storage format.
+                $lrReceipt->amount_credit = (int) ((float) $item->amount * 100);
                 $lrReceipt->office_invoice_number = $officeInvoice->invoice_number;
                 $lrReceipt->save();
 
@@ -80,6 +84,12 @@ class ProfitLossCalculationService
 
     /**
      * Core logic to distribute expense (amount_debit) proportionally among LR Receipts.
+     *
+     * Business rule (Scenario 2): If Section E (net_amount_payable) is not filled,
+     * we do not have sufficient information to calculate the total transport cost.
+     * In that case, we skip the calculation entirely — amount_debit on the related
+     * LR Receipts is left unchanged (or 0 if never set). The calculation will be
+     * performed later when Section E is filled.
      */
     public function recalculateAmountDebitForLorryReceiptDirect(Invoice $lorryReceipt): void
     {
@@ -90,14 +100,24 @@ class ProfitLossCalculationService
             return;
         }
 
-        // Calculate total expense (Section C + Section E) in cents
-        $totalExpense = (int) (
-            ((float) $lorryReceipt->advance_amount + (float) $lorryReceipt->net_amount_payable) * 100
-        );
+        // ── Scenario 2: Section E (net_amount_payable) must be filled ──
+        // If Section E is not filled, we don't have the complete transport cost.
+        // Skip calculation — it will be re-triggered when Section E is filled.
+        if (blank($lorryReceipt->net_amount_payable)) {
+            return;
+        }
+
+        // Calculate total expense (Section C + Section E) in cents.
+        // Both fields are stored as strings (rupees), so cast to float then
+        // convert to cents to match amount_debit's integer-cents storage format.
+        $advanceAmount = (float) $lorryReceipt->advance_amount;
+        $netAmountPayable = (float) $lorryReceipt->net_amount_payable;
+        $totalExpense = (int) (($advanceAmount + $netAmountPayable) * 100);
 
         if ($totalExpense <= 0) {
             // No expense to distribute, clear amount_debit on related LR Receipts
             $this->clearAmountDebitForDockets($docketNumbers, $lorryReceipt->company_id);
+
             return;
         }
 
@@ -120,16 +140,16 @@ class ProfitLossCalculationService
         // Update challan_number on all related LR Receipts
         foreach ($lrReceipts as $lrReceipt) {
             $lrReceipt->challan_number = $lorryReceipt->contract_no ?? $lorryReceipt->invoice_number;
-            
-            // Only distribute expense if this LR Receipt has income
+
+            // Only distribute expense if this LR Receipt has income (amount_credit > 0).
+            // If amount_credit is 0 (Office Invoice not yet linked), leave amount_debit
+            // unchanged — it will be recalculated when the Office Invoice is created
+            // and triggers recalculateFromOfficeInvoice().
             if ($totalIncome > 0 && $lrReceipt->amount_credit > 0) {
                 $proportion = $lrReceipt->amount_credit / $totalIncome;
                 $lrReceipt->amount_debit = (int) ($totalExpense * $proportion);
-            } else {
-                // No income yet, set amount_debit to 0 (will be updated when invoice is created)
-                $lrReceipt->amount_debit = 0;
             }
-            
+
             $lrReceipt->save();
         }
     }

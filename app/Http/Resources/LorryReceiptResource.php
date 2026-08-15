@@ -18,6 +18,7 @@ class LorryReceiptResource extends JsonResource
             'owner_customer_id' => $this->owner_customer_id,
             'driver_customer_id' => $this->driver_customer_id,
             'broker_customer_id' => $this->broker_customer_id,
+            'party_profile_id' => $this->party_profile_id,
 
             // Contract & Route
             'contract_no' => $this->contract_no,
@@ -172,18 +173,15 @@ class LorryReceiptResource extends JsonResource
             'total_from_invoices' => $this->totalFromInvoices,
 
             // Relations
-            'owner_customer' => $this->when($this->ownerCustomer()->exists(), function () {
-                return new CustomerResource($this->ownerCustomer);
-            }),
-            'driver_customer' => $this->when($this->driverCustomer()->exists(), function () {
-                return new CustomerResource($this->driverCustomer);
-            }),
-            'broker_customer' => $this->when($this->brokerCustomer()->exists(), function () {
-                return new CustomerResource($this->brokerCustomer);
-            }),
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
+            'owner_customer' => $this->whenLoaded('ownerCustomer', fn () => new CustomerResource($this->ownerCustomer)),
+            'driver_customer' => $this->whenLoaded('driverCustomer', fn () => new CustomerResource($this->driverCustomer)),
+            'broker_customer' => $this->whenLoaded('brokerCustomer', fn () => new CustomerResource($this->brokerCustomer)),
+            'party_profile' => $this->whenLoaded('partyProfile', fn () => [
+                'id' => $this->partyProfile->id,
+                'name' => $this->partyProfile->name,
+                'type' => $this->partyProfile->type,
+            ]),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
         ];
     }
 }

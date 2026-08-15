@@ -22,6 +22,7 @@ const { t } = useI18n()
 
 const isSavingGeneral = ref<boolean>(false)
 const isSavingAvatar = ref<boolean>(false)
+const isSavingSignature = ref<boolean>(false)
 const isSavingPassword = ref<boolean>(false)
 
 // General section
@@ -69,6 +70,22 @@ function onFileInputChange(_fileName: string, file: File): void {
 
 function onFileInputRemove(): void {
   avatarFileBlob.value = null
+}
+
+// Signature Photo section
+const sigFiles = ref<AvatarFile[]>([])
+const signatureFileBlob = ref<File | null>(null)
+
+if (userStore.currentUser?.signature) {
+  sigFiles.value.push({ image: userStore.currentUser.signature as string })
+}
+
+function onSigFileInputChange(_fileName: string, file: File): void {
+  signatureFileBlob.value = file
+}
+
+function onSigFileInputRemove(): void {
+  signatureFileBlob.value = null
 }
 
 // Security section
@@ -144,6 +161,31 @@ async function updateAvatar(): Promise<void> {
     avatarFileBlob.value = null
   } finally {
     isSavingAvatar.value = false
+  }
+}
+
+async function updateSignature(): Promise<void> {
+  if (!signatureFileBlob.value) return
+
+  isSavingSignature.value = true
+  try {
+    const formData = new FormData()
+    formData.append('admin_signature', signatureFileBlob.value)
+
+    await userStore.uploadSignature(formData)
+
+    notificationStore.showNotification({
+      type: 'success',
+      message: 'settings.account_settings.updated_message',
+    })
+
+    sigFiles.value = []
+    if (userStore.currentUser?.signature) {
+      sigFiles.value.push({ image: userStore.currentUser.signature as string })
+    }
+    signatureFileBlob.value = null
+  } finally {
+    isSavingSignature.value = false
   }
 }
 
@@ -251,6 +293,33 @@ async function updatePassword(): Promise<void> {
         <BaseButton :loading="isSavingAvatar" :disabled="isSavingAvatar" type="submit" class="mt-6">
           <template #left="slotProps">
             <BaseIcon v-if="!isSavingAvatar" name="ArrowDownOnSquareIcon" :class="slotProps.class" />
+          </template>
+          {{ $t('settings.company_info.save') }}
+        </BaseButton>
+      </BaseSettingCard>
+    </form>
+
+    <!-- Signature Photo Section -->
+    <form @submit.prevent="updateSignature">
+      <BaseSettingCard
+        :title="$t('settings.account_settings.signature_picture')"
+        :description="$t('settings.account_settings.signature_picture_description')"
+      >
+        <BaseInputGrid class="mt-5">
+          <BaseInputGroup :label="$t('settings.account_settings.signature_picture')">
+            <BaseFileUploader
+              v-model="sigFiles"
+              :avatar="true"
+              accept="image/*"
+              @change="onSigFileInputChange"
+              @remove="onSigFileInputRemove"
+            />
+          </BaseInputGroup>
+        </BaseInputGrid>
+
+        <BaseButton :loading="isSavingSignature" :disabled="isSavingSignature" type="submit" class="mt-6">
+          <template #left="slotProps">
+            <BaseIcon v-if="!isSavingSignature" name="ArrowDownOnSquareIcon" :class="slotProps.class" />
           </template>
           {{ $t('settings.company_info.save') }}
         </BaseButton>

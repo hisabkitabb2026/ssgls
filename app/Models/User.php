@@ -34,6 +34,10 @@ class User extends Authenticatable implements HasMedia
         $this->addMediaCollection('admin_avatar')
             ->useDisk('public')
             ->singleFile();
+
+        $this->addMediaCollection('user_signature')
+            ->useDisk('public')
+            ->singleFile();
     }
 
     /**
@@ -62,6 +66,7 @@ class User extends Authenticatable implements HasMedia
     protected $appends = [
         'formattedCreatedAt',
         'avatar',
+        'signature',
     ];
 
     /**
@@ -310,6 +315,17 @@ class User extends Authenticatable implements HasMedia
 
         if ($avatar) {
             return asset($avatar->getUrl());
+        }
+
+        return 0;
+    }
+
+    public function getSignatureAttribute()
+    {
+        $signature = $this->getMedia('user_signature')->first();
+
+        if ($signature) {
+            return asset($signature->getUrl());
         }
 
         return 0;

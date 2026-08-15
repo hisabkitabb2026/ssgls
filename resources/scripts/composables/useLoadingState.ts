@@ -3,7 +3,9 @@ import { ref } from 'vue'
 export interface LoadingState {
 isLoading: boolean
 message?: string
-} + +export function useLoadingState(initialState = false) {
+}
+
+export function useLoadingState(initialState = false) {
 const isLoading = ref(initialState)
 const message = ref('')
 

@@ -30,8 +30,8 @@
                   </ul>
                 </div>
                 <button
-                  @click="clearError"
                   class="text-alert-error-text hover:opacity-75 flex-shrink-0"
+                  @click="clearError"
                 >
                   <BaseIcon name="XMarkIcon" class="h-5 w-5" />
                 </button>

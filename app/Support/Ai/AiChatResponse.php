@@ -2,14 +2,20 @@
 
 namespace App\Support\Ai;
 
+use InvoiceShelf\Modules\Ai\Data\AiChatResponse as ModuleAiChatResponse;
+
 /**
  * Provider-agnostic chat completion response.
+ *
+ * Extends the module contract's AiChatResponse so that drivers registered
+ * with the module Registry (which expects InvoiceShelf\Modules\Ai\Data\AiChatResponse)
+ * can return this app-local subclass.
  *
  * Shape is deliberately modelled after OpenAI's response so drivers translating
  * from other shapes only have to do it once, and the AiAssistantService loop
  * stays vendor-neutral.
  */
-class AiChatResponse
+class AiChatResponse extends ModuleAiChatResponse
 {
     /**
      * @param  string|null  $message  The assistant's text reply. Null when the response is a tool-call-only turn.

@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Models\Address;
 use App\Models\CompanySetting;
+use App\Models\Customer;
 use App\Models\FileDisk;
 use App\Models\Setting;
 use App\Services\FontService;
@@ -13,6 +14,114 @@ use Illuminate\Support\Facades\App;
 
 trait GeneratesPdfTrait
 {
+    /**
+     * The document-type prefix used for CompanySetting keys.
+     *
+     * Subclasses should override this to match their document type
+     * (e.g. 'invoice', 'estimate', 'payment').  It is used to build
+     * setting keys like '{prefix}_company_address_format'.
+     *
+     * @var string
+     */
+    protected function documentTypePrefix(): string
+    {
+        // Default to 'invoice' — override in models that need a different prefix.
+        return 'invoice';
+    }
+
+    /**
+     * Get the company address for the document, formatted per company settings.
+     *
+     * Shared by Invoice, Estimate, and Payment — each model just needs a
+     * different CompanySetting key prefix.
+     */
+    public function getCompanyAddress(): string|false
+    {
+        if ($this->company && (! $this->company->address()->exists())) {
+            return false;
+        }
+
+        $format = CompanySetting::getSetting(
+            $this->documentTypePrefix().'_company_address_format',
+            $this->company_id
+        );
+
+        return $this->getFormattedString($format);
+    }
+
+    /**
+     * Get the customer shipping address for the document.
+     */
+    public function getCustomerShippingAddress(): string|false
+    {
+        if ($this->customer && (! $this->customer->shippingAddress()->exists())) {
+            return false;
+        }
+
+        $format = CompanySetting::getSetting(
+            $this->documentTypePrefix().'_shipping_address_format',
+            $this->company_id
+        );
+
+        return $this->getFormattedString($format);
+    }
+
+    /**
+     * Get the customer billing address for the document.
+     */
+    public function getCustomerBillingAddress(): string|false
+    {
+        if ($this->customer && (! $this->customer->billingAddress()->exists())) {
+            return false;
+        }
+
+        $format = CompanySetting::getSetting(
+            $this->documentTypePrefix().'_billing_address_format',
+            $this->company_id
+        );
+
+        return $this->getFormattedString($format);
+    }
+
+    /**
+     * Get the sanitized notes for the document.
+     */
+    public function getNotes(): string
+    {
+        return PdfHtmlSanitizer::sanitize($this->getFormattedString($this->notes));
+    }
+
+    /**
+     * Get the email attachment setting for the document.
+     */
+    public function getEmailAttachmentSetting(): bool
+    {
+        $asAttachment = CompanySetting::getSetting(
+            $this->documentTypePrefix().'_email_attachment',
+            $this->company_id
+        );
+
+        if ($asAttachment == 'NO') {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Replace template placeholders in an email body string.
+     *
+     * Works for both Invoice (getEmailString) and Estimate/Payment (getEmailBody).
+     */
+    public function getEmailBody(string $body): string
+    {
+        $values = array_merge($this->getFieldsArray(), $this->getExtraFields());
+
+        $body = strtr($body, $values);
+
+        return preg_replace('/{(.*?)}/', '', $body);
+    }
+
     public function getGeneratedPDFOrStream($collection_name)
     {
         $pdf = $this->getGeneratedPDF($collection_name);
@@ -116,6 +225,15 @@ trait GeneratesPdfTrait
     public function getFieldsArray()
     {
         $customer = $this->customer;
+
+        // Transport receipt templates (lr_receipt, lorry_receipt, office_invoice)
+        // may not have a customer attached — the Party is a LorryPartyProfile
+        // instead of a Customer.  Use a blank Customer instance to avoid
+        // "Attempt to read property on null" errors during PDF generation.
+        if (! $customer) {
+            $customer = new Customer;
+        }
+
         $shippingAddress = $customer->shippingAddress ?? new Address;
         $billingAddress = $customer->billingAddress ?? new Address;
         $companyAddress = $this->company->address ?? new Address;
@@ -156,7 +274,7 @@ trait GeneratesPdfTrait
         ];
 
         $customFields = $this->fields;
-        $customerCustomFields = $this->customer->fields;
+        $customerCustomFields = $customer->fields ?? collect();
 
         foreach ($customFields as $customField) {
             $fields['{'.$customField->customField->slug.'}'] = $customField->defaultAnswer;

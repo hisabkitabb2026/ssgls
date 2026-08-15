@@ -31,7 +31,7 @@ class ItemSalesReportController extends Controller
 
         App::setLocale($locale);
 
-        $items = InvoiceItem::whereCompany($company->id)
+        $items = InvoiceItem::whereCompanyId($company->id)
             ->applyInvoiceFilters($request->only(['from_date', 'to_date']))
             ->itemAttributes()
             ->get();

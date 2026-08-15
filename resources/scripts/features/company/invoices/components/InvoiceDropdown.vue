@@ -63,7 +63,7 @@
     </BaseDropdownItem>
 
     <!-- Record Payment — shown for any invoice that isn't fully paid -->
-    <router-link :to="`/admin/payments/${row.id}/create`">
+    <router-link :to="recordPaymentLink">
       <BaseDropdownItem
         v-if="row.paid_status !== 'PAID' && !isDetailView && canCreatePayment"
       >
@@ -74,6 +74,7 @@
         {{ $t('invoices.record_payment') }}
       </BaseDropdownItem>
     </router-link>
+
 
     <!-- Mark as Sent -->
     <BaseDropdownItem v-if="row.status === 'DRAFT' && !isDetailView && canSend" @click="onMarkAsSent">
@@ -160,7 +161,21 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
-const isDetailView = computed<boolean>(() => route.name === 'invoices.view')
+const isDetailView = computed<boolean>(() =>
+  route.name === 'invoices.view' ||
+  route.name === 'standard-invoices.view',
+)
+
+// Build the "Record Payment" link with a `from` query param so the payment
+// page knows which invoice list the user came from (standard-invoices vs
+// invoices). This lets us redirect back to the correct list after saving.
+const recordPaymentLink = computed(() => {
+  const from = route.path.includes('/admin/standard-invoices')
+    ? 'standard-invoices'
+    : 'invoices'
+  return `/admin/payments/${props.row.id}/create?from=${from}`
+})
+
 
 const canReSendInvoice = computed<boolean>(() => {
   return (

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, watch } from 'vue'
+
 import { useI18n } from 'vue-i18n'
 import { required, minLength, helpers } from '@vuelidate/validators'
 import { useVuelidate } from '@vuelidate/core'
@@ -15,14 +16,15 @@ interface CompanyFormData {
   enrollment_no: string | null
   gstin: string | null
   pan_no: string | null
+  billing_branch: string | null
   address: {
     address_street_1: string
     address_street_2: string
-    website: string
     country_id: number | null
     state: string
     city: string
     phone: string
+    email: string
     zip: string
   }
 }
@@ -46,14 +48,16 @@ const companyForm = reactive<CompanyFormData>({
   enrollment_no: companyStore.selectedCompany?.enrollment_no ?? null,
   gstin: companyStore.selectedCompany?.gstin ?? null,
   pan_no: companyStore.selectedCompany?.pan_no ?? null,
+  billing_branch: companyStore.selectedCompany?.billing_branch ?? null,
+
   address: {
     address_street_1: (companyStore.selectedCompany?.address as Record<string, string>)?.address_street_1 ?? '',
     address_street_2: (companyStore.selectedCompany?.address as Record<string, string>)?.address_street_2 ?? '',
-    website: (companyStore.selectedCompany?.address as Record<string, string>)?.website ?? '',
     country_id: (companyStore.selectedCompany?.address as Record<string, number | null>)?.country_id ?? null,
     state: (companyStore.selectedCompany?.address as Record<string, string>)?.state ?? '',
     city: (companyStore.selectedCompany?.address as Record<string, string>)?.city ?? '',
     phone: (companyStore.selectedCompany?.address as Record<string, string>)?.phone ?? '',
+    email: (companyStore.selectedCompany?.address as Record<string, string>)?.email ?? '',
     zip: (companyStore.selectedCompany?.address as Record<string, string>)?.zip ?? '',
   },
 })
@@ -63,9 +67,44 @@ const logoFileBlob = ref<string | null>(null)
 const logoFileName = ref<string | null>(null)
 const isCompanyLogoRemoved = ref<boolean>(false)
 
-if (companyForm.logo) {
-  previewLogo.value.push({ image: companyForm.logo })
-}
+// Watch for selectedCompany loading asynchronously after page refresh.
+// The form is initialized synchronously from selectedCompany, but on page
+// refresh selectedCompany starts as null and loads via the bootstrap API.
+// This watch ensures the form populates correctly once the data arrives.
+watch(
+  () => companyStore.selectedCompany,
+  (company) => {
+    if (!company) return
+
+    companyForm.name = company.name
+    companyForm.logo = company.logo
+    companyForm.tax_id = company.tax_id
+    companyForm.vat_id = company.vat_id
+    companyForm.enrollment_no = company.enrollment_no
+    companyForm.gstin = company.gstin
+    companyForm.pan_no = company.pan_no
+    companyForm.billing_branch = company.billing_branch
+
+    const addr = company.address as Record<string, unknown> | undefined
+    if (addr) {
+      companyForm.address.address_street_1 = (addr.address_street_1 as string) ?? ''
+      companyForm.address.address_street_2 = (addr.address_street_2 as string) ?? ''
+      companyForm.address.country_id = (addr.country_id as number | null) ?? null
+      companyForm.address.state = (addr.state as string) ?? ''
+      companyForm.address.city = (addr.city as string) ?? ''
+      companyForm.address.phone = (addr.phone as string) ?? ''
+      companyForm.address.email = (addr.email as string) ?? ''
+      companyForm.address.zip = (addr.zip as string) ?? ''
+    }
+
+    // Update logo preview if logo changed
+    if (company.logo && previewLogo.value.length === 0) {
+      previewLogo.value.push({ image: company.logo })
+    }
+  },
+  { immediate: true },
+)
+
 
 const rules = computed(() => ({
   name: {
@@ -114,6 +153,7 @@ async function updateCompanyData(): Promise<void> {
     enrollment_no: companyForm.enrollment_no,
     gstin: companyForm.gstin,
     pan_no: companyForm.pan_no,
+    billing_branch: companyForm.billing_branch,
     address: companyForm.address,
   })
 
@@ -176,6 +216,10 @@ async function updateCompanyData(): Promise<void> {
           <BaseInput v-model="companyForm.address.phone" />
         </BaseInputGroup>
 
+        <BaseInputGroup :label="$t('settings.company_info.email')">
+          <BaseInput v-model="companyForm.address.email" type="email" />
+        </BaseInputGroup>
+
         <BaseInputGroup
           :label="$t('settings.company_info.country')"
           :error="
@@ -231,6 +275,10 @@ async function updateCompanyData(): Promise<void> {
 
         <BaseInputGroup :label="$t('settings.company_info.pan_no')">
           <BaseInput v-model="companyForm.pan_no" type="text" />
+        </BaseInputGroup>
+
+        <BaseInputGroup label="Billing Branch Name & Address">
+          <BaseTextarea v-model="companyForm.billing_branch" rows="2" />
         </BaseInputGroup>
       </BaseInputGrid>
 

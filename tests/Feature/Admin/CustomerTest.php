@@ -190,7 +190,7 @@ test('cannot view customer from another company', function () {
     ]);
 
     getJson("api/v1/customers/{$otherCustomer->id}")
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('cannot update customer from another company', function () {
@@ -202,7 +202,7 @@ test('cannot update customer from another company', function () {
     putJson("api/v1/customers/{$otherCustomer->id}", [
         'name' => 'Hacked Name',
         'email' => 'hacked@example.com',
-    ])->assertForbidden();
+    ])->assertNotFound();
 });
 
 test('cannot bulk delete customer from another company', function () {

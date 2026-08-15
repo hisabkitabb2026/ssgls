@@ -35,8 +35,8 @@
     <!-- Add Button -->
     <BaseButton
       v-if="!showForm"
-      @click="openForm"
       variant="secondary"
+      @click="openForm"
     >
       <BaseIcon name="PlusIcon" class="h-4 w-4 mr-2" />
       {{ $t('invoices.add_item') }}

@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use App\Support\SafeOrderBy;
+use App\Traits\HasCompanyScopes;
 use Carbon\Carbon;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Item extends Model
 {
+    use HasCompanyScopes;
     use HasFactory;
 
     protected $guarded = ['id'];
@@ -26,6 +25,7 @@ class Item extends Model
     {
         return [
             'price' => 'integer',
+            'rate_card' => 'array',
         ];
     }
 
@@ -64,11 +64,6 @@ class Item extends Model
         return $query->where('items.unit_id', $unit_id);
     }
 
-    public function scopeWhereOrder(Builder $query, string $orderByField, string $orderBy): void
-    {
-        SafeOrderBy::apply($query, $orderByField, $orderBy);
-    }
-
     public function scopeWhereItem(Builder $query, int $item_id): void
     {
         $query->orWhere('id', $item_id);
@@ -104,18 +99,6 @@ class Item extends Model
         }
     }
 
-    /**
-     * @return LengthAwarePaginator|Collection
-     */
-    public function scopePaginateData(Builder $query, string $limit)
-    {
-        if ($limit == 'all') {
-            return $query->get();
-        }
-
-        return $query->paginate($limit);
-    }
-
     public function getFormattedCreatedAtAttribute(mixed $value): string
     {
         $dateFormat = CompanySetting::getSetting('carbon_date_format', request()->header('company'));
@@ -128,11 +111,6 @@ class Item extends Model
         return $this->hasMany(Tax::class)
             ->where('invoice_item_id', null)
             ->where('estimate_item_id', null);
-    }
-
-    public function scopeWhereCompany(Builder $query): void
-    {
-        $query->where('items.company_id', request()->header('company'));
     }
 
     public function invoiceItems(): HasMany

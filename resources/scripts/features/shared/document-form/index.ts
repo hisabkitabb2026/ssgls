@@ -7,7 +7,6 @@ export { default as TaxSelectPopup } from './TaxSelectPopup.vue'
 export { default as NoteSelectPopup } from './NoteSelectPopup.vue'
 export { default as TemplateSelectButton } from './TemplateSelectButton.vue'
 export { default as SelectTemplateModal } from './SelectTemplateModal.vue'
-export { default as QuotationRateSection } from './QuotationRateSection.vue'
 export { default as ExchangeRateConverter } from './ExchangeRateConverter.vue'
 
 export {
@@ -25,3 +24,13 @@ export type {
   DocumentStore,
   UseDocumentCalculationsOptions,
 } from './use-document-calculations'
+
+export {
+  createTaxStub,
+  createBaseItemStub,
+  createInvoiceItemStub,
+  createEstimateItemStub,
+} from './document-stubs'
+
+export { useDocumentActions } from './use-document-actions'
+export type { UseDocumentActionsOptions } from './use-document-actions'

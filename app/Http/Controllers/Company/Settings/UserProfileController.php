@@ -53,6 +53,32 @@ class UserProfileController extends Controller
         return new UserResource($user);
     }
 
+    public function uploadSignature(AvatarRequest $request)
+    {
+        $user = auth()->user();
+
+        if (isset($request->is_admin_signature_removed) && (bool) $request->is_admin_signature_removed) {
+            $user->clearMediaCollection('user_signature');
+        }
+        if ($user && $request->hasFile('admin_signature')) {
+            $user->clearMediaCollection('user_signature');
+
+            $user->addMediaFromRequest('admin_signature')
+                ->toMediaCollection('user_signature');
+        }
+
+        if ($user && $request->has('signature')) {
+            $data = json_decode($request->signature);
+            $user->clearMediaCollection('user_signature');
+
+            $user->addMediaFromBase64($data->data)
+                ->usingFileName($data->name)
+                ->toMediaCollection('user_signature');
+        }
+
+        return new UserResource($user);
+    }
+
     public function showSettings(GetSettingsRequest $request): JsonResponse
     {
         $user = $request->user();

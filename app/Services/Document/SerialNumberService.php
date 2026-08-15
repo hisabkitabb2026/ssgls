@@ -9,7 +9,39 @@ class SerialNumberService
 {
     public const VALID_PLACEHOLDERS = ['CUSTOMER_SERIES', 'SEQUENCE', 'DATE_FORMAT', 'SERIES', 'RANDOM_SEQUENCE', 'DELIMITER', 'CUSTOMER_SEQUENCE'];
 
+    /**
+     * Factory method to quickly build a fully-configured SerialNumberService.
+     *
+     * Replaces the repeated 4–5 line builder chain that was duplicated 10+ times
+     * across all document services.
+     *
+     * @param  mixed        $model         Model instance or class string.
+     * @param  int|string   $companyId     Company ID.
+     * @param  int|string   $customerId    Customer ID (nullable).
+     * @param  int|null     $modelId       Existing model ID for updates (to preserve sequence).
+     * @param  string|null  $templateName  Template name for invoice-type filtering.
+     * @return self
+     */
+    public static function for($model, $companyId, $customerId = null, ?int $modelId = null, ?string $templateName = null): self
+    {
+        $instance = (new self)
+            ->setModel($model)
+            ->setCompany($companyId)
+            ->setCustomer($customerId);
+
+        if ($templateName) {
+            $instance->setTemplateName($templateName);
+        }
+
+        if ($modelId) {
+            $instance->setModelObject($modelId);
+        }
+
+        return $instance->setNextNumbers();
+    }
+
     private $model;
+
 
     private $ob;
 

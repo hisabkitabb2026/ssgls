@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasCompanyScopes;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class Tax extends Model
 {
+    use HasCompanyScopes;
     use HasFactory;
 
     protected $guarded = [
@@ -64,11 +66,6 @@ class Tax extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
-    }
-
-    public function scopeWhereCompany(Builder $query, int $company_id): void
-    {
-        $query->where('company_id', $company_id);
     }
 
     public function scopeTaxAttributes(Builder $query): void

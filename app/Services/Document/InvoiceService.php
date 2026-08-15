@@ -2,27 +2,44 @@
 
 namespace App\Services\Document;
 
-use App;
 use App\Facades\Hashids;
-use App\Facades\Pdf;
+use App\Mail\SendDocumentMail;
 use App\Mail\SendInvoiceMail;
 use App\Models\Company;
 use App\Models\CompanySetting;
-use App\Models\CustomField;
+use App\Models\CustomFieldValue;
 use App\Models\Estimate;
-use App\Models\ExchangeRateLog;
 use App\Models\Invoice;
-use App\Services\Mail\CompanyMailConfigService;
+use App\Models\InvoiceItem;
 use App\Services\Report\ProfitLossCalculationService;
-use App\Services\Document\TransportDocumentService;
-use App\Support\Pdf\PdfTemplateUtils;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
-class InvoiceService
+class InvoiceService extends BaseDocumentService
 {
+    /**
+     * Document-type configuration for SendDocumentMail.
+     */
+    protected array $mailType = [
+        'model_class' => Invoice::class,
+        'data_key' => 'invoice',
+        'route_name' => 'invoice',
+        'template' => 'emails.send.invoice',
+        'number_field' => 'invoice_number',
+        'mailable_class' => SendInvoiceMail::class,
+    ];
+
+    /**
+     * Get the fully-qualified model class for this service.
+     */
+    protected function getModelClass(): string
+    {
+        return Invoice::class;
+    }
+
     public function __construct(
         private readonly DocumentItemService $documentItemService,
         private readonly ProfitLossCalculationService $profitLossService,
@@ -37,9 +54,6 @@ class InvoiceService
             $data['status'] = Invoice::STATUS_SENT;
         }
 
-        // Auto-add prefixes for document numbers based on template type
-        $this->transportDocumentService->addDocumentPrefixes($data, $request);
-
         $invoice = Invoice::create($data);
 
         // Always generate sequence numbers for ordering
@@ -51,7 +65,7 @@ class InvoiceService
             ->setNextNumbers();
 
         $invoice->sequence_number = $serial->nextSequenceNumber;
-        
+
         // Only auto-generate invoice_number if not provided by user
         if (! $request->has('invoice_number') || empty($request->invoice_number)) {
             $invoice->invoice_number = $serial->getNextNumber();
@@ -62,28 +76,26 @@ class InvoiceService
         $invoice->save();
 
         // Transport receipt templates (lr_receipt, lorry_receipt, office_invoice)
-        // use custom fields instead of line items — only create items if present
-        // and each item has a non-empty name (empty stubs are filtered out).
-        if ($request->has('items') && ! empty($request->items)) {
-            $validItems = array_filter(
-                $request->items,
-                fn ($item) => ! empty($item['name'])
-            );
+        // have their own item/tax creation logic in TransportDocumentService.
+        // For standard invoices/estimates, create items and taxes here.
+        if (! $this->transportDocumentService->isTransportTemplate($invoice)) {
+            if ($request->has('items') && ! empty($request->items)) {
+                $validItems = array_filter(
+                    $request->items,
+                    fn ($item) => ! empty($item['name'])
+                );
 
-            if (! empty($validItems)) {
-                $this->documentItemService->createItems($invoice, $validItems);
+                if (! empty($validItems)) {
+                    $this->documentItemService->createItems($invoice, $validItems);
+                }
+            }
+
+            if ($request->has('taxes') && (! empty($request->taxes))) {
+                $this->documentItemService->createTaxes($invoice, $request->taxes);
             }
         }
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
-
-        if ((string) $data['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($invoice);
-        }
-
-        if ($request->has('taxes') && (! empty($request->taxes))) {
-            $this->documentItemService->createTaxes($invoice, $request->taxes);
-        }
+        $this->logExchangeRateIfNeeded($invoice, $request->header('company'));
 
         // Handle transport documents (lr_receipt, lorry_receipt, office_invoice)
         if ($this->transportDocumentService->isTransportTemplate($invoice)) {
@@ -155,9 +167,6 @@ class InvoiceService
         $data['base_due_amount'] = $data['due_amount'] * $data['exchange_rate'];
         $data['customer_sequence_number'] = $serial->nextCustomerSequenceNumber;
 
-        // Auto-add prefixes for document numbers based on template type (for updates)
-        $this->transportDocumentService->addDocumentPrefixes($data, $request);
-
         $invoice->update($data);
 
         $statusData = $invoice->getInvoiceStatusByAmount($data['due_amount']);
@@ -165,41 +174,39 @@ class InvoiceService
             $invoice->update($statusData);
         }
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
-
-        if ((string) $data['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($invoice);
-        }
+        $this->logExchangeRateIfNeeded($invoice, $request->header('company'));
 
         $itemIds = $invoice->items()->pluck('id');
-        \App\Models\CustomFieldValue::where('custom_field_valuable_type', (new \App\Models\InvoiceItem)->getMorphClass())
+        CustomFieldValue::where('custom_field_valuable_type', (new InvoiceItem)->getMorphClass())
             ->whereIn('custom_field_valuable_id', $itemIds)
             ->delete();
 
         $invoice->items()->delete();
         $invoice->taxes()->delete();
 
-        // Transport receipt templates may not send items — only create if
-        // present and each item has a non-empty name (empty stubs filtered out).
-        if ($request->has('items') && ! empty($request->items)) {
-            $validItems = array_filter(
-                $request->items,
-                fn ($item) => ! empty($item['name'])
-            );
+        // Transport receipt templates have their own item/tax creation logic
+        // in TransportDocumentService. For standard invoices/estimates, create
+        // items and taxes here.
+        if (! $this->transportDocumentService->isTransportTemplate($invoice)) {
+            if ($request->has('items') && ! empty($request->items)) {
+                $validItems = array_filter(
+                    $request->items,
+                    fn ($item) => ! empty($item['name'])
+                );
 
-            if (! empty($validItems)) {
-                $this->documentItemService->createItems($invoice, $validItems);
+                if (! empty($validItems)) {
+                    $this->documentItemService->createItems($invoice, $validItems);
+                }
             }
-        }
 
-        if ($request->has('taxes') && (! empty($request->taxes))) {
-            $this->documentItemService->createTaxes($invoice, $request->taxes);
+            if ($request->has('taxes') && (! empty($request->taxes))) {
+                $this->documentItemService->createTaxes($invoice, $request->taxes);
+            }
         }
 
         // Handle transport documents (lr_receipt, lorry_receipt, office_invoice)
         if ($this->transportDocumentService->isTransportTemplate($invoice)) {
             $this->transportDocumentService->updateItems($invoice, $request);
-            $invoice->taxes()->delete();
             $this->transportDocumentService->createTaxes($invoice, $request);
             $this->transportDocumentService->recalculateProfitLoss($invoice);
         }
@@ -243,8 +250,13 @@ class InvoiceService
         return true;
     }
 
-    public function sendInvoiceData(Invoice $invoice, array $data): array
+    /**
+     * Prepare email send data for an invoice (implements BaseDocumentService template method).
+     */
+    protected function prepareSendData(Model $document, array $data): array
     {
+        $invoice = $document;
+
         $data['invoice'] = $invoice->toArray();
         $data['customer'] = $invoice->customer->toArray();
         $data['company'] = Company::find($invoice->company_id);
@@ -257,35 +269,21 @@ class InvoiceService
 
     public function preview(Invoice $invoice, array $data): array
     {
-        $data = $this->sendInvoiceData($invoice, $data);
+        $data = $this->prepareSendData($invoice, $data);
 
         return [
             'type' => 'preview',
-            'view' => new SendInvoiceMail($data),
+            'view' => new SendDocumentMail($data, $this->mailType),
         ];
     }
 
+    /**
+     * Send an invoice email — delegates to BaseDocumentService::sendDocument().
+     * Updates status to SENT after sending if currently DRAFT.
+     */
     public function send(Invoice $invoice, array $data): array
     {
-        $data = $this->sendInvoiceData($invoice, $data);
-
-        CompanyMailConfigService::apply($invoice->company_id);
-
-        $mail = \Mail::to($data['to']);
-        if (! empty($data['cc'])) {
-            $mail->cc($data['cc']);
-        }
-        if (! empty($data['bcc'])) {
-            $mail->bcc($data['bcc']);
-        }
-        try {
-            $mail->send(new SendInvoiceMail($data));
-        } catch (\Throwable $e) {
-            \Log::error('Failed to send invoice email: ' . $e->getMessage());
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'mail' => ['Failed to send email. Please check your mail SMTP configuration under Settings. Details: ' . $e->getMessage()],
-            ]);
-        }
+        $result = $this->sendDocument($invoice, $data);
 
         if ($invoice->status == Invoice::STATUS_DRAFT) {
             $invoice->status = Invoice::STATUS_SENT;
@@ -293,61 +291,24 @@ class InvoiceService
             $invoice->save();
         }
 
-        return [
-            'success' => true,
-            'type' => 'send',
-        ];
+        return $result;
     }
 
     public function getPdfData(Invoice $invoice)
     {
-        $taxes = collect();
-
-        if ($invoice->tax_per_item === 'YES') {
-            foreach ($invoice->items as $item) {
-                foreach ($item->taxes as $tax) {
-                    $found = $taxes->filter(function ($item) use ($tax) {
-                        return $item->tax_type_id == $tax->tax_type_id;
-                    })->first();
-
-                    if ($found) {
-                        $found->amount += $tax->amount;
-                    } else {
-                        $taxes->push($tax);
-                    }
-                }
-            }
-        }
+        $taxes = $this->aggregateItemTaxes($invoice);
 
         $invoiceTemplate = Invoice::find($invoice->id)->template_name;
 
-        $company = Company::find($invoice->company_id);
-        $locale = CompanySetting::getSetting('language', $company->id);
-        $customFields = CustomField::where('model_type', 'Item')->get();
-
-        App::setLocale($locale);
-
-        $logo = $company->logo_path;
-
-        view()->share([
-            'invoice' => $invoice,
-            'customFields' => $customFields,
-            'company_address' => $invoice->getCompanyAddress(),
-            'shipping_address' => $invoice->getCustomerShippingAddress(),
-            'billing_address' => $invoice->getCustomerBillingAddress(),
-            'notes' => $invoice->getNotes(),
-            'logo' => $logo ?? null,
-            'taxes' => $taxes,
-        ]);
-
-        $template = PdfTemplateUtils::findFormattedTemplate('invoice', $invoiceTemplate, '');
-        $templatePath = $template['custom'] ? sprintf('pdf_templates::invoice.%s', $invoiceTemplate) : sprintf('app.pdf.invoice.%s', $invoiceTemplate);
-
-        if (request()->has('preview')) {
-            return view($templatePath);
-        }
-
-        return Pdf::loadView($templatePath);
+        return $this->preparePdfView(
+            $invoice,
+            [
+                'invoice' => $invoice,
+                'taxes' => $taxes,
+            ],
+            'invoice',
+            $invoiceTemplate,
+        );
     }
 
     public function clone(Invoice $invoice): Invoice
@@ -420,18 +381,7 @@ class InvoiceService
             $this->documentItemService->createTaxes($newInvoice, $invoice->taxes->toArray());
         }
 
-        if ($invoice->fields()->exists()) {
-            $customFields = [];
-
-            foreach ($invoice->fields as $data) {
-                $customFields[] = [
-                    'id' => $data->custom_field_id,
-                    'value' => $data->defaultAnswer,
-                ];
-            }
-
-            $newInvoice->addCustomFields($customFields);
-        }
+        $this->copyCustomFields($invoice, $newInvoice);
 
         return $newInvoice;
     }
@@ -488,18 +438,7 @@ class InvoiceService
             $this->documentItemService->createTaxes($estimate, $invoice->taxes->toArray());
         }
 
-        if ($invoice->fields()->exists()) {
-            $customFields = [];
-
-            foreach ($invoice->fields as $data) {
-                $customFields[] = [
-                    'id' => $data->custom_field_id,
-                    'value' => $data->defaultAnswer,
-                ];
-            }
-
-            $estimate->addCustomFields($customFields);
-        }
+        $this->copyCustomFields($invoice, $estimate);
 
         return $estimate;
     }

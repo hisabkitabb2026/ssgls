@@ -55,13 +55,8 @@ class InvoiceItemResource extends JsonResource
             'dd_charge' => $this->dd_charge,
             'amount' => $this->amount,
 
-            'taxes' => $this->when($this->taxes()->exists(), function () {
-
-                return TaxResource::collection($this->taxes);
-            }),
-            'fields' => $this->when($this->fields()->exists(), function () {
-                return CustomFieldValueResource::collection($this->fields);
-            }),
+            'taxes' => $this->whenLoaded('taxes', fn () => TaxResource::collection($this->taxes)),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
         ];
     }
 }

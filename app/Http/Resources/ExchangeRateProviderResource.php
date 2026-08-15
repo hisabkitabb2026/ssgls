@@ -22,9 +22,7 @@ class ExchangeRateProviderResource extends JsonResource
             'driver_config' => $this->driver_config,
             'company_id' => $this->company_id,
             'active' => $this->active,
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
         ];
     }
 }

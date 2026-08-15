@@ -66,7 +66,7 @@ class EstimatesRequest extends FormRequest
                 'required',
             ],
             'items' => [
-                $this->template_name === 'quotation' ? 'nullable' : 'required',
+                'required',
                 'array',
             ],
             'items.*.description' => [
@@ -77,52 +77,15 @@ class EstimatesRequest extends FormRequest
                 'max:255',
             ],
             'items.*.name' => [
-                $this->template_name === 'quotation' ? 'nullable' : 'required',
+                'required',
             ],
             'items.*.quantity' => [
                 'numeric',
-                $this->template_name === 'quotation' ? 'nullable' : 'required',
+                'required',
             ],
             'items.*.price' => [
                 'integer',
-                $this->template_name === 'quotation' ? 'nullable' : 'required',
-            ],
-            'quotation_rates' => [
-                'nullable',
-                'array',
-            ],
-            'quotation_rates.*.station' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'quotation_rates.*.9mt' => [
-                'nullable',
-                'numeric',
-            ],
-            'quotation_rates.*.10mt' => [
-                'nullable',
-                'numeric',
-            ],
-            'quotation_rates.*.12mt' => [
-                'nullable',
-                'numeric',
-            ],
-            'quotation_rates.*.15mt' => [
-                'nullable',
-                'numeric',
-            ],
-            'quotation_rates.*.18mt' => [
-                'nullable',
-                'numeric',
-            ],
-            'quotation_rates.*.24mt' => [
-                'nullable',
-                'numeric',
-            ],
-            'quotation_rates.*.30mt' => [
-                'nullable',
-                'numeric',
+                'required',
             ],
         ];
 

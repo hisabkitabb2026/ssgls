@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Rules\ConsignmentNumberExists;
 use App\Support\DocumentTotals;
+use App\Support\Pdf\PdfTemplateUtils;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -77,7 +78,7 @@ class InvoicesRequest extends FormRequest
             'template_name' => [
                 'required',
                 function ($attribute, $value, $fail) {
-                    if (! \App\Support\Pdf\PdfTemplateUtils::findFormattedTemplate('invoice', $value)) {
+                    if (! PdfTemplateUtils::findFormattedTemplate('invoice', $value)) {
                         $fail("The selected {$attribute} is invalid.");
                     }
                 },
@@ -185,6 +186,52 @@ class InvoicesRequest extends FormRequest
         // above. No custom field mapping is needed — the Invoice model uses
         // $guarded = ['id'] so all transport columns are mass-assignable.
 
+        // Transport receipt templates (lr_receipt, lorry_receipt) use custom
+        // freight fields instead of line items — DocumentTotals::compute()
+        // returns 0 because there are no items. For lr_receipt, use the
+        // net_amount field (auto-calculated as the sum of all freight charges
+        // in TransportCustomFields.vue) as the invoice total.
+        // The frontend stores net_amount in rupees; the invoices.total column
+        // is in cents, so we multiply by 100.
+        if ($this->template_name === 'lr_receipt') {
+            $netAmount = (float) ($this->net_amount ?? 0);
+            $transportTotal = (int) round($netAmount * 100);
+
+            $payload = $payload->merge([
+                'sub_total' => $transportTotal,
+                'total' => $transportTotal,
+                'tax' => 0,
+                'due_amount' => $transportTotal,
+                'base_total' => $transportTotal * $exchange_rate,
+                'base_sub_total' => $transportTotal * $exchange_rate,
+                'base_tax' => 0,
+                'base_due_amount' => $transportTotal * $exchange_rate,
+            ]);
+        }
+
+        // Office Invoice items have native amount fields (rate + other_charge
+        // + lr_charge + dd_charge) but price/quantity are 0, so
+        // DocumentTotals::compute() returns 0. Compute the real total from
+        // the sum of item amounts. The frontend stores amount in rupees;
+        // the invoices.total column is in cents, so we multiply by 100.
+        if ($this->template_name === 'office_invoice') {
+            $itemsTotal = collect($this->items ?? [])
+                ->sum(fn ($item) => (float) ($item['amount'] ?? 0));
+            $officeTotal = (int) round($itemsTotal * 100);
+
+            $payload = $payload->merge([
+                'sub_total' => $officeTotal,
+                'total' => $officeTotal,
+                'tax' => 0,
+                'due_amount' => $officeTotal,
+                'base_total' => $officeTotal * $exchange_rate,
+                'base_sub_total' => $officeTotal * $exchange_rate,
+                'base_tax' => 0,
+                'base_due_amount' => $officeTotal * $exchange_rate,
+            ]);
+        }
+
         return $payload->toArray();
+
     }
 }

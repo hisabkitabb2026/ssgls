@@ -20,9 +20,7 @@ class NoteResource extends JsonResource
             'name' => $this->name,
             'notes' => $this->notes,
             'is_default' => $this->is_default,
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
         ];
     }
 }

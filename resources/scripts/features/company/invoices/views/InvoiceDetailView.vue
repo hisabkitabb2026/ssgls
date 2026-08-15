@@ -25,8 +25,9 @@
         <!-- Record Payment -->
         <router-link
           v-if="canCreatePayment"
-          :to="`/admin/payments/${$route.params.id}/create`"
+          :to="recordPaymentLink"
         >
+
           <BaseButton
             v-if="invoiceData.status === 'SENT' || invoiceData.status === 'VIEWED'"
             variant="primary"
@@ -143,7 +144,8 @@
           <router-link
             v-if="invoice"
             :id="'invoice-' + invoice.id"
-            :to="`/admin/invoices/${invoice.id}/view`"
+            :to="`${sidebarBasePath}/${invoice.id}/view`"
+
             :class="[
               'flex justify-between side-invoice p-4 cursor-pointer hover:bg-hover-strong items-center border-l-4 border-l-transparent',
               {
@@ -219,6 +221,7 @@ import { useModalStore } from '../../../../stores/modal.store'
 import type { Invoice } from '../../../../types/domain/invoice'
 
 interface Props {
+
   canEdit?: boolean
   canView?: boolean
   canCreate?: boolean
@@ -252,7 +255,39 @@ const modalStore = useModalStore()
 const { t } = useI18n()
 const route = useRoute()
 
+// Detect the current document type from the route name so the sidebar
+// list, links, and route watcher all respect the correct template.
+const isLrReceiptRoute = computed<boolean>(() =>
+  route.name?.toString().startsWith('lr-receipts') ?? false,
+)
+const isLorryReceiptRoute = computed<boolean>(() =>
+  route.name?.toString().startsWith('lorry-receipts') ?? false,
+)
+const currentTemplateName = computed<string | undefined>(() => {
+  if (isLrReceiptRoute.value) return 'lr_receipt'
+  if (isLorryReceiptRoute.value) return 'lorry_receipt'
+  // If the loaded invoice uses a transport template (office_invoice),
+  // pass its template_name so the sidebar list includes it.
+  if (invoiceData.value?.template_name) {
+    return invoiceData.value.template_name
+  }
+  return undefined
+})
+
+const isStandardInvoiceRoute = computed<boolean>(() =>
+  route.name?.toString().startsWith('standard-invoices') ?? false,
+)
+
+const sidebarBasePath = computed<string>(() => {
+  if (isLrReceiptRoute.value) return '/admin/lr-receipts'
+  if (isLorryReceiptRoute.value) return '/admin/lorry-receipts'
+  if (isStandardInvoiceRoute.value) return '/admin/standard-invoices'
+  return '/admin/invoices'
+})
+
+
 const canEdit = computed<boolean>(() => {
+
   return props.canEdit || userStore.hasAbilities(ABILITIES.EDIT)
 })
 
@@ -305,6 +340,17 @@ const searchData = reactive<SearchData>({
 
 const pageTitle = computed<string>(() => invoiceData.value?.invoice_number ?? '')
 
+// Build the "Record Payment" link with a `from` query param so the payment
+// page knows which invoice list the user came from (standard-invoices vs
+// invoices). This lets us redirect back to the correct list after saving.
+const recordPaymentLink = computed<string>(() => {
+  const from = route.path.includes('/admin/standard-invoices')
+    ? 'standard-invoices'
+    : 'invoices'
+  return `/admin/payments/${route.params.id}/create?from=${from}`
+})
+
+
 const getOrderBy = computed<boolean>(() => {
   return searchData.orderBy === 'asc' || searchData.orderBy === null
 })
@@ -314,10 +360,23 @@ const shareableLink = computed<string>(() => {
 })
 
 watch(route, (to) => {
-  if (to.name === 'invoices.view') {
-    loadInvoice()
+  if (
+    to.name === 'invoices.view' ||
+    to.name === 'standard-invoices.view' ||
+    to.name === 'lr-receipts.view' ||
+    to.name === 'lorry-receipts.view'
+  ) {
+
+    loadInvoice().then(() => {
+      // Reload the sidebar list with the correct template_name filter
+      // after the invoice data (and thus currentTemplateName) is available.
+      invoiceList.value = []
+      loadInvoices()
+    })
   }
 })
+
+
 
 function onMarkAsSent(): void {
   dialogStore.openDialog({
@@ -373,12 +432,18 @@ async function loadInvoices(
   if (searchData.orderByField != null) {
     params.orderByField = searchData.orderByField
   }
+  // Pass the current template_name so the backend returns the correct
+  // document type (lr_receipt, lorry_receipt, or standard invoices).
+  if (currentTemplateName.value) {
+    params.template_name = currentTemplateName.value
+  }
 
   isLoading.value = true
   const response = await invoiceStore.fetchInvoices({
     page: pageNumber,
     ...params,
   } as never)
+
   isLoading.value = false
 
   invoiceList.value = invoiceList.value ?? []
@@ -391,14 +456,21 @@ async function loadInvoices(
     (inv) => inv.id === Number(route.params.id),
   )
 
+  // Only auto-paginate when no user-applied search/sort filters are present.
+  // template_name is a route-derived filter, not a user filter, so we exclude
+  // it from the "has user filters" check.
+  const hasUserFilters =
+    Object.keys(params).filter((k) => k !== 'template_name').length > 0
+
   if (
     !fromScrollListener &&
     !invoiceFound &&
     currentPageNumber.value < lastPageNumber.value &&
-    Object.keys(params).length === 0
+    !hasUserFilters
   ) {
     loadInvoices(++currentPageNumber.value)
   }
+
 
   if (invoiceFound && !fromScrollListener) {
     setTimeout(() => scrollToInvoice(), 500)
@@ -454,7 +526,10 @@ function sortData(): void {
   onSearched()
 }
 
-// Initialize
-loadInvoices()
-loadInvoice()
+// Initialize — load invoice first so currentTemplateName is available
+// for the sidebar list query (transport templates need template_name filter).
+loadInvoice().then(() => {
+  loadInvoices()
+})
+
 </script>

@@ -34,6 +34,9 @@ test('make resolves Registry-only drivers via metadata', function () {
     Registry::registerAiDriver('registry_only_ai', [
         'class' => $fakeClass::class,
         'label' => 'test.ai.label',
+        'supported_roles' => ['chat', 'text_generation'],
+        'suggested_models' => [],
+        'config_fields' => [],
     ]);
 
     try {
@@ -53,6 +56,9 @@ test('availableDrivers merges built-in and Registry-registered drivers', functio
     Registry::registerAiDriver('extra_ai_driver', [
         'class' => OpenRouterDriver::class,
         'label' => 'extra.label',
+        'supported_roles' => ['chat', 'text_generation'],
+        'suggested_models' => [],
+        'config_fields' => [],
     ]);
 
     try {

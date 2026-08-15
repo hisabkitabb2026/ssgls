@@ -34,12 +34,8 @@ class EstimateItemResource extends JsonResource
             'base_price' => $this->base_price,
             'base_tax' => $this->base_tax,
             'base_total' => $this->base_total,
-            'taxes' => $this->when($this->taxes()->exists(), function () {
-                return TaxResource::collection($this->taxes);
-            }),
-            'fields' => $this->when($this->fields()->exists(), function () {
-                return CustomFieldValueResource::collection($this->fields);
-            }),
+            'taxes' => $this->whenLoaded('taxes', fn () => TaxResource::collection($this->taxes)),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
         ];
     }
 }

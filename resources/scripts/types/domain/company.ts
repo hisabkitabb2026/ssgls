@@ -10,7 +10,9 @@ export interface Company {
   enrollment_no: string | null
   gstin: string | null
   pan_no: string | null
+  billing_branch: string | null
   logo: string | null
+
   logo_path: string | null
   unique_hash: string
   owner_id: number
