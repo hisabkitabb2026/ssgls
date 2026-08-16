@@ -23,7 +23,8 @@
   </div>
 
   <BasePage class="relative invoice-create-page">
-    <form @submit.prevent="submitForm" @keydown.enter="handleEnterKey">
+    <form @submit.prevent="submitForm">
+
       <BasePageHeader :title="pageTitle">
         <BaseBreadcrumb>
           <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
@@ -94,157 +95,155 @@
       </BasePageHeader>
 
 
-      <!-- Single white card wrapping all form content — matches CustomerCreateView layout -->
-      <BaseCard class="mt-5">
-        <!-- Section 1: Booking / Invoice Information -->
+      <!-- Booking Information card -->
+      <BaseCard v-if="isLrReceipt" class="mt-5">
+        <template #header>
+          <h6 class="text-lg font-semibold text-left text-heading">
+            Booking Information
+          </h6>
+        </template>
+        <InvoiceBasicFields
+          :v="v$"
+          :is-loading="isLoadingContent"
+          :is-edit="isEdit"
+          :is-recurring="isRecurring"
+          :show-consignee="true"
+          :is-transport-receipt="true"
+        />
+      </BaseCard>
+
+      <!-- Invoice Information card -->
+      <BaseCard v-else-if="isOfficeInvoice" class="mt-5">
+        <template #header>
+          <h6 class="text-lg font-semibold text-left text-heading">
+            Invoice Information
+          </h6>
+        </template>
+        <InvoiceBasicFields
+          :v="v$"
+          :is-loading="isLoadingContent"
+          :is-edit="isEdit"
+          :is-recurring="isRecurring"
+          :show-consignee="false"
+          :is-transport-receipt="true"
+        />
+      </BaseCard>
+
+      <!-- Regular invoices: InvoiceBasicFields without card wrapper -->
+      <InvoiceBasicFields
+        v-else
+        :v="v$"
+        :is-loading="isLoadingContent"
+        :is-edit="isEdit"
+        :is-recurring="isRecurring"
+        :show-consignee="false"
+        :is-transport-receipt="false"
+      />
+
+      <!-- Lorry Receipt: Owner/Driver/Broker party selector -->
+      <BaseCard v-if="isLorryReceipt" class="mt-5">
+        <template #header>
+          <h6 class="text-lg font-semibold text-left text-heading">
+            Party Details
+          </h6>
+        </template>
+        <LorryReceiptPartyFields />
+      </BaseCard>
+
+      <!-- Office Invoice: Consignment items table with Add New Item -->
+      <BaseCard v-if="isOfficeInvoice" class="mt-5">
+        <template #header>
+          <h6 class="text-lg font-semibold text-left text-heading">
+            Consignment Items
+          </h6>
+        </template>
+        <OfficeInvoiceItemsTable
+          :is-edit="isEdit"
+          :is-loading="isLoadingContent"
+          :store="invoiceStore"
+          store-prop="newInvoice"
+          :item-validation-scope="invoiceValidationScope"
+          @consignment-valid="onConsignmentValidChange"
+        />
+      </BaseCard>
+
+      <!-- Transport fields (lr_receipt, lorry_receipt only) -->
+      <BaseCard v-if="isTransportReceipt && !isOfficeInvoice" class="mt-5">
+        <template #header>
+          <h6 class="text-lg font-semibold text-left text-heading">
+            Transport Details
+          </h6>
+        </template>
+        <TransportCustomFields
+          :is-loading="isLoadingContent"
+          :store="invoiceStore"
+          store-prop="newInvoice"
+          :template-name="transportTemplateName"
+        />
+      </BaseCard>
+
+      <!-- Standard Invoice: Items, Notes, Custom Fields, Totals -->
+      <template v-if="!isTransportEntryTemplate">
+        <BaseDivider class="mb-5 md:mb-8" />
+
+        <!-- Items Table -->
         <div class="grid grid-cols-5 gap-4 mb-8">
           <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-            {{ isLrReceipt ? 'Booking Information' : isOfficeInvoice ? 'Invoice Information' : 'Invoice Details' }}
+            Items
           </h6>
 
           <div class="col-span-5 lg:col-span-4">
-            <InvoiceBasicFields
-              :v="v$"
+            <DocumentItemsTable
+              :currency="invoiceStore.newInvoice.selectedCurrency"
               :is-loading="isLoadingContent"
-              :is-edit="isEdit"
-              :is-recurring="isRecurring"
-              :show-consignee="isLrReceipt"
-              :is-transport-receipt="isTransportReceipt"
+              :item-validation-scope="invoiceValidationScope"
+              :store="invoiceStore"
+              store-prop="newInvoice"
             />
           </div>
         </div>
 
+        <BaseDivider class="mb-5 md:mb-8" />
 
+        <!-- Notes, Custom Fields & Totals -->
+        <div class="grid grid-cols-5 gap-4 mb-8">
+          <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
+            Notes & Totals
+          </h6>
 
+          <div class="col-span-5 lg:col-span-4">
+            <div class="block invoice-foot lg:flex lg:justify-between lg:items-start">
+              <div class="relative w-full lg:w-1/2 lg:mr-4">
+                <DocumentNotes
+                  :store="invoiceStore"
+                  store-prop="newInvoice"
+                  :fields="invoiceNoteFieldList"
+                  type="Invoice"
+                />
 
-
-        <!-- Transport-specific sections -->
-        <template v-if="isTransportReceipt">
-          <!-- Lorry Receipt: Owner/Driver/Broker party selector -->
-          <template v-if="isLorryReceipt">
-            <BaseDivider class="mb-5 md:mb-8" />
-
-            <div class="grid grid-cols-5 gap-4 mb-8">
-              <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-                Party Details
-              </h6>
-
-              <div class="col-span-5 lg:col-span-4">
-                <LorryReceiptPartyFields />
-              </div>
-            </div>
-          </template>
-
-          <!-- Office Invoice: Consignment items table with Add New Item -->
-          <template v-if="isOfficeInvoice">
-            <BaseDivider class="mb-5 md:mb-8" />
-
-            <div class="grid grid-cols-5 gap-4 mb-8">
-              <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-                Consignment Items
-              </h6>
-
-              <div class="col-span-5 lg:col-span-4">
-                <OfficeInvoiceItemsTable
+                <InvoiceCustomFields
+                  v-if="!isTransportReceipt"
+                  type="Invoice"
                   :is-edit="isEdit"
                   :is-loading="isLoadingContent"
                   :store="invoiceStore"
                   store-prop="newInvoice"
-                  :item-validation-scope="invoiceValidationScope"
-                  @consignment-valid="onConsignmentValidChange"
+                  :custom-field-scope="invoiceValidationScope"
+                  class="mb-6"
                 />
               </div>
-            </div>
-          </template>
 
-          <!-- Transport fields (lr_receipt, lorry_receipt only) -->
-          <template v-if="!isOfficeInvoice">
-            <BaseDivider class="mb-5 md:mb-8" />
-
-            <div class="grid grid-cols-5 gap-4 mb-8">
-              <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-                Transport Details
-              </h6>
-
-              <div class="col-span-5 lg:col-span-4">
-                <TransportCustomFields
-                  :is-loading="isLoadingContent"
-                  :store="invoiceStore"
-                  store-prop="newInvoice"
-                  :template-name="transportTemplateName"
-                />
-              </div>
-            </div>
-          </template>
-
-          <!-- Lorry Receipt: Document uploads removed — documents (RC, PAN, Insurance,
-               License, etc.) are now captured when creating/editing Owner, Driver,
-               and Broker profiles via the LorryPartyProfileModal. -->
-        </template>
-
-        <!-- Standard Invoice: Items, Notes, Custom Fields, Totals -->
-        <template v-if="!isTransportEntryTemplate">
-          <BaseDivider class="mb-5 md:mb-8" />
-
-          <!-- Items Table -->
-          <div class="grid grid-cols-5 gap-4 mb-8">
-            <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-              Items
-            </h6>
-
-            <div class="col-span-5 lg:col-span-4">
-              <DocumentItemsTable
+              <DocumentTotals
                 :currency="invoiceStore.newInvoice.selectedCurrency"
                 :is-loading="isLoadingContent"
-                :item-validation-scope="invoiceValidationScope"
                 :store="invoiceStore"
                 store-prop="newInvoice"
+                tax-popup-type="invoice"
               />
             </div>
           </div>
-
-          <BaseDivider class="mb-5 md:mb-8" />
-
-          <!-- Notes, Custom Fields & Totals -->
-          <div class="grid grid-cols-5 gap-4 mb-8">
-            <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-              Notes & Totals
-            </h6>
-
-            <div class="col-span-5 lg:col-span-4">
-              <div class="block invoice-foot lg:flex lg:justify-between lg:items-start">
-                <div class="relative w-full lg:w-1/2 lg:mr-4">
-                  <DocumentNotes
-                    :store="invoiceStore"
-                    store-prop="newInvoice"
-                    :fields="invoiceNoteFieldList"
-                    type="Invoice"
-                  />
-
-                  <InvoiceCustomFields
-                    v-if="!isTransportReceipt"
-                    type="Invoice"
-                    :is-edit="isEdit"
-                    :is-loading="isLoadingContent"
-                    :store="invoiceStore"
-                    store-prop="newInvoice"
-                    :custom-field-scope="invoiceValidationScope"
-                    class="mb-6"
-                  />
-                </div>
-
-                <DocumentTotals
-                  :currency="invoiceStore.newInvoice.selectedCurrency"
-                  :is-loading="isLoadingContent"
-                  :store="invoiceStore"
-                  store-prop="newInvoice"
-                  tax-popup-type="invoice"
-                />
-              </div>
-            </div>
-          </div>
-        </template>
-      </BaseCard>
+        </div>
+      </template>
     </form>
   </BasePage>
 </template>
@@ -273,6 +272,7 @@ import InvoiceCustomFields from '@/scripts/features/company/customers/components
 import TransportCustomFields from '../components/TransportCustomFields.vue'
 import LorryReceiptPartyFields from '../components/LorryReceiptPartyFields.vue'
 import OfficeInvoiceItemsTable from '../components/OfficeInvoiceItemsTable.vue'
+
 import {
   DocumentItemsTable,
   DocumentTotals,
@@ -428,12 +428,6 @@ const isStandardInvoice = computed<boolean>(() => route.path.includes('/admin/st
 // are transport receipts with their own custom field layouts.
 const isTransportReceipt = computed<boolean>(() => !isStandardInvoice.value)
 const transportTemplateName = computed<string>(() => {
-  // Standard invoices use the upstream InvoiceShelf flow (items table, taxes,
-  // discounts). They must NOT fall through to 'office_invoice', otherwise the
-  // consignment-number validation and Office Invoice items table are activated.
-  if (isStandardInvoice.value) {
-    return invoiceStore.newInvoice.template_name || 'invoice1'
-  }
   if (isLorryReceipt.value) {
     return companyStore.selectedCompanySettings.default_lorry_receipt_template || 'lorry_receipt'
   }
@@ -710,16 +704,6 @@ watch(
     isAutoUpdatingDueDate = false
   },
 )
-
-/**
- * Prevent Enter key from auto-submitting the form on text inputs.
- * Textareas are excluded so Enter still creates newlines.
- */
-function handleEnterKey(event: KeyboardEvent): void {
-  if (!(event.target instanceof HTMLTextAreaElement)) {
-    event.preventDefault()
-  }
-}
 
 async function submitForm(): Promise<void> {
   v$.value.$touch()

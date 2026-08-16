@@ -248,7 +248,7 @@ test('cannot convert an estimate belonging to another company', function () {
         'expiry_date' => now()->addMonth(),
     ]);
 
-    postJson("api/v1/estimates/{$estimate->id}/convert-to-invoice")->assertNotFound();
+    postJson("api/v1/estimates/{$estimate->id}/convert-to-invoice")->assertStatus(403);
 });
 
 test('delete multiple estimates using a form request', function () {

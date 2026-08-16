@@ -106,15 +106,6 @@ function getFileName(path: string | null | undefined): string {
   return path.substring(path.lastIndexOf('/') + 1)
 }
 
-/**
- * Prevent Enter key from auto-submitting the form on text inputs.
- * Textareas are excluded so Enter still creates newlines.
- */
-function handleEnterKey(event: KeyboardEvent): void {
-  if (!(event.target instanceof HTMLTextAreaElement)) {
-    event.preventDefault()
-  }
-}
 
 function closeModal(): void {
   modalStore.closeModal()
@@ -140,9 +131,8 @@ async function submit(): Promise<void> {
     })
     emit('saved', { type: form.type, profile: response.data })
     closeModal()
+
   } catch {
-    // Error is handled by the API interceptor (toast notification)
-  } finally {
     isSaving.value = false
   }
 }
@@ -161,15 +151,15 @@ async function submit(): Promise<void> {
       </div>
     </template>
 
-    <form @submit.prevent="submit" @keydown.enter="handleEnterKey">
+    <form>
       <div class="px-6 pb-6 max-h-[70vh] overflow-y-auto space-y-6">
         <!-- Basic Info -->
-        <div class="mt-4 mb-2">
-          <h6 class="block text-base font-semibold text-left text-heading mb-4">
+        <div class="grid grid-cols-5 gap-4 mt-4 mb-2">
+          <h6 class="col-span-5 text-base font-semibold text-left lg:col-span-1 text-heading">
             Basic Info
           </h6>
 
-          <BaseInputGrid>
+          <BaseInputGrid class="col-span-5 lg:col-span-4">
             <BaseInputGroup
               :label="`${singularTitle} Name`"
               required
@@ -196,17 +186,15 @@ async function submit(): Promise<void> {
         <BaseDivider />
 
         <!-- Details Section -->
-        <div class="mb-2">
-          <h6 class="block text-base font-semibold text-left text-heading mb-4">
+        <div class="grid grid-cols-5 gap-4 mb-2">
+          <h6 class="col-span-5 text-base font-semibold text-left lg:col-span-1 text-heading">
             {{ detailsSectionTitle }}
           </h6>
 
-          <!-- OWNER fields (separate layout to avoid overlap on mobile) -->
-          <div
-            v-if="form.type === 'OWNER'"
-            class="space-y-6"
-          >
-            <BaseInputGrid>
+          <!-- OWNER/BROKER fields -->
+          <BaseInputGrid v-if="form.type === 'OWNER' || form.type === 'BROKER'" class="col-span-5 lg:col-span-4">
+            <!-- OWNER fields -->
+            <template v-if="form.type === 'OWNER'">
               <BaseInputGroup label="Owner Bank Account No.">
                 <BaseInput v-model.trim="form.bank_account_no" type="text" />
               </BaseInputGroup>
@@ -214,15 +202,13 @@ async function submit(): Promise<void> {
               <BaseInputGroup label="Owner PAN No.">
                 <BaseInput v-model.trim="form.financer_name" type="text" />
               </BaseInputGroup>
-            </BaseInputGrid>
 
-            <div>
-              <h6 class="text-base font-semibold text-muted text-left mb-2">
-                Mandatory Required Documents
-              </h6>
-            </div>
+              <div class="col-span-5 mt-4 mb-2">
+                <h6 class="text-base font-semibold text-muted text-left">
+                  Mandatory Required Documents
+                </h6>
+              </div>
 
-            <BaseInputGrid>
               <BaseInputGroup label="Attach RC Front">
                 <div v-if="form.rc_front_path" class="flex flex-col p-3 border border-line-default rounded-md bg-surface-secondary">
                   <div class="flex items-center justify-between">
@@ -348,15 +334,10 @@ async function submit(): Promise<void> {
                   </div>
                 </div>
               </BaseInputGroup>
-            </BaseInputGrid>
-          </div>
+            </template>
 
-          <!-- BROKER fields (separate layout to avoid overlap on mobile) -->
-          <div
-            v-else-if="form.type === 'BROKER'"
-            class="space-y-6"
-          >
-            <BaseInputGrid>
+            <!-- BROKER fields -->
+            <template v-else-if="form.type === 'BROKER'">
               <BaseInputGroup label="Broker Bank Account No.">
                 <BaseInput v-model.trim="form.bank_account_no" type="text" />
               </BaseInputGroup>
@@ -364,15 +345,13 @@ async function submit(): Promise<void> {
               <BaseInputGroup label="Broker Pan No.">
                 <BaseInput v-model.trim="form.advice_no" type="text" />
               </BaseInputGroup>
-            </BaseInputGrid>
 
-            <div class="mt-2 mb-2">
-              <h6 class="text-base font-semibold text-muted text-left">
-                Mandatory Required Documents
-              </h6>
-            </div>
+              <div class="col-span-5 mt-4 mb-2">
+                <h6 class="text-base font-semibold text-muted text-left">
+                  Mandatory Required Documents
+                </h6>
+              </div>
 
-            <BaseInputGrid>
               <BaseInputGroup label="Attach PAN Front">
                 <div v-if="form.pan_front_path_broker" class="flex flex-col p-3 border border-line-default rounded-md bg-surface-secondary">
                   <div class="flex items-center justify-between">
@@ -414,13 +393,13 @@ async function submit(): Promise<void> {
                   </div>
                 </div>
               </BaseInputGroup>
-            </BaseInputGrid>
-          </div>
+            </template>
+          </BaseInputGrid>
 
           <!-- DRIVER fields (separate layout to avoid overlap) -->
           <div
-            v-else-if="form.type === 'DRIVER'"
-            class="space-y-6"
+            v-if="form.type === 'DRIVER'"
+            class="col-span-5 lg:col-span-4 space-y-6"
           >
             <BaseInputGrid>
               <BaseInputGroup label="Driver Bank Account No.">
@@ -446,7 +425,7 @@ async function submit(): Promise<void> {
               </BaseInputGroup>
             </BaseInputGrid>
 
-            <div class="mt-2 mb-2">
+            <div class="col-span-5 mt-4 mb-2">
               <h6 class="text-base font-semibold text-muted text-left">
                 Mandatory Required Documents
               </h6>

@@ -38,13 +38,14 @@ class CustomFieldsController extends Controller
     /**
      * Store a newly created resource in storage.
      *
+     * @param  \Illuminate\Http\CustomFieldRequest  $request
      * @return Response
      */
     public function store(CustomFieldRequest $request)
     {
         $this->authorize('create', CustomField::class);
 
-        $customField = $this->customFieldService->createCustomField($request->validated());
+        $customField = $this->customFieldService->create($request);
 
         return new CustomFieldResource($customField);
     }
@@ -57,7 +58,7 @@ class CustomFieldsController extends Controller
      */
     public function show(CustomField $customField)
     {
-        $this->authorize('view', CustomField::class);
+        $this->authorize('view', $customField);
 
         return new CustomFieldResource($customField);
     }
@@ -65,13 +66,15 @@ class CustomFieldsController extends Controller
     /**
      * Update the specified resource in storage.
      *
+     * @param  Request  $request
+     * @param  int  $id
      * @return Response
      */
     public function update(CustomFieldRequest $request, CustomField $customField)
     {
-        $this->authorize('update', CustomField::class);
+        $this->authorize('update', $customField);
 
-        $customField = $this->customFieldService->updateCustomField($customField, $request->validated());
+        $this->customFieldService->update($customField, $request);
 
         return new CustomFieldResource($customField);
     }
