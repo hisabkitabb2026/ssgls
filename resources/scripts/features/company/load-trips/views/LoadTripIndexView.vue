@@ -13,7 +13,7 @@
           class="px-4 py-2 bg-surface-secondary text-body rounded border border-line-default hover:bg-hover whitespace-nowrap"
           @click="$router.push({ name: 'consolidation.index' })"
         >
-           Consolidation Board
+          🚚 Consolidation Board
         </button>
         <button
           class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 whitespace-nowrap"

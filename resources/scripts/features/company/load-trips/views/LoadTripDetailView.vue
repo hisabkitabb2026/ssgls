@@ -41,7 +41,7 @@
             class="px-4 py-2 bg-status-purple text-white rounded hover:bg-status-purple/90"
             @click="dispatchTrip"
           >
-             Dispatch Trip
+            🚚 Dispatch Trip
           </button>
           <button
             v-if="trip.status === 'dispatched'"
@@ -164,7 +164,7 @@
       <!-- Future Integration Placeholder -->
       <div class="bg-surface-secondary rounded p-4 border border-dashed border-line-default">
         <p class="text-xs text-muted">
-           Future integrations: GPS tracking, Fastag toll data, E-Way Bill verification, and route optimization
+          🔌 Future integrations: GPS tracking, Fastag toll data, E-Way Bill verification, and route optimization
           will appear here when production APIs are connected.
         </p>
       </div>
