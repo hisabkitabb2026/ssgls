@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers\Company\CustomField;
-
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CustomFieldRequest;
 use App\Http\Resources\CustomFieldResource;
@@ -9,13 +7,11 @@ use App\Models\CustomField;
 use App\Services\CustomFieldService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-
 class CustomFieldsController extends Controller
 {
     public function __construct(
         private readonly CustomFieldService $customFieldService,
     ) {}
-
     /**
      * Display a listing of the resource.
      *
@@ -24,32 +20,24 @@ class CustomFieldsController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', CustomField::class);
-
         $limit = $request->has('limit') ? $request->limit : 5;
-
         $customFields = CustomField::applyFilters($request->all())
             ->whereCompany()
             ->latest()
             ->paginateData($limit);
-
         return CustomFieldResource::collection($customFields);
     }
-
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\CustomFieldRequest  $request
      * @return Response
      */
     public function store(CustomFieldRequest $request)
     {
         $this->authorize('create', CustomField::class);
-
-        $customField = $this->customFieldService->create($request);
-
+        $customField = $this->customFieldService->createCustomField($request->validated());
         return new CustomFieldResource($customField);
     }
-
     /**
      * Display the specified resource.
      *
@@ -58,27 +46,20 @@ class CustomFieldsController extends Controller
      */
     public function show(CustomField $customField)
     {
-        $this->authorize('view', $customField);
-
+        $this->authorize('view', CustomField::class);
         return new CustomFieldResource($customField);
     }
-
     /**
      * Update the specified resource in storage.
      *
-     * @param  Request  $request
-     * @param  int  $id
      * @return Response
      */
     public function update(CustomFieldRequest $request, CustomField $customField)
     {
         $this->authorize('update', $customField);
-
-        $this->customFieldService->update($customField, $request);
-
+        $customField = $this->customFieldService->updateCustomField($customField, $request->validated());
         return new CustomFieldResource($customField);
     }
-
     /**
      * Remove the specified resource from storage.
      *
@@ -87,14 +68,11 @@ class CustomFieldsController extends Controller
      */
     public function destroy(CustomField $customField)
     {
-        $this->authorize('delete', CustomField::class);
-
+        $this->authorize('delete', $customField);
         if ($customField->customFieldValues()->exists()) {
             $customField->customFieldValues()->delete();
         }
-
         $customField->forceDelete();
-
         return response()->json([
             'success' => true,
         ]);
