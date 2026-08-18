@@ -6,9 +6,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   server: {
-    host: 'invoiceshelf.test',
+    host: 'localhost',
     hmr: {
-      host: 'invoiceshelf.test',
+      host: 'localhost',
     }
   },
   resolve: {
